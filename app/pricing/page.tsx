@@ -51,16 +51,18 @@ const plans: Plan[] = [
 export default function PricingPage() {
   return (
     <main className="relative min-h-screen overflow-hidden bg-slate-950 text-white">
-      {/* Background lights */}
+      {/* Background */}
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -left-40 top-10 h-96 w-96 rounded-full bg-purple-700/30 blur-3xl" />
+
         <div className="absolute -right-40 bottom-10 h-96 w-96 rounded-full bg-fuchsia-600/25 blur-3xl" />
+
         <div className="absolute left-1/2 top-1/3 h-80 w-80 -translate-x-1/2 rounded-full bg-violet-500/10 blur-3xl" />
       </div>
 
       <div className="relative mx-auto w-full max-w-6xl px-4 py-6 sm:px-8 sm:py-10">
         {/* Header */}
-        <header className="flex items-center justify-between gap-4">
+        <header className="flex items-center justify-between gap-3">
           <Link
             href="/"
             className="flex items-center gap-2 text-lg font-bold sm:text-xl"
@@ -72,14 +74,14 @@ export default function PricingPage() {
           <div className="flex items-center gap-2">
             <Link
               href="/dashboard"
-              className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold transition hover:bg-white/10"
+              className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold transition hover:bg-white/10 sm:px-4 sm:text-sm"
             >
               Dashboard
             </Link>
 
             <Link
               href="/login"
-              className="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold transition hover:bg-white/20"
+              className="rounded-full border border-white/15 bg-white/10 px-3 py-2 text-xs font-semibold transition hover:bg-white/20 sm:px-4 sm:text-sm"
             >
               Login
             </Link>
@@ -143,9 +145,10 @@ export default function PricingPage() {
 
           {/* Paid plans */}
           {plans.map((plan) => (
-            <article
+            <Link
               key={plan.id}
-              className={`relative flex flex-col rounded-[2rem] border p-6 backdrop-blur-xl sm:p-7 ${
+              href={plan.paymentUrl}
+              className={`relative flex cursor-pointer flex-col rounded-[2rem] border p-6 backdrop-blur-xl transition hover:-translate-y-1 hover:border-purple-300/70 active:scale-[0.99] sm:p-7 ${
                 plan.highlighted
                   ? "border-purple-300/60 bg-gradient-to-b from-purple-500/25 to-white/5 shadow-2xl shadow-purple-950/40"
                   : "border-white/10 bg-white/5"
@@ -170,7 +173,9 @@ export default function PricingPage() {
 
                 <h2
                   className={`text-4xl font-black sm:text-5xl ${
-                    plan.oldPrice ? "mt-1" : "mt-5"
+                    plan.oldPrice
+                      ? "mt-1"
+                      : "mt-5"
                   }`}
                 >
                   {plan.price}
@@ -191,17 +196,20 @@ export default function PricingPage() {
                 ))}
               </ul>
 
-              <Link
-                href={plan.paymentUrl}
-                className={`mt-8 block w-full rounded-2xl px-5 py-4 text-center text-lg font-bold text-white transition active:scale-[0.98] ${
+              <div
+                className={`mt-8 block w-full rounded-2xl px-5 py-4 text-center text-lg font-bold text-white ${
                   plan.highlighted
-                    ? "bg-gradient-to-r from-purple-500 to-fuchsia-500 hover:opacity-90"
-                    : "bg-purple-600 hover:bg-purple-500"
+                    ? "bg-gradient-to-r from-purple-500 to-fuchsia-500"
+                    : "bg-purple-600"
                 }`}
               >
                 Choose {plan.name}
-              </Link>
-            </article>
+              </div>
+
+              <p className="mt-3 text-center text-xs text-white/40">
+                Tap anywhere on this card
+              </p>
+            </Link>
           ))}
         </section>
 
@@ -244,7 +252,7 @@ export default function PricingPage() {
               </h3>
 
               <p className="mt-2 text-sm leading-6 text-white/55">
-                Payment slip တင်ပြီး Admin စစ်ဆေးအတည်ပြုပါမယ်။
+                Payment slip တင်ပြီး Admin က စစ်ဆေးအတည်ပြုပါမယ်။
               </p>
             </div>
           </div>
@@ -264,18 +272,18 @@ export default function PricingPage() {
 
               <p className="mt-2 text-sm leading-6 text-white/55">
                 Account register လုပ်တဲ့အချိန်ကစပြီး 3 ရက်
-                အလိုအလျောက်စတင်ပါတယ်။
+                အလိုအလျောက် စတင်ပါတယ်။
               </p>
             </div>
 
             <div className="rounded-2xl bg-black/20 p-5">
               <h3 className="font-bold">
-                Trial ကုန်ရင်ဘာဖြစ်မလဲ?
+                Trial ကုန်ရင် ဘာဖြစ်မလဲ?
               </h3>
 
               <p className="mt-2 text-sm leading-6 text-white/55">
                 Anna-AI Call Page ကို အသုံးပြုနိုင်တော့မှာမဟုတ်ဘဲ
-                Plan ဝယ်ယူရန် ဒီစာမျက်နှာကို ပြန်ပို့ပါမယ်။
+                Plan ဝယ်ယူရန် Pricing Page ကို ပြန်ပို့ပါမယ်။
               </p>
             </div>
 
@@ -296,8 +304,8 @@ export default function PricingPage() {
               </h3>
 
               <p className="mt-2 text-sm leading-6 text-white/55">
-                Admin က payment ကိုစစ်ပြီး Approve လုပ်ပြီးတာနဲ့
-                Premium အလိုအလျောက်ဖြစ်ပါမယ်။
+                Admin က payment ကို စစ်ပြီး Approve လုပ်တာနဲ့
+                Premium အလိုအလျောက် ဖြစ်ပါမယ်။
               </p>
             </div>
           </div>
