@@ -8,6 +8,10 @@ import {
 
 import { createSupabaseBrowserClient } from "@/lib/supabase";
 
+type InputLanguage =
+  | "zh-CN"
+  | "my-MM";
+
 interface SpeechRecognitionEventLike {
   results: {
     [index: number]: {
@@ -71,9 +75,15 @@ interface ChatBoxProps {
   ) => void;
 }
 
-const CHAT_TIMEOUT_MS = 25000;
+interface AnnaReplyResult {
+  reply: string;
+  responseId: string | null;
+}
+
+const CHAT_TIMEOUT_MS = 35000;
 const SPEECH_TIMEOUT_MS = 30000;
 const RESTART_DELAY_MS = 700;
+const MAX_CHAT_ATTEMPTS = 2;
 
 export default function ChatBox({
   onStatusChange,
@@ -83,16 +93,20 @@ export default function ChatBox({
     []
   );
 
+  const [inputLanguage, setInputLanguage] =
+    useState<InputLanguage>("zh-CN");
+
   const [message, setMessage] =
     useState("");
 
-  const [reply, setReply] = useState(
-    [
-      "中文：按一下麦克风，跟我说中文吧！😄",
-      "拼音：Àn yíxià màikèfēng, gēn wǒ shuō Zhōngwén ba!",
-      "မြန်မာ：မိုက်ခရိုဖုန်းကို နှိပ်ပြီး Anna နဲ့ တရုတ်လို ပြောပါနော်။",
-    ].join("\n")
-  );
+  const [reply, setReply] =
+    useState(
+      [
+        "中文：你好呀！你可以选择中文或者缅甸语跟我说话。",
+        "拼音：Nǐ hǎo ya! Nǐ kěyǐ xuǎnzé Zhōngwén huòzhě Miǎndiànyǔ gēn wǒ shuōhuà.",
+        "မြန်မာ：ဟိုင်း။ တရုတ်လိုဖြစ်ဖြစ် မြန်မာလိုဖြစ်ဖြစ် ရွေးပြီး Anna နဲ့ စကားပြောနိုင်ပါတယ်။",
+      ].join("\n")
+    );
 
   const [isListening, setIsListening] =
     useState(false);
@@ -123,14 +137,14 @@ export default function ChatBox({
     useRef<string | null>(null);
 
   const restartTimerRef =
-    useRef<ReturnType<typeof setTimeout> | null>(
-      null
-    );
+    useRef<ReturnType<
+      typeof setTimeout
+    > | null>(null);
 
   const audioWatchdogRef =
-    useRef<ReturnType<typeof setTimeout> | null>(
-      null
-    );
+    useRef<ReturnType<
+      typeof setTimeout
+    > | null>(null);
 
   const chatAbortRef =
     useRef<AbortController | null>(null);
@@ -162,7 +176,9 @@ export default function ChatBox({
   function updateAutoConversation(
     value: boolean
   ) {
-    autoConversationRef.current = value;
+    autoConversationRef.current =
+      value;
+
     setAutoConversation(value);
   }
 
@@ -172,7 +188,8 @@ export default function ChatBox({
         restartTimerRef.current
       );
 
-      restartTimerRef.current = null;
+      restartTimerRef.current =
+        null;
     }
   }
 
@@ -182,7 +199,8 @@ export default function ChatBox({
         audioWatchdogRef.current
       );
 
-      audioWatchdogRef.current = null;
+      audioWatchdogRef.current =
+        null;
     }
   }
 
@@ -201,7 +219,7 @@ export default function ChatBox({
     try {
       recognition.abort?.();
     } catch {
-      // Browser abort error ကို မပြပါ။
+      // Browser abort error ကို ignore လုပ်ပါမယ်။
     }
 
     recognitionRef.current = null;
@@ -253,13 +271,45 @@ export default function ChatBox({
 
     if (chineseLine) {
       return chineseLine
-        .replace(/^中文[：:]\s*/u, "")
+        .replace(
+          /^中文[：:]\s*/u,
+          ""
+        )
         .trim();
+    }
+
+    const mainSentenceIndex =
+      lines.findIndex(
+        (line) =>
+          line.startsWith(
+            "အဓိကစာကြောင်း："
+          ) ||
+          line.startsWith(
+            "အဓိကစာကြောင်း:"
+          )
+      );
+
+    if (
+      mainSentenceIndex !== -1 &&
+      lines[mainSentenceIndex + 1]
+    ) {
+      const possibleChinese =
+        lines[mainSentenceIndex + 1];
+
+      if (
+        /[\u3400-\u9fff]/u.test(
+          possibleChinese
+        )
+      ) {
+        return possibleChinese;
+      }
     }
 
     const fallback = lines.find(
       (line) =>
-        /[\u3400-\u9fff]/u.test(line) &&
+        /[\u3400-\u9fff]/u.test(
+          line
+        ) &&
         !line.startsWith("拼音") &&
         !line.startsWith("မြန်မာ")
     );
@@ -281,7 +331,8 @@ export default function ChatBox({
     try {
       const {
         data: { user },
-      } = await supabase.auth.getUser();
+      } =
+        await supabase.auth.getUser();
 
       if (!user) {
         return;
@@ -292,7 +343,8 @@ export default function ChatBox({
           .from("conversations")
           .insert({
             user_id: user.id,
-            user_message: userMessage,
+            user_message:
+              userMessage,
             anna_reply: annaReply,
           });
 
@@ -326,7 +378,8 @@ export default function ChatBox({
 
     restartTimerRef.current =
       setTimeout(() => {
-        restartTimerRef.current = null;
+        restartTimerRef.current =
+          null;
 
         if (
           autoConversationRef.current &&
@@ -341,14 +394,14 @@ export default function ChatBox({
 
   async function requestAnnaReply(
     cleanMessage: string
-  ) {
-    let lastError:
-      | Error
-      | null = null;
+  ): Promise<AnnaReplyResult> {
+    let lastError: Error | null =
+      null;
 
     for (
       let attempt = 1;
-      attempt <= 2;
+      attempt <=
+      MAX_CHAT_ATTEMPTS;
       attempt += 1
     ) {
       const controller =
@@ -357,29 +410,44 @@ export default function ChatBox({
       chatAbortRef.current =
         controller;
 
-      const timeout = setTimeout(() => {
-        controller.abort();
-      }, CHAT_TIMEOUT_MS);
+      const timeout = setTimeout(
+        () => {
+          controller.abort();
+        },
+        CHAT_TIMEOUT_MS
+      );
 
       try {
-        const response = await fetch(
-          "/api/chat",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-            body: JSON.stringify({
-              message: cleanMessage,
+        const response =
+          await fetch(
+            "/api/chat",
+            {
+              method: "POST",
 
-              previousResponseId:
-                previousResponseIdRef.current,
-            }),
-            signal: controller.signal,
-            cache: "no-store",
-          }
-        );
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+
+              body: JSON.stringify({
+                message:
+                  cleanMessage,
+
+                inputLanguage,
+
+                previousResponseId:
+                  inputLanguage ===
+                  "my-MM"
+                    ? null
+                    : previousResponseIdRef.current,
+              }),
+
+              signal:
+                controller.signal,
+
+              cache: "no-store",
+            }
+          );
 
         const data =
           await response
@@ -389,7 +457,7 @@ export default function ChatBox({
         if (!response.ok) {
           throw new Error(
             data?.error ||
-              "Anna reply မရပါ။"
+              `Anna reply မရပါ။ (${response.status})`
           );
         }
 
@@ -404,7 +472,8 @@ export default function ChatBox({
         }
 
         return {
-          reply: data.reply.trim(),
+          reply:
+            data.reply.trim(),
 
           responseId:
             typeof data.responseId ===
@@ -421,12 +490,16 @@ export default function ChatBox({
               );
 
         if (
-          attempt < 2 &&
+          attempt <
+            MAX_CHAT_ATTEMPTS &&
           autoConversationRef.current
         ) {
           await new Promise<void>(
             (resolve) => {
-              setTimeout(resolve, 800);
+              setTimeout(
+                resolve,
+                800
+              );
             }
           );
 
@@ -439,14 +512,17 @@ export default function ChatBox({
           chatAbortRef.current ===
           controller
         ) {
-          chatAbortRef.current = null;
+          chatAbortRef.current =
+            null;
         }
       }
     }
 
     throw (
       lastError ??
-      new Error("Anna reply မရပါ။")
+      new Error(
+        "Anna reply မရပါ။"
+      )
     );
   }
 
@@ -464,6 +540,7 @@ export default function ChatBox({
     ) {
       busyRef.current = false;
       setIsSpeaking(false);
+
       scheduleListeningRestart();
       return;
     }
@@ -474,32 +551,42 @@ export default function ChatBox({
     speechAbortRef.current =
       controller;
 
-    const timeout = setTimeout(() => {
-      controller.abort();
-    }, SPEECH_TIMEOUT_MS);
+    const timeout = setTimeout(
+      () => {
+        controller.abort();
+      },
+      SPEECH_TIMEOUT_MS
+    );
 
     try {
       busyRef.current = true;
 
       setIsSpeaking(true);
       changeStatus("speaking");
+
       cleanUpAudio();
 
-      const response = await fetch(
-        "/api/speech",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-          body: JSON.stringify({
-            text: chineseText,
-          }),
-          signal: controller.signal,
-          cache: "no-store",
-        }
-      );
+      const response =
+        await fetch(
+          "/api/speech",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              text: chineseText,
+            }),
+
+            signal:
+              controller.signal,
+
+            cache: "no-store",
+          }
+        );
 
       if (!response.ok) {
         const errorData =
@@ -524,7 +611,9 @@ export default function ChatBox({
         await response.blob();
 
       const audioUrl =
-        URL.createObjectURL(audioBlob);
+        URL.createObjectURL(
+          audioBlob
+        );
 
       const audio =
         new Audio(audioUrl);
@@ -532,7 +621,8 @@ export default function ChatBox({
       audio.preload = "auto";
 
       audioRef.current = audio;
-      audioUrlRef.current = audioUrl;
+      audioUrlRef.current =
+        audioUrl;
 
       let finished = false;
 
@@ -561,7 +651,7 @@ export default function ChatBox({
 
       audio.onerror = () => {
         setError(
-          "Anna အသံဖွင့်မရပေမယ့် စကားဝိုင်းကို ဆက်ထားပါတယ်။"
+          "Anna အသံဖွင့်မရပေမယ့် conversation ကို ဆက်ထားပါတယ်။"
         );
 
         finishSpeaking();
@@ -593,15 +683,18 @@ export default function ChatBox({
       busyRef.current = false;
 
       if (
-        speechError instanceof DOMException &&
-        speechError.name === "AbortError"
+        speechError instanceof
+          DOMException &&
+        speechError.name ===
+          "AbortError"
       ) {
         setError(
-          "Anna အသံနည်းနည်းကြာသွားလို့ Listening ကို ပြန်စလိုက်ပါတယ်။"
+          "Anna အသံထုတ်တာကြာသွားလို့ Listening ကို ပြန်စလိုက်ပါတယ်။"
         );
       } else {
         setError(
-          speechError instanceof Error
+          speechError instanceof
+            Error
             ? speechError.message
             : "Anna အသံထုတ်မရပါ။"
         );
@@ -656,7 +749,10 @@ export default function ChatBox({
         return;
       }
 
-      if (result.responseId) {
+      if (
+        result.responseId &&
+        inputLanguage !== "my-MM"
+      ) {
         previousResponseIdRef.current =
           result.responseId;
       }
@@ -688,14 +784,23 @@ export default function ChatBox({
         requestError
       );
 
-      setError(
-        requestError instanceof DOMException &&
-        requestError.name === "AbortError"
-          ? "Anna reply ကြာသွားပါတယ်။ ထပ်ပြောကြည့်ပါနော်။"
-          : requestError instanceof Error
+      if (
+        requestError instanceof
+          DOMException &&
+        requestError.name ===
+          "AbortError"
+      ) {
+        setError(
+          "Anna reply ကြာသွားပါတယ်။ ထပ်ပြောကြည့်ပါနော်။"
+        );
+      } else {
+        setError(
+          requestError instanceof
+            Error
             ? requestError.message
             : "AI connection failed."
-      );
+        );
+      }
     } finally {
       if (
         generation ===
@@ -732,7 +837,10 @@ export default function ChatBox({
         "ဒီ Browser မှာ microphone recognition မရပါ။ Google Chrome သုံးပါ။"
       );
 
-      updateAutoConversation(false);
+      updateAutoConversation(
+        false
+      );
+
       changeStatus("ready");
       return;
     }
@@ -747,7 +855,9 @@ export default function ChatBox({
       recognitionRef.current =
         recognition;
 
-      recognition.lang = "zh-CN";
+      recognition.lang =
+        inputLanguage;
+
       recognition.interimResults =
         false;
 
@@ -795,7 +905,9 @@ export default function ChatBox({
           event.error ===
             "service-not-allowed"
         ) {
-          updateAutoConversation(false);
+          updateAutoConversation(
+            false
+          );
 
           setError(
             "Microphone permission ကို Allow လုပ်ပေးပါ။"
@@ -808,7 +920,9 @@ export default function ChatBox({
         if (
           event.error === "aborted"
         ) {
-          if (!stoppingRef.current) {
+          if (
+            !stoppingRef.current
+          ) {
             scheduleListeningRestart();
           }
 
@@ -874,7 +988,8 @@ export default function ChatBox({
         listeningError
       );
 
-      recognitionRef.current = null;
+      recognitionRef.current =
+        null;
 
       setIsListening(false);
       busyRef.current = false;
@@ -937,9 +1052,9 @@ export default function ChatBox({
 
     setReply(
       [
-        "中文：新的聊天开始啦！今天想聊什么呀？",
-        "拼音：Xīn de liáotiān kāishǐ la! Jīntiān xiǎng liáo shénme ya?",
-        "မြန်မာ：စကားဝိုင်းအသစ် စပြီနော်။ ဒီနေ့ ဘာအကြောင်းပြောချင်လဲ။",
+        "中文：新的聊天开始啦！你想用中文还是缅甸语跟我说话？",
+        "拼音：Xīn de liáotiān kāishǐ la! Nǐ xiǎng yòng Zhōngwén háishì Miǎndiànyǔ gēn wǒ shuōhuà?",
+        "မြန်မာ：စကားဝိုင်းအသစ် စပြီနော်။ တရုတ်လိုပြောမလား၊ မြန်မာလိုပြောမလား။",
       ].join("\n")
     );
   }
@@ -952,13 +1067,45 @@ export default function ChatBox({
     }
   }
 
+  function handleLanguageChange(
+    language: InputLanguage
+  ) {
+    setInputLanguage(language);
+    setError("");
+
+    previousResponseIdRef.current =
+      null;
+
+    if (language === "my-MM") {
+      setReply(
+        [
+          "中文：你可以用缅甸语告诉我你想说什么，我会帮你整理成自然的中文。",
+          "拼音：Nǐ kěyǐ yòng Miǎndiànyǔ gàosu wǒ nǐ xiǎng shuō shénme, wǒ huì bāng nǐ zhěnglǐ chéng zìrán de Zhōngwén.",
+          "မြန်မာ：ပြောချင်တာကို မြန်မာလိုပြောပါ။ Anna က တရုတ်လို သဘာဝကျအောင် စာကြောင်းစီပေးပါမယ်။",
+        ].join("\n")
+      );
+    } else {
+      setReply(
+        [
+          "中文：好呀，我们用中文聊天吧！",
+          "拼音：Hǎo ya, wǒmen yòng Zhōngwén liáotiān ba!",
+          "မြန်မာ：ကောင်းပြီ၊ တရုတ်လို စကားပြောကြမယ်နော်။",
+        ].join("\n")
+      );
+    }
+  }
+
   function getStatusText() {
     if (isListening) {
-      return "🎙️ Listening...";
+      return inputLanguage === "my-MM"
+        ? "🎙️ မြန်မာလို နားထောင်နေပါတယ်..."
+        : "🎙️ 正在听你说中文...";
     }
 
     if (isThinking) {
-      return "⏳ Anna is thinking...";
+      return inputLanguage === "my-MM"
+        ? "⏳ တရုတ်လို စာကြောင်းစီနေပါတယ်..."
+        : "⏳ Anna is thinking...";
     }
 
     if (isSpeaking) {
@@ -974,6 +1121,49 @@ export default function ChatBox({
 
   return (
     <div className="space-y-4 text-center">
+      <div className="rounded-2xl border border-white/10 bg-black/20 p-4 text-left">
+        <label
+          htmlFor="voice-language"
+          className="mb-2 block text-sm font-semibold text-purple-200"
+        >
+          ပြောမယ့်ဘာသာစကား
+        </label>
+
+        <select
+          id="voice-language"
+          value={inputLanguage}
+          onChange={(event) =>
+            handleLanguageChange(
+              event.target
+                .value as InputLanguage
+            )
+          }
+          disabled={
+            autoConversation ||
+            isThinking ||
+            isSpeaking ||
+            isListening
+          }
+          className="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <option value="zh-CN">
+            🇨🇳 Chinese — တရုတ်လို စကားပြောမယ်
+          </option>
+
+          <option value="my-MM">
+            🇲🇲 Myanmar — မြန်မာလိုပြောပြီး တရုတ်စာကြောင်းစီမယ်
+          </option>
+        </select>
+
+        <p className="mt-2 text-xs leading-5 text-white/45">
+          Myanmar Mode မှာ ပြောချင်တာကို
+          မြန်မာလိုပြောပါ။ Anna က
+          “နင်ပြောချင်တာ ဒီလိုလား” ဆိုပြီး
+          တရုတ်စာကြောင်း၊ Pinyin နဲ့
+          စာကြောင်းဖွဲ့ပုံကို ပြန်ပေးပါမယ်။
+        </p>
+      </div>
+
       <div className="max-h-96 overflow-y-auto rounded-3xl border border-white/10 bg-black/30 p-5">
         {message && (
           <div className="mb-4 rounded-2xl bg-purple-500/20 p-3 text-left">
@@ -989,7 +1179,9 @@ export default function ChatBox({
 
         <p className="whitespace-pre-line text-left text-base font-semibold leading-8">
           {isThinking
-            ? "Anna is thinking... 🤔"
+            ? inputLanguage === "my-MM"
+              ? "တရုတ်လို စာကြောင်းစီနေပါတယ်... 🤔"
+              : "Anna is thinking... 🤔"
             : reply}
         </p>
       </div>
@@ -1011,7 +1203,9 @@ export default function ChatBox({
       >
         {autoConversation
           ? "⏹ Stop Conversation"
-          : "🎤 Start Conversation"}
+          : inputLanguage === "my-MM"
+            ? "🎤 မြန်မာလို ပြောမယ်"
+            : "🎤 中文开始说话"}
       </button>
 
       <p className="text-sm text-purple-200">
@@ -1049,7 +1243,11 @@ export default function ChatBox({
               void askAnna(message);
             }
           }}
-          placeholder="မြန်မာလို ဒါမှမဟုတ် တရုတ်လို ရိုက်လို့ရတယ်..."
+          placeholder={
+            inputLanguage === "my-MM"
+              ? "ပြောချင်တာကို မြန်မာလို ရိုက်ပါ..."
+              : "တရုတ်လို ရိုက်လည်းရတယ်..."
+          }
           disabled={
             isThinking ||
             isSpeaking ||
