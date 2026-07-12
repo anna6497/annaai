@@ -71,6 +71,10 @@ interface ChatBoxProps {
   ) => void;
 }
 
+const CHAT_TIMEOUT_MS = 25000;
+const SPEECH_TIMEOUT_MS = 30000;
+const RESTART_DELAY_MS = 700;
+
 export default function ChatBox({
   onStatusChange,
 }: ChatBoxProps) {
@@ -83,13 +87,17 @@ export default function ChatBox({
     useState("");
 
   const [reply, setReply] = useState(
-    "按一下麦克风，跟我说中文吧！😄"
+    [
+      "中文：按一下麦克风，跟我说中文吧！😄",
+      "拼音：Àn yíxià màikèfēng, gēn wǒ shuō Zhōngwén ba!",
+      "မြန်မာ：မိုက်ခရိုဖုန်းကို နှိပ်ပြီး Anna နဲ့ တရုတ်လို ပြောပါနော်။",
+    ].join("\n")
   );
 
   const [isListening, setIsListening] =
     useState(false);
 
-  const [isLoading, setIsLoading] =
+  const [isThinking, setIsThinking] =
     useState(false);
 
   const [isSpeaking, setIsSpeaking] =
@@ -114,13 +122,33 @@ export default function ChatBox({
   const audioUrlRef =
     useRef<string | null>(null);
 
+  const restartTimerRef =
+    useRef<ReturnType<typeof setTimeout> | null>(
+      null
+    );
+
+  const audioWatchdogRef =
+    useRef<ReturnType<typeof setTimeout> | null>(
+      null
+    );
+
+  const chatAbortRef =
+    useRef<AbortController | null>(null);
+
+  const speechAbortRef =
+    useRef<AbortController | null>(null);
+
   const autoConversationRef =
     useRef(false);
 
-  const busyRef = useRef(false);
-
-  const manuallyStoppingRef =
+  const busyRef =
     useRef(false);
+
+  const stoppingRef =
+    useRef(false);
+
+  const generationRef =
+    useRef(0);
 
   const previousResponseIdRef =
     useRef<string | null>(null);
@@ -138,25 +166,57 @@ export default function ChatBox({
     setAutoConversation(value);
   }
 
-  function extractChineseText(
-    text: string
-  ) {
-    const chineseLines = text
-      .split("\n")
-      .map((line) => line.trim())
-      .filter((line) =>
-        /[\u4e00-\u9fff]/.test(line)
+  function clearRestartTimer() {
+    if (restartTimerRef.current) {
+      clearTimeout(
+        restartTimerRef.current
       );
 
-    return chineseLines
-      .slice(0, 2)
-      .join(" ");
+      restartTimerRef.current = null;
+    }
+  }
+
+  function clearAudioWatchdog() {
+    if (audioWatchdogRef.current) {
+      clearTimeout(
+        audioWatchdogRef.current
+      );
+
+      audioWatchdogRef.current = null;
+    }
+  }
+
+  function cleanUpRecognition() {
+    const recognition =
+      recognitionRef.current;
+
+    if (!recognition) {
+      return;
+    }
+
+    recognition.onresult = null;
+    recognition.onerror = null;
+    recognition.onend = null;
+
+    try {
+      recognition.abort?.();
+    } catch {
+      // Browser abort error ကို မပြပါ။
+    }
+
+    recognitionRef.current = null;
   }
 
   function cleanUpAudio() {
+    clearAudioWatchdog();
+
     if (audioRef.current) {
+      audioRef.current.onended = null;
+      audioRef.current.onerror = null;
+
       audioRef.current.pause();
       audioRef.current.src = "";
+
       audioRef.current = null;
     }
 
@@ -169,21 +229,49 @@ export default function ChatBox({
     }
   }
 
-  function restartListeningAfterDelay() {
-    if (!autoConversationRef.current) {
-      changeStatus("ready");
-      return;
+  function abortRequests() {
+    chatAbortRef.current?.abort();
+    speechAbortRef.current?.abort();
+
+    chatAbortRef.current = null;
+    speechAbortRef.current = null;
+  }
+
+  function extractChineseText(
+    fullReply: string
+  ) {
+    const lines = fullReply
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    const chineseLine = lines.find(
+      (line) =>
+        line.startsWith("中文：") ||
+        line.startsWith("中文:")
+    );
+
+    if (chineseLine) {
+      return chineseLine
+        .replace(/^中文[：:]\s*/u, "")
+        .trim();
     }
 
-    window.setTimeout(() => {
-      if (
-        autoConversationRef.current &&
-        !busyRef.current &&
-        !manuallyStoppingRef.current
-      ) {
-        startListening();
-      }
-    }, 700);
+    const fallback = lines.find(
+      (line) =>
+        /[\u3400-\u9fff]/u.test(line) &&
+        !line.startsWith("拼音") &&
+        !line.startsWith("မြန်မာ")
+    );
+
+    return (
+      fallback
+        ?.replace(
+          /^(中文|更自然)[：:]\s*/u,
+          ""
+        )
+        .trim() ?? ""
+    );
   }
 
   async function saveConversation(
@@ -193,15 +281,9 @@ export default function ChatBox({
     try {
       const {
         data: { user },
-        error: userError,
       } = await supabase.auth.getUser();
 
-      if (userError || !user) {
-        console.error(
-          "Conversation user error:",
-          userError
-        );
-
+      if (!user) {
         return;
       }
 
@@ -222,31 +304,185 @@ export default function ChatBox({
       }
     } catch (saveError) {
       console.error(
-        "Unexpected conversation save error:",
+        "Conversation save error:",
         saveError
       );
     }
   }
 
-  async function speakChinese(
-    text: string
+  function scheduleListeningRestart(
+    delay = RESTART_DELAY_MS
   ) {
-    const chineseText =
-      extractChineseText(text);
+    clearRestartTimer();
 
-    if (!chineseText) {
+    if (
+      !autoConversationRef.current ||
+      stoppingRef.current
+    ) {
       busyRef.current = false;
-      setIsSpeaking(false);
-      restartListeningAfterDelay();
+      changeStatus("ready");
       return;
     }
+
+    restartTimerRef.current =
+      setTimeout(() => {
+        restartTimerRef.current = null;
+
+        if (
+          autoConversationRef.current &&
+          !stoppingRef.current &&
+          !busyRef.current &&
+          !recognitionRef.current
+        ) {
+          startListening();
+        }
+      }, delay);
+  }
+
+  async function requestAnnaReply(
+    cleanMessage: string
+  ) {
+    let lastError:
+      | Error
+      | null = null;
+
+    for (
+      let attempt = 1;
+      attempt <= 2;
+      attempt += 1
+    ) {
+      const controller =
+        new AbortController();
+
+      chatAbortRef.current =
+        controller;
+
+      const timeout = setTimeout(() => {
+        controller.abort();
+      }, CHAT_TIMEOUT_MS);
+
+      try {
+        const response = await fetch(
+          "/api/chat",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+            body: JSON.stringify({
+              message: cleanMessage,
+
+              previousResponseId:
+                previousResponseIdRef.current,
+            }),
+            signal: controller.signal,
+            cache: "no-store",
+          }
+        );
+
+        const data =
+          await response
+            .json()
+            .catch(() => null);
+
+        if (!response.ok) {
+          throw new Error(
+            data?.error ||
+              "Anna reply မရပါ။"
+          );
+        }
+
+        if (
+          typeof data?.reply !==
+            "string" ||
+          !data.reply.trim()
+        ) {
+          throw new Error(
+            "Anna reply was empty."
+          );
+        }
+
+        return {
+          reply: data.reply.trim(),
+
+          responseId:
+            typeof data.responseId ===
+            "string"
+              ? data.responseId
+              : null,
+        };
+      } catch (requestError) {
+        lastError =
+          requestError instanceof Error
+            ? requestError
+            : new Error(
+                "Anna reply မရပါ။"
+              );
+
+        if (
+          attempt < 2 &&
+          autoConversationRef.current
+        ) {
+          await new Promise<void>(
+            (resolve) => {
+              setTimeout(resolve, 800);
+            }
+          );
+
+          continue;
+        }
+      } finally {
+        clearTimeout(timeout);
+
+        if (
+          chatAbortRef.current ===
+          controller
+        ) {
+          chatAbortRef.current = null;
+        }
+      }
+    }
+
+    throw (
+      lastError ??
+      new Error("Anna reply မရပါ။")
+    );
+  }
+
+  async function speakChinese(
+    fullReply: string,
+    generation: number
+  ) {
+    const chineseText =
+      extractChineseText(fullReply);
+
+    if (
+      !chineseText ||
+      generation !==
+        generationRef.current
+    ) {
+      busyRef.current = false;
+      setIsSpeaking(false);
+      scheduleListeningRestart();
+      return;
+    }
+
+    const controller =
+      new AbortController();
+
+    speechAbortRef.current =
+      controller;
+
+    const timeout = setTimeout(() => {
+      controller.abort();
+    }, SPEECH_TIMEOUT_MS);
 
     try {
       busyRef.current = true;
 
       setIsSpeaking(true);
       changeStatus("speaking");
-
       cleanUpAudio();
 
       const response = await fetch(
@@ -260,6 +496,8 @@ export default function ChatBox({
           body: JSON.stringify({
             text: chineseText,
           }),
+          signal: controller.signal,
+          cache: "no-store",
         }
       );
 
@@ -271,8 +509,15 @@ export default function ChatBox({
 
         throw new Error(
           errorData?.error ||
-            "Speech generation failed."
+            "Anna အသံထုတ်မရပါ။"
         );
+      }
+
+      if (
+        generation !==
+        generationRef.current
+      ) {
+        return;
       }
 
       const audioBlob =
@@ -284,39 +529,59 @@ export default function ChatBox({
       const audio =
         new Audio(audioUrl);
 
+      audio.preload = "auto";
+
       audioRef.current = audio;
       audioUrlRef.current = audioUrl;
 
-      audio.onended = () => {
+      let finished = false;
+
+      function finishSpeaking() {
+        if (finished) {
+          return;
+        }
+
+        finished = true;
+
         cleanUpAudio();
 
         setIsSpeaking(false);
         busyRef.current = false;
 
         if (
-          autoConversationRef.current
+          generation ===
+          generationRef.current
         ) {
-          restartListeningAfterDelay();
-        } else {
-          changeStatus("ready");
+          scheduleListeningRestart();
         }
-      };
+      }
+
+      audio.onended =
+        finishSpeaking;
 
       audio.onerror = () => {
-        cleanUpAudio();
-
-        setIsSpeaking(false);
-        busyRef.current = false;
-
         setError(
-          "Anna အသံဖွင့်မရပါ။"
+          "Anna အသံဖွင့်မရပေမယ့် စကားဝိုင်းကို ဆက်ထားပါတယ်။"
         );
 
-        restartListeningAfterDelay();
+        finishSpeaking();
       };
+
+      audioWatchdogRef.current =
+        setTimeout(
+          finishSpeaking,
+          SPEECH_TIMEOUT_MS
+        );
 
       await audio.play();
     } catch (speechError) {
+      if (
+        generation !==
+        generationRef.current
+      ) {
+        return;
+      }
+
       console.error(
         "Speech error:",
         speechError
@@ -327,18 +592,40 @@ export default function ChatBox({
       setIsSpeaking(false);
       busyRef.current = false;
 
-      setError(
-        speechError instanceof Error
-          ? speechError.message
-          : "Anna အသံထုတ်မရပါ။ ပြန်စမ်းကြည့်ပါ။"
-      );
+      if (
+        speechError instanceof DOMException &&
+        speechError.name === "AbortError"
+      ) {
+        setError(
+          "Anna အသံနည်းနည်းကြာသွားလို့ Listening ကို ပြန်စလိုက်ပါတယ်။"
+        );
+      } else {
+        setError(
+          speechError instanceof Error
+            ? speechError.message
+            : "Anna အသံထုတ်မရပါ။"
+        );
+      }
 
-      restartListeningAfterDelay();
+      scheduleListeningRestart();
+    } finally {
+      clearTimeout(timeout);
+
+      if (
+        speechAbortRef.current ===
+        controller
+      ) {
+        speechAbortRef.current =
+          null;
+      }
     }
   }
 
-  async function askAnna(text: string) {
-    const cleanMessage = text.trim();
+  async function askAnna(
+    text: string
+  ) {
+    const cleanMessage =
+      text.trim();
 
     if (
       !cleanMessage ||
@@ -347,90 +634,91 @@ export default function ChatBox({
       return;
     }
 
+    const generation =
+      generationRef.current;
+
+    busyRef.current = true;
+
+    setIsThinking(true);
+    setError("");
+    changeStatus("thinking");
+
     try {
-      busyRef.current = true;
-
-      setIsLoading(true);
-      changeStatus("thinking");
-      setError("");
-
-      const response = await fetch(
-        "/api/chat",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-          body: JSON.stringify({
-            message: cleanMessage,
-            previousResponseId:
-              previousResponseIdRef.current,
-          }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.error ||
-            "Anna could not reply."
+      const result =
+        await requestAnnaReply(
+          cleanMessage
         );
-      }
-
-      const annaReply =
-        typeof data.reply === "string"
-          ? data.reply
-          : "ခဏလောက်နေရင် ပြန်စမ်းကြည့်ပါနော်။";
 
       if (
-        typeof data.responseId ===
-        "string"
+        generation !==
+        generationRef.current
       ) {
-        previousResponseIdRef.current =
-          data.responseId;
+        return;
       }
 
-      setReply(annaReply);
-      setIsLoading(false);
+      if (result.responseId) {
+        previousResponseIdRef.current =
+          result.responseId;
+      }
 
-      busyRef.current = false;
+      setReply(result.reply);
 
-      // Conversation history ကို
-      // Supabase ထဲသိမ်းမယ်
       void saveConversation(
         cleanMessage,
-        annaReply
+        result.reply
       );
 
-      await speakChinese(annaReply);
+      setIsThinking(false);
+      busyRef.current = false;
+
+      await speakChinese(
+        result.reply,
+        generation
+      );
     } catch (requestError) {
+      if (
+        generation !==
+        generationRef.current
+      ) {
+        return;
+      }
+
       console.error(
         "Chat error:",
         requestError
       );
 
-      setIsLoading(false);
-      busyRef.current = false;
-
       setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "AI connection failed."
+        requestError instanceof DOMException &&
+        requestError.name === "AbortError"
+          ? "Anna reply ကြာသွားပါတယ်။ ထပ်ပြောကြည့်ပါနော်။"
+          : requestError instanceof Error
+            ? requestError.message
+            : "AI connection failed."
       );
+    } finally {
+      if (
+        generation ===
+        generationRef.current
+      ) {
+        setIsThinking(false);
+        busyRef.current = false;
 
-      restartListeningAfterDelay();
+        if (!audioRef.current) {
+          scheduleListeningRestart();
+        }
+      }
     }
   }
 
   function startListening() {
+    clearRestartTimer();
     setError("");
 
     if (
+      stoppingRef.current ||
       busyRef.current ||
-      isListening ||
-      manuallyStoppingRef.current
+      recognitionRef.current
     ) {
       return;
     }
@@ -449,25 +737,10 @@ export default function ChatBox({
       return;
     }
 
+    const generation =
+      generationRef.current;
+
     try {
-      if (recognitionRef.current) {
-        manuallyStoppingRef.current =
-          true;
-
-        recognitionRef.current.onerror =
-          null;
-
-        recognitionRef.current.onend =
-          null;
-
-        recognitionRef.current.abort?.();
-
-        recognitionRef.current = null;
-
-        manuallyStoppingRef.current =
-          false;
-      }
-
       const recognition =
         new Recognition();
 
@@ -475,20 +748,34 @@ export default function ChatBox({
         recognition;
 
       recognition.lang = "zh-CN";
-      recognition.interimResults = false;
-      recognition.continuous = false;
+      recognition.interimResults =
+        false;
+
+      recognition.continuous =
+        false;
 
       recognition.onresult = (
         event
       ) => {
         const transcript =
-          event.results[0][0].transcript.trim();
+          event.results[0]?.[0]?.transcript?.trim();
+
+        recognitionRef.current =
+          null;
+
+        setIsListening(false);
+        busyRef.current = false;
+
+        if (
+          !transcript ||
+          generation !==
+            generationRef.current
+        ) {
+          scheduleListeningRestart();
+          return;
+        }
 
         setMessage(transcript);
-        setIsListening(false);
-
-        busyRef.current = false;
-        recognitionRef.current = null;
 
         void askAnna(transcript);
       };
@@ -496,29 +783,17 @@ export default function ChatBox({
       recognition.onerror = (
         event
       ) => {
+        recognitionRef.current =
+          null;
+
         setIsListening(false);
-
         busyRef.current = false;
-        recognitionRef.current = null;
-
-        if (
-          event.error === "aborted"
-        ) {
-          if (
-            autoConversationRef.current &&
-            !manuallyStoppingRef.current
-          ) {
-            restartListeningAfterDelay();
-          } else {
-            changeStatus("ready");
-          }
-
-          return;
-        }
 
         if (
           event.error ===
-          "not-allowed"
+            "not-allowed" ||
+          event.error ===
+            "service-not-allowed"
         ) {
           updateAutoConversation(false);
 
@@ -531,32 +806,59 @@ export default function ChatBox({
         }
 
         if (
-          event.error === "no-speech"
+          event.error === "aborted"
         ) {
-          restartListeningAfterDelay();
+          if (!stoppingRef.current) {
+            scheduleListeningRestart();
+          }
+
           return;
         }
 
-        console.error(
-          "Microphone recognition error:",
-          event.error
-        );
+        if (
+          event.error ===
+            "no-speech" ||
+          event.error ===
+            "audio-capture" ||
+          event.error === "network"
+        ) {
+          scheduleListeningRestart(
+            1000
+          );
+
+          return;
+        }
 
         setError(
           `Microphone error: ${event.error}`
         );
 
-        restartListeningAfterDelay();
+        scheduleListeningRestart(
+          1000
+        );
       };
 
       recognition.onend = () => {
-        setIsListening(false);
-
         if (
           recognitionRef.current ===
           recognition
         ) {
-          recognitionRef.current = null;
+          recognitionRef.current =
+            null;
+        }
+
+        setIsListening(false);
+
+        if (
+          generation !==
+            generationRef.current ||
+          stoppingRef.current
+        ) {
+          return;
+        }
+
+        if (!busyRef.current) {
+          scheduleListeningRestart();
         }
       };
 
@@ -568,62 +870,60 @@ export default function ChatBox({
       recognition.start();
     } catch (listeningError) {
       console.error(
-        "Start listening error:",
+        "Listening error:",
         listeningError
       );
 
-      setIsListening(false);
-      busyRef.current = false;
       recognitionRef.current = null;
 
+      setIsListening(false);
+      busyRef.current = false;
+
       setError(
-        "Microphone ကို စတင်လို့မရပါ။ ခဏစောင့်ပြီး ပြန်နှိပ်ပါ။"
+        "Microphone ပြန်စဖို့ ခဏစောင့်နေပါတယ်။"
       );
 
-      changeStatus("ready");
+      scheduleListeningRestart(
+        1000
+      );
     }
   }
 
   function startConversation() {
-    manuallyStoppingRef.current =
-      false;
+    stoppingRef.current = false;
+
+    generationRef.current += 1;
 
     updateAutoConversation(true);
+
+    busyRef.current = false;
+
     startListening();
   }
 
   function stopConversation() {
-    manuallyStoppingRef.current =
-      true;
+    stoppingRef.current = true;
+
+    generationRef.current += 1;
 
     updateAutoConversation(false);
 
-    if (recognitionRef.current) {
-      recognitionRef.current.onerror =
-        null;
-
-      recognitionRef.current.onend =
-        null;
-
-      recognitionRef.current.abort?.();
-
-      recognitionRef.current = null;
-    }
-
+    clearRestartTimer();
+    abortRequests();
+    cleanUpRecognition();
     cleanUpAudio();
 
     busyRef.current = false;
 
     setIsListening(false);
-    setIsLoading(false);
+    setIsThinking(false);
     setIsSpeaking(false);
     setError("");
 
     changeStatus("ready");
 
-    window.setTimeout(() => {
-      manuallyStoppingRef.current =
-        false;
+    setTimeout(() => {
+      stoppingRef.current = false;
     }, 300);
   }
 
@@ -636,20 +936,20 @@ export default function ChatBox({
     setMessage("");
 
     setReply(
-      "新的聊天开始啦！跟我说中文吧 😄"
+      [
+        "中文：新的聊天开始啦！今天想聊什么呀？",
+        "拼音：Xīn de liáotiān kāishǐ la! Jīntiān xiǎng liáo shénme ya?",
+        "မြန်မာ：စကားဝိုင်းအသစ် စပြီနော်။ ဒီနေ့ ဘာအကြောင်းပြောချင်လဲ။",
+      ].join("\n")
     );
-
-    setError("");
-    changeStatus("ready");
   }
 
   function handleMainButton() {
     if (autoConversation) {
       stopConversation();
-      return;
+    } else {
+      startConversation();
     }
-
-    startConversation();
   }
 
   function getStatusText() {
@@ -657,7 +957,7 @@ export default function ChatBox({
       return "🎙️ Listening...";
     }
 
-    if (isLoading) {
+    if (isThinking) {
       return "⏳ Anna is thinking...";
     }
 
@@ -674,7 +974,7 @@ export default function ChatBox({
 
   return (
     <div className="space-y-4 text-center">
-      <div className="max-h-64 overflow-y-auto rounded-3xl border border-white/10 bg-black/30 p-5">
+      <div className="max-h-96 overflow-y-auto rounded-3xl border border-white/10 bg-black/30 p-5">
         {message && (
           <div className="mb-4 rounded-2xl bg-purple-500/20 p-3 text-left">
             <p className="text-xs text-purple-200">
@@ -687,8 +987,8 @@ export default function ChatBox({
           </div>
         )}
 
-        <p className="whitespace-pre-line text-lg font-semibold leading-8">
-          {isLoading
+        <p className="whitespace-pre-line text-left text-base font-semibold leading-8">
+          {isThinking
             ? "Anna is thinking... 🤔"
             : reply}
         </p>
@@ -722,7 +1022,7 @@ export default function ChatBox({
         type="button"
         onClick={startNewChat}
         disabled={
-          isLoading ||
+          isThinking ||
           isListening ||
           isSpeaking
         }
@@ -749,9 +1049,9 @@ export default function ChatBox({
               void askAnna(message);
             }
           }}
-          placeholder="တရုတ်လို ရိုက်လည်းရတယ်..."
+          placeholder="မြန်မာလို ဒါမှမဟုတ် တရုတ်လို ရိုက်လို့ရတယ်..."
           disabled={
-            isLoading ||
+            isThinking ||
             isSpeaking ||
             isListening
           }
@@ -765,7 +1065,7 @@ export default function ChatBox({
           }
           disabled={
             !message.trim() ||
-            isLoading ||
+            isThinking ||
             isSpeaking ||
             isListening
           }
@@ -776,7 +1076,8 @@ export default function ChatBox({
       </div>
 
       <p className="text-xs text-white/40">
-        Anna’s voice is AI-generated.
+        Anna’s voice and replies are
+        AI-generated.
       </p>
     </div>
   );
