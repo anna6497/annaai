@@ -1,67 +1,14 @@
 "use client";
 
 import {
-  useMemo,
+  useEffect,
   useRef,
   useState,
 } from "react";
 
-import { createSupabaseBrowserClient } from "@/lib/supabase";
-
-type InputLanguage =
-  | "zh-CN"
-  | "my-MM";
-
-interface SpeechRecognitionEventLike {
-  results: {
-    [index: number]: {
-      [index: number]: {
-        transcript: string;
-      };
-    };
-  };
-}
-
-interface SpeechRecognitionErrorEventLike {
-  error: string;
-}
-
-interface SpeechRecognitionInstance {
-  lang: string;
-  interimResults: boolean;
-  continuous: boolean;
-
-  start: () => void;
-  stop: () => void;
-  abort?: () => void;
-
-  onresult:
-    | ((
-        event: SpeechRecognitionEventLike
-      ) => void)
-    | null;
-
-  onerror:
-    | ((
-        event: SpeechRecognitionErrorEventLike
-      ) => void)
-    | null;
-
-  onend: (() => void) | null;
-}
-
-type SpeechRecognitionConstructor =
-  new () => SpeechRecognitionInstance;
-
-declare global {
-  interface Window {
-    SpeechRecognition?:
-      SpeechRecognitionConstructor;
-
-    webkitSpeechRecognition?:
-      SpeechRecognitionConstructor;
-  }
-}
+type AnnaMode =
+  | "conversation"
+  | "sentence";
 
 export type ConversationStatus =
   | "ready"
@@ -75,97 +22,222 @@ interface ChatBoxProps {
   ) => void;
 }
 
-interface AnnaReplyResult {
-  reply: string;
-  responseId: string | null;
+interface RealtimeEvent {
+  type?: string;
+  delta?: string;
+  transcript?: string;
+  error?: {
+    message?: string;
+  };
+  response?: {
+    status_details?: {
+      error?: {
+        message?: string;
+      };
+    };
+  };
 }
 
-const CHAT_TIMEOUT_MS = 35000;
-const SPEECH_TIMEOUT_MS = 30000;
+interface DisplayReply {
+  hanzi: string;
+  pinyin: string;
+  myanmar: string;
+  alternativeHanzi?: string;
+  alternativePinyin?: string;
+}
+
+interface SpeechRecognitionAlternativeLike {
+  transcript: string;
+  confidence?: number;
+}
+
+interface SpeechRecognitionResultLike {
+  isFinal: boolean;
+  length: number;
+  [index: number]: SpeechRecognitionAlternativeLike;
+}
+
+interface SpeechRecognitionEventLike {
+  resultIndex: number;
+  results: {
+    length: number;
+    [index: number]: SpeechRecognitionResultLike;
+  };
+}
+
+interface SpeechRecognitionErrorEventLike {
+  error: string;
+  message?: string;
+}
+
+interface SpeechRecognitionInstance {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  maxAlternatives: number;
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+  onstart: (() => void) | null;
+  onspeechstart: (() => void) | null;
+  onspeechend: (() => void) | null;
+  onresult:
+    | ((
+        event: SpeechRecognitionEventLike
+      ) => void)
+    | null;
+  onerror:
+    | ((
+        event: SpeechRecognitionErrorEventLike
+      ) => void)
+    | null;
+  onend: (() => void) | null;
+}
+
+type SpeechRecognitionConstructor =
+  new () => SpeechRecognitionInstance;
+
+declare global {
+  interface Window {
+    SpeechRecognition?:
+      SpeechRecognitionConstructor;
+    webkitSpeechRecognition?:
+      SpeechRecognitionConstructor;
+  }
+}
+
 const RESTART_DELAY_MS = 700;
-const MAX_CHAT_ATTEMPTS = 2;
+const REQUEST_TIMEOUT_MS = 45000;
+
+const MODE_DETAILS: Record<
+  AnnaMode,
+  {
+    label: string;
+    description: string;
+    startText: string;
+    welcome: DisplayReply;
+  }
+> = {
+  conversation: {
+    label:
+      "🇨🇳 Chinese — တရုတ်လို စကားပြောမယ်",
+    description:
+      "Chinese Mode က Realtime ဖြစ်ပါတယ်။ Start တစ်ကြိမ်နှိပ်ပြီး ဆက်တိုက်ပြောနိုင်ပါတယ်။",
+    startText:
+      "တရုတ်လို စကားပြောမယ်",
+    welcome: {
+      hanzi:
+        "你好呀！我们像朋友一样用中文聊天吧！",
+      pinyin:
+        "Nǐ hǎo ya! Wǒmen xiàng péngyou yíyàng yòng Zhōngwén liáotiān ba!",
+      myanmar:
+        "ဟိုင်း။ သူငယ်ချင်းတွေလို တရုတ်လို စကားပြောကြမယ်နော်။",
+    },
+  },
+
+  sentence: {
+    label:
+      "🇲🇲 Myanmar — မြန်မာလိုပြောပြီး တရုတ်စာကြောင်းစီမယ်",
+    description:
+      "Browser Myanmar voice recognition ကိုသုံးပါတယ်။ Start တစ်ကြိမ်နှိပ်ပြီး စာကြောင်းများများ ဆက်ပြောနိုင်ပါတယ်။",
+    startText:
+      "မြန်မာလို စကားပြောမယ်",
+    welcome: {
+      hanzi:
+        "请用缅甸语说出你想表达的意思。",
+      pinyin:
+        "Qǐng yòng Miǎndiànyǔ shuō chū nǐ xiǎng biǎodá de yìsi.",
+      myanmar:
+        "ပြောချင်တဲ့အဓိပ္ပါယ်ကို မြန်မာလိုပြောပါ။",
+    },
+  },
+};
 
 export default function ChatBox({
   onStatusChange,
 }: ChatBoxProps) {
-  const supabase = useMemo(
-    () => createSupabaseBrowserClient(),
-    []
-  );
+  const [mode, setMode] =
+    useState<AnnaMode>("conversation");
 
-  const [inputLanguage, setInputLanguage] =
-    useState<InputLanguage>("zh-CN");
+  const [isConnected, setIsConnected] =
+    useState(false);
+  const [isConnecting, setIsConnecting] =
+    useState(false);
+  const [isMuted, setIsMuted] =
+    useState(false);
 
-  const [message, setMessage] =
+  const [isUserSpeaking, setIsUserSpeaking] =
+    useState(false);
+  const [isAnnaSpeaking, setIsAnnaSpeaking] =
+    useState(false);
+  const [isFormatting, setIsFormatting] =
+    useState(false);
+
+  const [myanmarActive, setMyanmarActive] =
+    useState(false);
+  const [isMyanmarListening, setIsMyanmarListening] =
+    useState(false);
+  const [isBuildingSentence, setIsBuildingSentence] =
+    useState(false);
+
+  const [userTranscript, setUserTranscript] =
+    useState("");
+  const [interimTranscript, setInterimTranscript] =
     useState("");
 
+  const [liveHanzi, setLiveHanzi] =
+    useState("");
   const [reply, setReply] =
-    useState(
-      [
-        "中文：你好呀！你可以选择中文或者缅甸语跟我说话。",
-        "拼音：Nǐ hǎo ya! Nǐ kěyǐ xuǎnzé Zhōngwén huòzhě Miǎndiànyǔ gēn wǒ shuōhuà.",
-        "မြန်မာ：ဟိုင်း။ တရုတ်လိုဖြစ်ဖြစ် မြန်မာလိုဖြစ်ဖြစ် ရွေးပြီး Anna နဲ့ စကားပြောနိုင်ပါတယ်။",
-      ].join("\n")
+    useState<DisplayReply>(
+      MODE_DETAILS.conversation.welcome
     );
-
-  const [isListening, setIsListening] =
-    useState(false);
-
-  const [isThinking, setIsThinking] =
-    useState(false);
-
-  const [isSpeaking, setIsSpeaking] =
-    useState(false);
-
-  const [
-    autoConversation,
-    setAutoConversation,
-  ] = useState(false);
 
   const [error, setError] =
     useState("");
+
+  const pcRef =
+    useRef<RTCPeerConnection | null>(null);
+  const dcRef =
+    useRef<RTCDataChannel | null>(null);
+  const realtimeStreamRef =
+    useRef<MediaStream | null>(null);
+  const remoteAudioRef =
+    useRef<HTMLAudioElement | null>(null);
+
+  const realtimeReplyRef =
+    useRef("");
+  const realtimeTranscriptRef =
+    useRef("");
 
   const recognitionRef =
     useRef<SpeechRecognitionInstance | null>(
       null
     );
-
-  const audioRef =
-    useRef<HTMLAudioElement | null>(null);
-
-  const audioUrlRef =
-    useRef<string | null>(null);
-
+  const myanmarActiveRef =
+    useRef(false);
+  const myanmarBusyRef =
+    useRef(false);
+  const myanmarStoppingRef =
+    useRef(false);
   const restartTimerRef =
-    useRef<ReturnType<
-      typeof setTimeout
-    > | null>(null);
+    useRef<
+      ReturnType<typeof setTimeout> | null
+    >(null);
 
-  const audioWatchdogRef =
-    useRef<ReturnType<
-      typeof setTimeout
-    > | null>(null);
-
-  const chatAbortRef =
-    useRef<AbortController | null>(null);
-
-  const speechAbortRef =
-    useRef<AbortController | null>(null);
-
-  const autoConversationRef =
-    useRef(false);
-
-  const busyRef =
-    useRef(false);
-
-  const stoppingRef =
-    useRef(false);
-
-  const generationRef =
-    useRef(0);
-
-  const previousResponseIdRef =
+  const playbackAudioRef =
+    useRef<HTMLAudioElement | null>(null);
+  const playbackUrlRef =
     useRef<string | null>(null);
+
+  const formatAbortRef =
+    useRef<AbortController | null>(null);
+  const sentenceAbortRef =
+    useRef<AbortController | null>(null);
+
+  const mountedRef = useRef(true);
+
+  const currentMode =
+    MODE_DETAILS[mode];
 
   function changeStatus(
     status: ConversationStatus
@@ -173,38 +245,38 @@ export default function ChatBox({
     onStatusChange?.(status);
   }
 
-  function updateAutoConversation(
-    value: boolean
-  ) {
-    autoConversationRef.current =
-      value;
-
-    setAutoConversation(value);
-  }
-
   function clearRestartTimer() {
     if (restartTimerRef.current) {
       clearTimeout(
         restartTimerRef.current
       );
-
-      restartTimerRef.current =
-        null;
+      restartTimerRef.current = null;
     }
   }
 
-  function clearAudioWatchdog() {
-    if (audioWatchdogRef.current) {
-      clearTimeout(
-        audioWatchdogRef.current
+  function cleanPlayback() {
+    if (playbackAudioRef.current) {
+      playbackAudioRef.current.onended =
+        null;
+      playbackAudioRef.current.onerror =
+        null;
+      playbackAudioRef.current.pause();
+      playbackAudioRef.current.removeAttribute(
+        "src"
       );
+      playbackAudioRef.current.load();
+      playbackAudioRef.current = null;
+    }
 
-      audioWatchdogRef.current =
-        null;
+    if (playbackUrlRef.current) {
+      URL.revokeObjectURL(
+        playbackUrlRef.current
+      );
+      playbackUrlRef.current = null;
     }
   }
 
-  function cleanUpRecognition() {
+  function cleanMyanmarRecognition() {
     const recognition =
       recognitionRef.current;
 
@@ -212,617 +284,832 @@ export default function ChatBox({
       return;
     }
 
+    recognition.onstart = null;
+    recognition.onspeechstart = null;
+    recognition.onspeechend = null;
     recognition.onresult = null;
     recognition.onerror = null;
     recognition.onend = null;
 
     try {
-      recognition.abort?.();
-    } catch {
-      // Browser abort error ကို ignore လုပ်ပါမယ်။
-    }
+      recognition.abort();
+    } catch {}
 
     recognitionRef.current = null;
   }
 
-  function cleanUpAudio() {
-    clearAudioWatchdog();
+  function closeRealtimeSession() {
+    formatAbortRef.current?.abort();
+    formatAbortRef.current = null;
 
-    if (audioRef.current) {
-      audioRef.current.onended = null;
-      audioRef.current.onerror = null;
+    dcRef.current?.close();
+    dcRef.current = null;
 
-      audioRef.current.pause();
-      audioRef.current.src = "";
+    pcRef.current?.close();
+    pcRef.current = null;
 
-      audioRef.current = null;
-    }
-
-    if (audioUrlRef.current) {
-      URL.revokeObjectURL(
-        audioUrlRef.current
+    realtimeStreamRef.current
+      ?.getTracks()
+      .forEach((track) =>
+        track.stop()
       );
+    realtimeStreamRef.current = null;
 
-      audioUrlRef.current = null;
+    if (remoteAudioRef.current) {
+      remoteAudioRef.current.pause();
+      remoteAudioRef.current.srcObject =
+        null;
+      remoteAudioRef.current.remove();
+      remoteAudioRef.current = null;
     }
+
+    realtimeReplyRef.current = "";
+    realtimeTranscriptRef.current = "";
+
+    setIsConnected(false);
+    setIsConnecting(false);
+    setIsMuted(false);
+    setIsUserSpeaking(false);
+    setIsAnnaSpeaking(false);
+    setIsFormatting(false);
+    setLiveHanzi("");
+
+    changeStatus("ready");
   }
 
-  function abortRequests() {
-    chatAbortRef.current?.abort();
-    speechAbortRef.current?.abort();
+  function stopMyanmarMode() {
+    myanmarStoppingRef.current = true;
+    myanmarActiveRef.current = false;
+    myanmarBusyRef.current = false;
 
-    chatAbortRef.current = null;
-    speechAbortRef.current = null;
+    setMyanmarActive(false);
+    setIsMyanmarListening(false);
+    setIsBuildingSentence(false);
+    setIsAnnaSpeaking(false);
+    setInterimTranscript("");
+
+    clearRestartTimer();
+    cleanMyanmarRecognition();
+    cleanPlayback();
+
+    sentenceAbortRef.current?.abort();
+    sentenceAbortRef.current = null;
+
+    changeStatus("ready");
+
+    window.setTimeout(() => {
+      myanmarStoppingRef.current = false;
+    }, 300);
   }
 
-  function extractChineseText(
-    fullReply: string
+  function stopEverything() {
+    closeRealtimeSession();
+    stopMyanmarMode();
+  }
+
+  useEffect(() => {
+    mountedRef.current = true;
+
+    return () => {
+      mountedRef.current = false;
+      stopEverything();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function formatRealtimeReply(
+    hanzi: string
   ) {
-    const lines = fullReply
-      .split("\n")
-      .map((line) => line.trim())
-      .filter(Boolean);
+    const clean = hanzi.trim();
 
-    const chineseLine = lines.find(
-      (line) =>
-        line.startsWith("中文：") ||
-        line.startsWith("中文:")
-    );
-
-    if (chineseLine) {
-      return chineseLine
-        .replace(
-          /^中文[：:]\s*/u,
-          ""
-        )
-        .trim();
+    if (!clean) {
+      return;
     }
 
-    const mainSentenceIndex =
-      lines.findIndex(
-        (line) =>
-          line.startsWith(
-            "အဓိကစာကြောင်း："
-          ) ||
-          line.startsWith(
-            "အဓိကစာကြောင်း:"
-          )
-      );
+    formatAbortRef.current?.abort();
 
-    if (
-      mainSentenceIndex !== -1 &&
-      lines[mainSentenceIndex + 1]
-    ) {
-      const possibleChinese =
-        lines[mainSentenceIndex + 1];
+    const controller =
+      new AbortController();
+    formatAbortRef.current = controller;
 
-      if (
-        /[\u3400-\u9fff]/u.test(
-          possibleChinese
-        )
-      ) {
-        return possibleChinese;
-      }
-    }
+    setIsFormatting(true);
 
-    const fallback = lines.find(
-      (line) =>
-        /[\u3400-\u9fff]/u.test(
-          line
-        ) &&
-        !line.startsWith("拼音") &&
-        !line.startsWith("မြန်မာ")
-    );
-
-    return (
-      fallback
-        ?.replace(
-          /^(中文|更自然)[：:]\s*/u,
-          ""
-        )
-        .trim() ?? ""
-    );
-  }
-
-  async function saveConversation(
-    userMessage: string,
-    annaReply: string
-  ) {
     try {
-      const {
-        data: { user },
-      } =
-        await supabase.auth.getUser();
+      const response = await fetch(
+        "/api/format-reply",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            hanzi: clean,
+          }),
+          signal: controller.signal,
+          cache: "no-store",
+        }
+      );
 
-      if (!user) {
+      const data = await response
+        .json()
+        .catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(
+          data?.error ||
+            `Format error (${response.status})`
+        );
+      }
+
+      if (!mountedRef.current) {
         return;
       }
 
-      const { error: saveError } =
-        await supabase
-          .from("conversations")
-          .insert({
-            user_id: user.id,
-            user_message:
-              userMessage,
-            anna_reply: annaReply,
-          });
+      setReply({
+        hanzi:
+          typeof data?.hanzi === "string" &&
+          data.hanzi.trim()
+            ? data.hanzi.trim()
+            : clean,
+        pinyin:
+          typeof data?.pinyin === "string"
+            ? data.pinyin.trim()
+            : "",
+        myanmar:
+          typeof data?.myanmar === "string"
+            ? data.myanmar.trim()
+            : "",
+      });
 
-      if (saveError) {
-        console.error(
-          "Conversation save error:",
-          saveError
-        );
+      setLiveHanzi("");
+    } catch (formatError) {
+      if (
+        formatError instanceof DOMException &&
+        formatError.name === "AbortError"
+      ) {
+        return;
       }
-    } catch (saveError) {
-      console.error(
-        "Conversation save error:",
-        saveError
+
+      setError(
+        formatError instanceof Error
+          ? formatError.message
+          : "Pinyin/Myanmar ပြောင်းမရပါ။"
       );
+
+      setReply((previous) => ({
+        ...previous,
+        hanzi: clean,
+      }));
+    } finally {
+      if (
+        formatAbortRef.current ===
+        controller
+      ) {
+        formatAbortRef.current = null;
+      }
+
+      if (mountedRef.current) {
+        setIsFormatting(false);
+      }
     }
   }
 
-  function scheduleListeningRestart(
+  function handleRealtimeEvent(
+    event: RealtimeEvent
+  ) {
+    switch (event.type) {
+      case "session.created":
+      case "session.updated":
+        setError("");
+        return;
+
+      case "input_audio_buffer.speech_started":
+        realtimeTranscriptRef.current = "";
+        setUserTranscript("");
+        setIsUserSpeaking(true);
+        setIsAnnaSpeaking(false);
+        changeStatus("listening");
+        return;
+
+      case "input_audio_buffer.speech_stopped":
+        setIsUserSpeaking(false);
+        changeStatus("thinking");
+        return;
+
+      case "conversation.item.input_audio_transcription.delta": {
+        const delta =
+          typeof event.delta === "string"
+            ? event.delta
+            : "";
+
+        if (!delta) {
+          return;
+        }
+
+        realtimeTranscriptRef.current +=
+          delta;
+
+        setUserTranscript(
+          realtimeTranscriptRef.current
+        );
+
+        return;
+      }
+
+      case "conversation.item.input_audio_transcription.completed": {
+        const transcript =
+          typeof event.transcript ===
+            "string"
+            ? event.transcript.trim()
+            : realtimeTranscriptRef.current.trim();
+
+        if (transcript) {
+          setUserTranscript(transcript);
+        }
+
+        realtimeTranscriptRef.current = "";
+        return;
+      }
+
+      case "response.created":
+        realtimeReplyRef.current = "";
+        setLiveHanzi("");
+        changeStatus("thinking");
+        return;
+
+      case "response.output_audio_transcript.delta":
+      case "response.output_text.delta": {
+        const delta =
+          typeof event.delta === "string"
+            ? event.delta
+            : "";
+
+        if (!delta) {
+          return;
+        }
+
+        realtimeReplyRef.current += delta;
+        setLiveHanzi(
+          realtimeReplyRef.current
+        );
+        setIsAnnaSpeaking(true);
+        changeStatus("speaking");
+        return;
+      }
+
+      case "response.output_audio_transcript.done":
+      case "response.output_text.done": {
+        const finalHanzi =
+          typeof event.transcript ===
+            "string" &&
+          event.transcript.trim()
+            ? event.transcript.trim()
+            : realtimeReplyRef.current.trim();
+
+        if (finalHanzi) {
+          realtimeReplyRef.current =
+            finalHanzi;
+          setLiveHanzi(finalHanzi);
+          void formatRealtimeReply(
+            finalHanzi
+          );
+        }
+
+        return;
+      }
+
+      case "response.done": {
+        const responseError =
+          event.response?.status_details
+            ?.error?.message;
+
+        if (responseError) {
+          setError(responseError);
+        }
+
+        const finalHanzi =
+          realtimeReplyRef.current.trim();
+
+        if (finalHanzi) {
+          setLiveHanzi(finalHanzi);
+          void formatRealtimeReply(
+            finalHanzi
+          );
+        }
+
+        realtimeReplyRef.current = "";
+        setIsAnnaSpeaking(false);
+        changeStatus("listening");
+        return;
+      }
+
+      case "error":
+        setError(
+          event.error?.message ||
+            "Realtime API error ဖြစ်သွားပါတယ်။"
+        );
+        setIsAnnaSpeaking(false);
+        setIsUserSpeaking(false);
+        changeStatus("ready");
+        return;
+
+      default:
+        return;
+    }
+  }
+
+  async function startRealtimeSession() {
+    if (
+      isConnecting ||
+      isConnected
+    ) {
+      return;
+    }
+
+    if (
+      !navigator.mediaDevices
+        ?.getUserMedia
+    ) {
+      setError(
+        "ဒီ Browser မှာ microphone မရပါ။"
+      );
+      return;
+    }
+
+    setIsConnecting(true);
+    setError("");
+    setUserTranscript("");
+    setLiveHanzi("");
+
+    realtimeReplyRef.current = "";
+    realtimeTranscriptRef.current = "";
+
+    changeStatus("thinking");
+
+    try {
+      const stream =
+        await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+            channelCount: 1,
+          },
+        });
+
+      realtimeStreamRef.current =
+        stream;
+
+      const pc =
+        new RTCPeerConnection();
+      pcRef.current = pc;
+
+      const audio =
+        document.createElement("audio");
+
+      audio.autoplay = true;
+      audio.playsInline = true;
+      audio.muted = false;
+
+      document.body.appendChild(audio);
+      remoteAudioRef.current = audio;
+
+      pc.ontrack = (event) => {
+        const [remoteStream] =
+          event.streams;
+
+        if (!remoteStream) {
+          return;
+        }
+
+        audio.srcObject = remoteStream;
+
+        void audio.play().catch(() => {
+          setError(
+            "Anna အသံမထွက်ရင် ဖုန်း Silent Mode ကိုပိတ်ပြီး Start ပြန်နှိပ်ပါ။"
+          );
+        });
+      };
+
+      const microphoneTrack =
+        stream.getAudioTracks()[0];
+
+      if (!microphoneTrack) {
+        throw new Error(
+          "Microphone track မတွေ့ပါ။"
+        );
+      }
+
+      pc.addTrack(
+        microphoneTrack,
+        stream
+      );
+
+      const dc =
+        pc.createDataChannel(
+          "oai-events"
+        );
+
+      dcRef.current = dc;
+
+      dc.addEventListener(
+        "message",
+        (messageEvent) => {
+          try {
+            handleRealtimeEvent(
+              JSON.parse(
+                messageEvent.data
+              ) as RealtimeEvent
+            );
+          } catch (parseError) {
+            console.error(
+              "Realtime event parse error:",
+              parseError
+            );
+          }
+        }
+      );
+
+      dc.addEventListener(
+        "open",
+        () => {
+          if (!mountedRef.current) {
+            return;
+          }
+
+          setIsConnected(true);
+          setIsConnecting(false);
+          setError("");
+          changeStatus("listening");
+        }
+      );
+
+      dc.addEventListener(
+        "close",
+        () => {
+          if (mountedRef.current) {
+            closeRealtimeSession();
+          }
+        }
+      );
+
+      pc.addEventListener(
+        "connectionstatechange",
+        () => {
+          if (
+            pc.connectionState ===
+              "failed" ||
+            pc.connectionState ===
+              "disconnected"
+          ) {
+            if (mountedRef.current) {
+              setError(
+                "Realtime connection ပြတ်သွားပါတယ်။"
+              );
+              closeRealtimeSession();
+            }
+          }
+        }
+      );
+
+      const offer =
+        await pc.createOffer();
+
+      await pc.setLocalDescription(
+        offer
+      );
+
+      if (!offer.sdp) {
+        throw new Error(
+          "WebRTC SDP မရပါ။"
+        );
+      }
+
+      const response = await fetch(
+        "/api/realtime/session",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/sdp",
+          },
+          body: offer.sdp,
+          cache: "no-store",
+        }
+      );
+
+      const responseBody =
+        await response.text();
+
+      if (!response.ok) {
+        let apiMessage =
+          responseBody;
+
+        try {
+          const parsed =
+            JSON.parse(responseBody);
+
+          apiMessage =
+            parsed.error ||
+            responseBody;
+        } catch {}
+
+        throw new Error(apiMessage);
+      }
+
+      await pc.setRemoteDescription({
+        type: "answer",
+        sdp: responseBody,
+      });
+    } catch (startError) {
+      console.error(
+        "Realtime start error:",
+        startError
+      );
+
+      closeRealtimeSession();
+
+      setError(
+        startError instanceof
+            DOMException &&
+          startError.name ===
+            "NotAllowedError"
+          ? "Microphone permission ကို Allow လုပ်ပေးပါ။"
+          : startError instanceof Error
+            ? startError.message
+            : "Realtime session စမရပါ။"
+      );
+
+      setIsConnecting(false);
+      changeStatus("ready");
+    }
+  }
+
+  function scheduleMyanmarRestart(
     delay = RESTART_DELAY_MS
   ) {
     clearRestartTimer();
 
     if (
-      !autoConversationRef.current ||
-      stoppingRef.current
+      !myanmarActiveRef.current ||
+      myanmarStoppingRef.current ||
+      myanmarBusyRef.current ||
+      mode !== "sentence"
     ) {
-      busyRef.current = false;
-      changeStatus("ready");
       return;
     }
 
     restartTimerRef.current =
       setTimeout(() => {
-        restartTimerRef.current =
-          null;
+        restartTimerRef.current = null;
 
         if (
-          autoConversationRef.current &&
-          !stoppingRef.current &&
-          !busyRef.current &&
-          !recognitionRef.current
+          myanmarActiveRef.current &&
+          !myanmarStoppingRef.current &&
+          !myanmarBusyRef.current &&
+          !recognitionRef.current &&
+          mode === "sentence"
         ) {
-          startListening();
+          startMyanmarRecognition();
         }
       }, delay);
   }
 
-  async function requestAnnaReply(
-    cleanMessage: string
-  ): Promise<AnnaReplyResult> {
-    let lastError: Error | null =
-      null;
-
-    for (
-      let attempt = 1;
-      attempt <=
-      MAX_CHAT_ATTEMPTS;
-      attempt += 1
-    ) {
-      const controller =
-        new AbortController();
-
-      chatAbortRef.current =
-        controller;
-
-      const timeout = setTimeout(
-        () => {
-          controller.abort();
-        },
-        CHAT_TIMEOUT_MS
-      );
-
-      try {
-        const response =
-          await fetch(
-            "/api/chat",
-            {
-              method: "POST",
-
-              headers: {
-                "Content-Type":
-                  "application/json",
-              },
-
-              body: JSON.stringify({
-                message:
-                  cleanMessage,
-
-                inputLanguage,
-
-                previousResponseId:
-                  inputLanguage ===
-                  "my-MM"
-                    ? null
-                    : previousResponseIdRef.current,
-              }),
-
-              signal:
-                controller.signal,
-
-              cache: "no-store",
-            }
-          );
-
-        const data =
-          await response
-            .json()
-            .catch(() => null);
-
-        if (!response.ok) {
-          throw new Error(
-            data?.error ||
-              `Anna reply မရပါ။ (${response.status})`
-          );
-        }
-
-        if (
-          typeof data?.reply !==
-            "string" ||
-          !data.reply.trim()
-        ) {
-          throw new Error(
-            "Anna reply was empty."
-          );
-        }
-
-        return {
-          reply:
-            data.reply.trim(),
-
-          responseId:
-            typeof data.responseId ===
-            "string"
-              ? data.responseId
-              : null,
-        };
-      } catch (requestError) {
-        lastError =
-          requestError instanceof Error
-            ? requestError
-            : new Error(
-                "Anna reply မရပါ။"
-              );
-
-        if (
-          attempt <
-            MAX_CHAT_ATTEMPTS &&
-          autoConversationRef.current
-        ) {
-          await new Promise<void>(
-            (resolve) => {
-              setTimeout(
-                resolve,
-                800
-              );
-            }
-          );
-
-          continue;
-        }
-      } finally {
-        clearTimeout(timeout);
-
-        if (
-          chatAbortRef.current ===
-          controller
-        ) {
-          chatAbortRef.current =
-            null;
-        }
-      }
-    }
-
-    throw (
-      lastError ??
-      new Error(
-        "Anna reply မရပါ။"
-      )
-    );
-  }
-
-  async function speakChinese(
-    fullReply: string,
-    generation: number
+  async function speakMyanmarModeChinese(
+    text: string
   ) {
-    const chineseText =
-      extractChineseText(fullReply);
+    const clean = text.trim();
 
-    if (
-      !chineseText ||
-      generation !==
-        generationRef.current
-    ) {
-      busyRef.current = false;
-      setIsSpeaking(false);
-
-      scheduleListeningRestart();
+    if (!clean) {
+      scheduleMyanmarRestart();
       return;
     }
 
-    const controller =
-      new AbortController();
+    cleanPlayback();
 
-    speechAbortRef.current =
-      controller;
-
-    const timeout = setTimeout(
-      () => {
-        controller.abort();
-      },
-      SPEECH_TIMEOUT_MS
-    );
+    myanmarBusyRef.current = true;
+    setIsAnnaSpeaking(true);
+    changeStatus("speaking");
 
     try {
-      busyRef.current = true;
-
-      setIsSpeaking(true);
-      changeStatus("speaking");
-
-      cleanUpAudio();
-
-      const response =
-        await fetch(
-          "/api/speech",
-          {
-            method: "POST",
-
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-
-            body: JSON.stringify({
-              text: chineseText,
-            }),
-
-            signal:
-              controller.signal,
-
-            cache: "no-store",
-          }
-        );
+      const response = await fetch(
+        "/api/speech",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            text: clean,
+          }),
+          cache: "no-store",
+        }
+      );
 
       if (!response.ok) {
-        const errorData =
-          await response
-            .json()
-            .catch(() => null);
+        const data = await response
+          .json()
+          .catch(() => null);
 
         throw new Error(
-          errorData?.error ||
-            "Anna အသံထုတ်မရပါ။"
+          data?.error ||
+            `အသံထုတ်မရပါ။ (${response.status})`
         );
       }
 
-      if (
-        generation !==
-        generationRef.current
-      ) {
-        return;
-      }
-
-      const audioBlob =
+      const blob =
         await response.blob();
-
-      const audioUrl =
-        URL.createObjectURL(
-          audioBlob
-        );
-
+      const url =
+        URL.createObjectURL(blob);
       const audio =
-        new Audio(audioUrl);
+        new Audio(url);
 
-      audio.preload = "auto";
+      audio.playsInline = true;
 
-      audioRef.current = audio;
-      audioUrlRef.current =
-        audioUrl;
+      playbackAudioRef.current =
+        audio;
+      playbackUrlRef.current =
+        url;
 
       let finished = false;
 
-      function finishSpeaking() {
+      const finish = () => {
         if (finished) {
           return;
         }
 
         finished = true;
+        cleanPlayback();
 
-        cleanUpAudio();
+        setIsAnnaSpeaking(false);
+        myanmarBusyRef.current = false;
 
-        setIsSpeaking(false);
-        busyRef.current = false;
-
-        if (
-          generation ===
-          generationRef.current
-        ) {
-          scheduleListeningRestart();
-        }
-      }
-
-      audio.onended =
-        finishSpeaking;
-
-      audio.onerror = () => {
-        setError(
-          "Anna အသံဖွင့်မရပေမယ့် conversation ကို ဆက်ထားပါတယ်။"
-        );
-
-        finishSpeaking();
+        scheduleMyanmarRestart();
       };
 
-      audioWatchdogRef.current =
-        setTimeout(
-          finishSpeaking,
-          SPEECH_TIMEOUT_MS
-        );
+      audio.onended = finish;
+      audio.onerror = finish;
 
       await audio.play();
     } catch (speechError) {
-      if (
-        generation !==
-        generationRef.current
-      ) {
-        return;
-      }
-
       console.error(
-        "Speech error:",
+        "Myanmar mode speech error:",
         speechError
       );
 
-      cleanUpAudio();
+      setError(
+        speechError instanceof Error
+          ? speechError.message
+          : "အသံထုတ်မရပါ။"
+      );
 
-      setIsSpeaking(false);
-      busyRef.current = false;
+      setIsAnnaSpeaking(false);
+      myanmarBusyRef.current = false;
 
-      if (
-        speechError instanceof
-          DOMException &&
-        speechError.name ===
-          "AbortError"
-      ) {
-        setError(
-          "Anna အသံထုတ်တာကြာသွားလို့ Listening ကို ပြန်စလိုက်ပါတယ်။"
-        );
-      } else {
-        setError(
-          speechError instanceof
-            Error
-            ? speechError.message
-            : "Anna အသံထုတ်မရပါ။"
+      scheduleMyanmarRestart();
+    }
+  }
+
+  async function buildMyanmarSentence(
+    transcript: string
+  ) {
+    const clean =
+      transcript.trim();
+
+    if (
+      !clean ||
+      myanmarBusyRef.current
+    ) {
+      scheduleMyanmarRestart();
+      return;
+    }
+
+    myanmarBusyRef.current = true;
+    setIsBuildingSentence(true);
+    setError("");
+    setUserTranscript(clean);
+    changeStatus("thinking");
+
+    sentenceAbortRef.current?.abort();
+
+    const controller =
+      new AbortController();
+    sentenceAbortRef.current =
+      controller;
+
+    const timeout =
+      setTimeout(
+        () => controller.abort(),
+        REQUEST_TIMEOUT_MS
+      );
+
+    try {
+      const response = await fetch(
+        "/api/sentence-builder",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            burmese: clean,
+          }),
+          signal: controller.signal,
+          cache: "no-store",
+        }
+      );
+
+      const data = await response
+        .json()
+        .catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(
+          data?.error ||
+            `တရုတ်စာကြောင်း စီမရပါ။ (${response.status})`
         );
       }
 
-      scheduleListeningRestart();
+      const nextReply: DisplayReply = {
+        hanzi:
+          typeof data?.hanzi === "string"
+            ? data.hanzi.trim()
+            : "",
+        pinyin:
+          typeof data?.pinyin === "string"
+            ? data.pinyin.trim()
+            : "",
+        myanmar:
+          typeof data?.myanmar === "string"
+            ? data.myanmar.trim()
+            : clean,
+        alternativeHanzi:
+          typeof data?.alternativeHanzi ===
+            "string"
+            ? data.alternativeHanzi.trim()
+            : "",
+        alternativePinyin:
+          typeof data?.alternativePinyin ===
+            "string"
+            ? data.alternativePinyin.trim()
+            : "",
+      };
+
+      if (!nextReply.hanzi) {
+        throw new Error(
+          "Chinese sentence မရပါ။"
+        );
+      }
+
+      setReply(nextReply);
+      setIsBuildingSentence(false);
+      myanmarBusyRef.current = false;
+
+      await speakMyanmarModeChinese(
+        nextReply.hanzi
+      );
+    } catch (buildError) {
+      console.error(
+        "Sentence builder error:",
+        buildError
+      );
+
+      setError(
+        buildError instanceof Error
+          ? buildError.name ===
+            "AbortError"
+            ? "တရုတ်စာကြောင်း စီတာကြာသွားပါတယ်။"
+            : buildError.message
+          : "တရုတ်စာကြောင်း စီမရပါ။"
+      );
+
+      setIsBuildingSentence(false);
+      myanmarBusyRef.current = false;
+
+      scheduleMyanmarRestart();
     } finally {
       clearTimeout(timeout);
 
       if (
-        speechAbortRef.current ===
+        sentenceAbortRef.current ===
         controller
       ) {
-        speechAbortRef.current =
-          null;
+        sentenceAbortRef.current = null;
       }
     }
   }
 
-  async function askAnna(
-    text: string
-  ) {
-    const cleanMessage =
-      text.trim();
-
-    if (
-      !cleanMessage ||
-      busyRef.current
-    ) {
-      return;
-    }
-
-    const generation =
-      generationRef.current;
-
-    busyRef.current = true;
-
-    setIsThinking(true);
-    setError("");
-    changeStatus("thinking");
-
-    try {
-      const result =
-        await requestAnnaReply(
-          cleanMessage
-        );
-
-      if (
-        generation !==
-        generationRef.current
-      ) {
-        return;
-      }
-
-      if (
-        result.responseId &&
-        inputLanguage !== "my-MM"
-      ) {
-        previousResponseIdRef.current =
-          result.responseId;
-      }
-
-      setReply(result.reply);
-
-      void saveConversation(
-        cleanMessage,
-        result.reply
-      );
-
-      setIsThinking(false);
-      busyRef.current = false;
-
-      await speakChinese(
-        result.reply,
-        generation
-      );
-    } catch (requestError) {
-      if (
-        generation !==
-        generationRef.current
-      ) {
-        return;
-      }
-
-      console.error(
-        "Chat error:",
-        requestError
-      );
-
-      if (
-        requestError instanceof
-          DOMException &&
-        requestError.name ===
-          "AbortError"
-      ) {
-        setError(
-          "Anna reply ကြာသွားပါတယ်။ ထပ်ပြောကြည့်ပါနော်။"
-        );
-      } else {
-        setError(
-          requestError instanceof
-            Error
-            ? requestError.message
-            : "AI connection failed."
-        );
-      }
-    } finally {
-      if (
-        generation ===
-        generationRef.current
-      ) {
-        setIsThinking(false);
-        busyRef.current = false;
-
-        if (!audioRef.current) {
-          scheduleListeningRestart();
-        }
-      }
-    }
-  }
-
-  function startListening() {
+  function startMyanmarRecognition() {
     clearRestartTimer();
-    setError("");
 
     if (
-      stoppingRef.current ||
-      busyRef.current ||
+      mode !== "sentence" ||
+      !myanmarActiveRef.current ||
+      myanmarStoppingRef.current ||
+      myanmarBusyRef.current ||
       recognitionRef.current
     ) {
       return;
@@ -834,19 +1121,14 @@ export default function ChatBox({
 
     if (!Recognition) {
       setError(
-        "ဒီ Browser မှာ microphone recognition မရပါ။ Google Chrome သုံးပါ။"
+        "ဒီ Browser မှာ Myanmar voice recognition မရပါ။ Desktop Chrome သို့မဟုတ် Android Chrome သုံးပါ။"
       );
 
-      updateAutoConversation(
-        false
-      );
-
+      myanmarActiveRef.current = false;
+      setMyanmarActive(false);
       changeStatus("ready");
       return;
     }
-
-    const generation =
-      generationRef.current;
 
     try {
       const recognition =
@@ -855,49 +1137,95 @@ export default function ChatBox({
       recognitionRef.current =
         recognition;
 
-      recognition.lang =
-        inputLanguage;
+      recognition.lang = "my-MM";
 
-      recognition.interimResults =
-        false;
+      /*
+       * false is intentionally used:
+       * the browser returns one clear sentence,
+       * then the code automatically starts a new recognition session.
+       * This is usually more stable than continuous=true.
+       */
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.maxAlternatives = 3;
 
-      recognition.continuous =
-        false;
+      recognition.onstart = () => {
+        setIsMyanmarListening(true);
+        setInterimTranscript("");
+        changeStatus("listening");
+      };
+
+      recognition.onspeechstart = () => {
+        setIsMyanmarListening(true);
+        changeStatus("listening");
+      };
+
+      recognition.onspeechend = () => {
+        setIsMyanmarListening(false);
+        changeStatus("thinking");
+      };
 
       recognition.onresult = (
         event
       ) => {
-        const transcript =
-          event.results[0]?.[0]?.transcript?.trim();
+        let interim = "";
+        let finalTranscript = "";
 
-        recognitionRef.current =
-          null;
-
-        setIsListening(false);
-        busyRef.current = false;
-
-        if (
-          !transcript ||
-          generation !==
-            generationRef.current
+        for (
+          let index =
+            event.resultIndex;
+          index <
+          event.results.length;
+          index += 1
         ) {
-          scheduleListeningRestart();
-          return;
+          const result =
+            event.results[index];
+
+          const bestAlternative =
+            result[0];
+
+          const transcript =
+            bestAlternative?.transcript?.trim() ??
+            "";
+
+          if (!transcript) {
+            continue;
+          }
+
+          if (result.isFinal) {
+            finalTranscript +=
+              `${transcript} `;
+          } else {
+            interim +=
+              `${transcript} `;
+          }
         }
 
-        setMessage(transcript);
+        setInterimTranscript(
+          interim.trim()
+        );
 
-        void askAnna(transcript);
+        const cleanFinal =
+          finalTranscript.trim();
+
+        if (cleanFinal) {
+          recognitionRef.current =
+            null;
+          setIsMyanmarListening(false);
+          setInterimTranscript("");
+
+          void buildMyanmarSentence(
+            cleanFinal
+          );
+        }
       };
 
       recognition.onerror = (
         event
       ) => {
-        recognitionRef.current =
-          null;
-
-        setIsListening(false);
-        busyRef.current = false;
+        recognitionRef.current = null;
+        setIsMyanmarListening(false);
+        setInterimTranscript("");
 
         if (
           event.error ===
@@ -905,9 +1233,9 @@ export default function ChatBox({
           event.error ===
             "service-not-allowed"
         ) {
-          updateAutoConversation(
-            false
-          );
+          myanmarActiveRef.current =
+            false;
+          setMyanmarActive(false);
 
           setError(
             "Microphone permission ကို Allow လုပ်ပေးပါ။"
@@ -918,38 +1246,47 @@ export default function ChatBox({
         }
 
         if (
-          event.error === "aborted"
+          event.error ===
+            "no-speech" ||
+          event.error ===
+            "audio-capture" ||
+          event.error ===
+            "network"
         ) {
           if (
-            !stoppingRef.current
+            event.error ===
+            "audio-capture"
           ) {
-            scheduleListeningRestart();
+            setError(
+              "Microphone အသံမရပါ။ Browser permission ကိုစစ်ပါ။"
+            );
           }
 
+          myanmarBusyRef.current =
+            false;
+          scheduleMyanmarRestart(900);
           return;
         }
 
         if (
           event.error ===
-            "no-speech" ||
-          event.error ===
-            "audio-capture" ||
-          event.error === "network"
+          "aborted"
         ) {
-          scheduleListeningRestart(
-            1000
-          );
-
+          if (
+            !myanmarStoppingRef.current
+          ) {
+            scheduleMyanmarRestart();
+          }
           return;
         }
 
         setError(
-          `Microphone error: ${event.error}`
+          `Myanmar voice error: ${event.error}`
         );
 
-        scheduleListeningRestart(
-          1000
-        );
+        myanmarBusyRef.current =
+          false;
+        scheduleMyanmarRestart(1000);
       };
 
       recognition.onend = () => {
@@ -961,322 +1298,335 @@ export default function ChatBox({
             null;
         }
 
-        setIsListening(false);
+        setIsMyanmarListening(false);
+        setInterimTranscript("");
 
         if (
-          generation !==
-            generationRef.current ||
-          stoppingRef.current
+          myanmarStoppingRef.current ||
+          !myanmarActiveRef.current
         ) {
           return;
         }
 
-        if (!busyRef.current) {
-          scheduleListeningRestart();
+        if (!myanmarBusyRef.current) {
+          scheduleMyanmarRestart();
         }
       };
 
-      busyRef.current = true;
-
-      setIsListening(true);
-      changeStatus("listening");
-
       recognition.start();
-    } catch (listeningError) {
+    } catch (recognitionError) {
       console.error(
-        "Listening error:",
-        listeningError
+        "Myanmar recognition start error:",
+        recognitionError
       );
 
-      recognitionRef.current =
-        null;
+      recognitionRef.current = null;
+      setIsMyanmarListening(false);
+      myanmarBusyRef.current = false;
 
-      setIsListening(false);
-      busyRef.current = false;
-
-      setError(
-        "Microphone ပြန်စဖို့ ခဏစောင့်နေပါတယ်။"
-      );
-
-      scheduleListeningRestart(
-        1000
-      );
+      scheduleMyanmarRestart(1000);
     }
   }
 
-  function startConversation() {
-    stoppingRef.current = false;
+  function startMyanmarMode() {
+    if (myanmarActive) {
+      stopMyanmarMode();
+      return;
+    }
 
-    generationRef.current += 1;
+    const Recognition =
+      window.SpeechRecognition ||
+      window.webkitSpeechRecognition;
 
-    updateAutoConversation(true);
+    if (!Recognition) {
+      setError(
+        "ဒီ Browser မှာ Myanmar Speech Recognition မရပါ။ Desktop/Android Chrome ကိုသုံးပါ။"
+      );
+      return;
+    }
 
-    busyRef.current = false;
+    myanmarStoppingRef.current =
+      false;
+    myanmarActiveRef.current =
+      true;
+    myanmarBusyRef.current =
+      false;
 
-    startListening();
-  }
-
-  function stopConversation() {
-    stoppingRef.current = true;
-
-    generationRef.current += 1;
-
-    updateAutoConversation(false);
-
-    clearRestartTimer();
-    abortRequests();
-    cleanUpRecognition();
-    cleanUpAudio();
-
-    busyRef.current = false;
-
-    setIsListening(false);
-    setIsThinking(false);
-    setIsSpeaking(false);
+    setMyanmarActive(true);
     setError("");
+    setUserTranscript("");
+    setInterimTranscript("");
 
-    changeStatus("ready");
-
-    setTimeout(() => {
-      stoppingRef.current = false;
-    }, 300);
+    startMyanmarRecognition();
   }
 
-  function startNewChat() {
-    stopConversation();
+  function toggleMute() {
+    const track =
+      realtimeStreamRef.current
+        ?.getAudioTracks()[0];
 
-    previousResponseIdRef.current =
-      null;
+    if (!track) {
+      return;
+    }
 
-    setMessage("");
+    track.enabled =
+      !track.enabled;
 
-    setReply(
-      [
-        "中文：新的聊天开始啦！你想用中文还是缅甸语跟我说话？",
-        "拼音：Xīn de liáotiān kāishǐ la! Nǐ xiǎng yòng Zhōngwén háishì Miǎndiànyǔ gēn wǒ shuōhuà?",
-        "မြန်မာ：စကားဝိုင်းအသစ် စပြီနော်။ တရုတ်လိုပြောမလား၊ မြန်မာလိုပြောမလား။",
-      ].join("\n")
+    setIsMuted(
+      !track.enabled
     );
   }
 
-  function handleMainButton() {
-    if (autoConversation) {
-      stopConversation();
-    } else {
-      startConversation();
-    }
-  }
-
-  function handleLanguageChange(
-    language: InputLanguage
+  function changeMode(
+    nextMode: AnnaMode
   ) {
-    setInputLanguage(language);
+    stopEverything();
+
+    setMode(nextMode);
+    setReply(
+      MODE_DETAILS[nextMode].welcome
+    );
+    setUserTranscript("");
+    setInterimTranscript("");
+    setLiveHanzi("");
     setError("");
-
-    previousResponseIdRef.current =
-      null;
-
-    if (language === "my-MM") {
-      setReply(
-        [
-          "中文：你可以用缅甸语告诉我你想说什么，我会帮你整理成自然的中文。",
-          "拼音：Nǐ kěyǐ yòng Miǎndiànyǔ gàosu wǒ nǐ xiǎng shuō shénme, wǒ huì bāng nǐ zhěnglǐ chéng zìrán de Zhōngwén.",
-          "မြန်မာ：ပြောချင်တာကို မြန်မာလိုပြောပါ။ Anna က တရုတ်လို သဘာဝကျအောင် စာကြောင်းစီပေးပါမယ်။",
-        ].join("\n")
-      );
-    } else {
-      setReply(
-        [
-          "中文：好呀，我们用中文聊天吧！",
-          "拼音：Hǎo ya, wǒmen yòng Zhōngwén liáotiān ba!",
-          "မြန်မာ：ကောင်းပြီ၊ တရုတ်လို စကားပြောကြမယ်နော်။",
-        ].join("\n")
-      );
-    }
   }
 
-  function getStatusText() {
-    if (isListening) {
-      return inputLanguage === "my-MM"
-        ? "🎙️ မြန်မာလို နားထောင်နေပါတယ်..."
-        : "🎙️ 正在听你说中文...";
+  function statusText() {
+    if (isConnecting) {
+      return "⏳ Connecting…";
     }
 
-    if (isThinking) {
-      return inputLanguage === "my-MM"
-        ? "⏳ တရုတ်လို စာကြောင်းစီနေပါတယ်..."
-        : "⏳ Anna is thinking...";
+    if (isUserSpeaking) {
+      return "🎙️ တရုတ်လို နားထောင်နေပါတယ်…";
     }
 
-    if (isSpeaking) {
-      return "🔊 Anna is speaking...";
+    if (isMyanmarListening) {
+      return "🎙️ မြန်မာလို နားထောင်နေပါတယ်…";
     }
 
-    if (autoConversation) {
-      return "💬 Conversation active";
+    if (isBuildingSentence) {
+      return "✍️ တရုတ်စာကြောင်း စီနေပါတယ်…";
     }
 
-    return "🎤 Start Conversation";
+    if (isAnnaSpeaking) {
+      return "🔊 Anna ပြောနေပါတယ်…";
+    }
+
+    if (isFormatting) {
+      return "📝 Pinyin နဲ့ မြန်မာဘာသာပြန် ထည့်နေပါတယ်…";
+    }
+
+    if (isConnected) {
+      return "🟢 Connected — ဆက်ပြောလို့ရပါတယ်";
+    }
+
+    if (myanmarActive) {
+      return "🟢 Myanmar listening active — နောက်စာကြောင်း ဆက်ပြောလို့ရပါတယ်";
+    }
+
+    return currentMode.description;
   }
+
+  const shownHanzi =
+    liveHanzi || reply.hanzi;
+
+  const shownUserTranscript =
+    interimTranscript ||
+    userTranscript;
 
   return (
-    <div className="space-y-4 text-center">
-      <div className="rounded-2xl border border-white/10 bg-black/20 p-4 text-left">
+    <div className="space-y-5">
+      <section className="rounded-3xl border border-white/10 bg-black/20 p-5">
         <label
-          htmlFor="voice-language"
-          className="mb-2 block text-sm font-semibold text-purple-200"
+          htmlFor="anna-mode"
+          className="mb-3 block text-sm font-bold text-purple-200"
         >
-          ပြောမယ့်ဘာသာစကား
+          ပြောမယ့် Mode ရွေးပါ
         </label>
 
         <select
-          id="voice-language"
-          value={inputLanguage}
+          id="anna-mode"
+          value={mode}
           onChange={(event) =>
-            handleLanguageChange(
+            changeMode(
               event.target
-                .value as InputLanguage
+                .value as AnnaMode
             )
           }
           disabled={
-            autoConversation ||
-            isThinking ||
-            isSpeaking ||
-            isListening
+            isConnected ||
+            isConnecting ||
+            myanmarActive
           }
-          className="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none disabled:cursor-not-allowed disabled:opacity-50"
+          className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-4 text-base font-semibold text-white outline-none disabled:opacity-50"
         >
-          <option value="zh-CN">
-            🇨🇳 Chinese — တရုတ်လို စကားပြောမယ်
+          <option value="conversation">
+            {
+              MODE_DETAILS
+                .conversation.label
+            }
           </option>
 
-          <option value="my-MM">
-            🇲🇲 Myanmar — မြန်မာလိုပြောပြီး တရုတ်စာကြောင်းစီမယ်
+          <option value="sentence">
+            {
+              MODE_DETAILS
+                .sentence.label
+            }
           </option>
         </select>
 
-        <p className="mt-2 text-xs leading-5 text-white/45">
-          Myanmar Mode မှာ ပြောချင်တာကို
-          မြန်မာလိုပြောပါ။ Anna က
-          “နင်ပြောချင်တာ ဒီလိုလား” ဆိုပြီး
-          တရုတ်စာကြောင်း၊ Pinyin နဲ့
-          စာကြောင်းဖွဲ့ပုံကို ပြန်ပေးပါမယ်။
+        <p className="mt-3 text-sm leading-6 text-white/55">
+          {currentMode.description}
         </p>
-      </div>
+      </section>
 
-      <div className="max-h-96 overflow-y-auto rounded-3xl border border-white/10 bg-black/30 p-5">
-        {message && (
-          <div className="mb-4 rounded-2xl bg-purple-500/20 p-3 text-left">
-            <p className="text-xs text-purple-200">
-              You said
+      {shownUserTranscript && (
+        <section className="rounded-3xl border border-purple-300/20 bg-purple-500/20 p-5">
+          <p className="text-xs font-bold uppercase tracking-wide text-purple-200">
+            You said
+          </p>
+
+          <p className="mt-2 whitespace-pre-line text-left text-lg font-semibold leading-8 text-white">
+            {shownUserTranscript}
+          </p>
+
+          {interimTranscript && (
+            <p className="mt-2 text-xs text-purple-200">
+              နားထောင်နေဆဲ…
+            </p>
+          )}
+        </section>
+      )}
+
+      <section className="min-h-64 max-h-[40rem] overflow-y-auto rounded-3xl border border-white/10 bg-black/30 p-6">
+        <div className="space-y-5 text-left">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-purple-300">
+              中文 · Hanzi
             </p>
 
-            <p className="mt-1 text-lg">
-              {message}
+            <p className="mt-2 whitespace-pre-line text-xl font-bold leading-9 text-white">
+              {shownHanzi}
             </p>
           </div>
-        )}
 
-        <p className="whitespace-pre-line text-left text-base font-semibold leading-8">
-          {isThinking
-            ? inputLanguage === "my-MM"
-              ? "တရုတ်လို စာကြောင်းစီနေပါတယ်... 🤔"
-              : "Anna is thinking... 🤔"
-            : reply}
-        </p>
-      </div>
+          <div className="border-t border-white/10 pt-4">
+            <p className="text-xs font-bold uppercase tracking-wide text-purple-300">
+              拼音 · Pinyin
+            </p>
+
+            <p className="mt-2 whitespace-pre-line text-base font-semibold leading-8 text-purple-100">
+              {isFormatting
+                ? "Pinyin ထည့်နေပါတယ်…"
+                : reply.pinyin}
+            </p>
+          </div>
+
+          <div className="border-t border-white/10 pt-4">
+            <p className="text-xs font-bold uppercase tracking-wide text-purple-300">
+              မြန်မာ
+            </p>
+
+            <p className="mt-2 whitespace-pre-line text-base font-semibold leading-8 text-white/90">
+              {isFormatting
+                ? "မြန်မာဘာသာပြန်နေပါတယ်…"
+                : reply.myanmar}
+            </p>
+          </div>
+
+          {reply.alternativeHanzi && (
+            <div className="border-t border-white/10 pt-4">
+              <p className="text-xs font-bold uppercase tracking-wide text-purple-300">
+                ပိုသဘာဝကျတဲ့ပြောပုံ
+              </p>
+
+              <p className="mt-2 text-lg font-bold leading-8 text-white">
+                {
+                  reply.alternativeHanzi
+                }
+              </p>
+
+              {reply.alternativePinyin && (
+                <p className="mt-2 text-base leading-8 text-purple-100">
+                  {
+                    reply.alternativePinyin
+                  }
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      </section>
 
       {error && (
-        <p className="rounded-xl border border-red-400/20 bg-red-500/20 px-3 py-2 text-sm text-red-100">
+        <p className="rounded-2xl border border-red-400/20 bg-red-500/20 px-4 py-3 text-sm leading-6 text-red-100">
           {error}
         </p>
       )}
 
-      <button
-        type="button"
-        onClick={handleMainButton}
-        className={`rounded-full px-7 py-3 font-bold transition ${
-          autoConversation
-            ? "bg-red-500 hover:bg-red-400"
-            : "bg-purple-600 hover:bg-purple-500"
-        }`}
-      >
-        {autoConversation
-          ? "⏹ Stop Conversation"
-          : inputLanguage === "my-MM"
-            ? "🎤 မြန်မာလို ပြောမယ်"
-            : "🎤 中文开始说话"}
-      </button>
-
-      <p className="text-sm text-purple-200">
-        {getStatusText()}
-      </p>
-
-      <button
-        type="button"
-        onClick={startNewChat}
-        disabled={
-          isThinking ||
-          isListening ||
-          isSpeaking
-        }
-        className="text-sm text-white/50 underline transition hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        Start New Chat
-      </button>
-
-      <div className="flex gap-2">
-        <input
-          value={message}
-          onChange={(event) =>
-            setMessage(
-              event.target.value
-            )
-          }
-          onKeyDown={(event) => {
-            if (
-              event.key === "Enter" &&
-              !event.shiftKey
-            ) {
-              event.preventDefault();
-
-              void askAnna(message);
+      <div className="text-center">
+        {mode === "conversation" ? (
+          <button
+            type="button"
+            onClick={
+              isConnected
+                ? closeRealtimeSession
+                : () =>
+                    void startRealtimeSession()
             }
-          }}
-          placeholder={
-            inputLanguage === "my-MM"
-              ? "ပြောချင်တာကို မြန်မာလို ရိုက်ပါ..."
-              : "တရုတ်လို ရိုက်လည်းရတယ်..."
-          }
-          disabled={
-            isThinking ||
-            isSpeaking ||
-            isListening
-          }
-          className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-white outline-none placeholder:text-white/40 disabled:opacity-50"
-        />
+            disabled={isConnecting}
+            className={`rounded-full px-8 py-4 text-lg font-bold transition disabled:opacity-50 ${
+              isConnected
+                ? "bg-red-500 hover:bg-red-400"
+                : "bg-purple-600 hover:bg-purple-500"
+            }`}
+          >
+            {isConnecting
+              ? "⏳ Connecting…"
+              : isConnected
+                ? "⏹ Stop Conversation"
+                : "🎤 တရုတ်လို စကားပြောမယ်"}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={startMyanmarMode}
+            disabled={
+              isBuildingSentence ||
+              isAnnaSpeaking
+            }
+            className={`rounded-full px-8 py-4 text-lg font-bold transition disabled:opacity-50 ${
+              myanmarActive
+                ? "bg-red-500 hover:bg-red-400"
+                : "bg-purple-600 hover:bg-purple-500"
+            }`}
+          >
+            {myanmarActive
+              ? "⏹ Stop Conversation"
+              : "🎤 မြန်မာလို စကားပြောမယ်"}
+          </button>
+        )}
 
-        <button
-          type="button"
-          onClick={() =>
-            void askAnna(message)
-          }
-          disabled={
-            !message.trim() ||
-            isThinking ||
-            isSpeaking ||
-            isListening
-          }
-          className="rounded-2xl bg-white/15 px-4 font-semibold transition hover:bg-white/25 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          Send
-        </button>
+        <p className="mt-3 text-sm leading-6 text-purple-200">
+          {statusText()}
+        </p>
       </div>
 
-      <p className="text-xs text-white/40">
-        Anna’s voice and replies are
-        AI-generated.
-      </p>
+      {mode === "conversation" &&
+        isConnected && (
+          <div className="flex justify-center">
+            <button
+              type="button"
+              onClick={toggleMute}
+              className="rounded-xl bg-white/10 px-5 py-3 text-sm font-semibold"
+            >
+              {isMuted
+                ? "🎤 Unmute"
+                : "🔇 Mute"}
+            </button>
+          </div>
+        )}
     </div>
   );
 }

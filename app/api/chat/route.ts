@@ -1,97 +1,423 @@
 import OpenAI from "openai";
+import { NextResponse } from "next/server";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+type AnnaMode =
+  | "friend"
+  | "translation"
+  | "tutor";
 
 interface ChatRequestBody {
-  message?: string;
-  previousResponseId?: string | null;
+  message?: unknown;
+  previousResponseId?: unknown;
+  inputLanguage?: unknown;
 }
 
-export async function POST(request: Request) {
+const BURMESE_PATTERN =
+  /[\u1000-\u109f\uaa60-\uaa7f]/u;
+
+const TUTOR_PATTERNS: RegExp[] = [
+  /ရှင်းပြ/u,
+  /အသေးစိတ်/u,
+  /ဥပမာ/u,
+  /ဘယ်လိုသုံး/u,
+  /အသုံးပြုပုံ/u,
+  /သင်ပေး/u,
+  /ပြင်ပေး/u,
+  /စစ်ပေး/u,
+  /ဘာကွာ/u,
+  /ဘာကြောင့်/u,
+  /grammar/i,
+  /explain/i,
+  /example/i,
+  /examples/i,
+  /how to use/i,
+  /difference/i,
+  /compare/i,
+  /怎么用/u,
+  /为什么/u,
+  /解释/u,
+  /例子/u,
+  /举例/u,
+  /区别/u,
+  /语法/u,
+];
+
+function detectMode(
+  message: string,
+  inputLanguage: string
+): AnnaMode {
+  const tutorRequested =
+    TUTOR_PATTERNS.some((pattern) =>
+      pattern.test(message)
+    );
+
+  if (tutorRequested) {
+    return "tutor";
+  }
+
+  if (
+    inputLanguage === "my-MM" ||
+    BURMESE_PATTERN.test(message)
+  ) {
+    return "translation";
+  }
+
+  return "friend";
+}
+
+const BASE_INSTRUCTIONS = `
+You are Anna, a friendly Chinese-speaking friend and Chinese tutor for Burmese learners.
+
+General rules:
+- Use natural everyday Mandarin.
+- Use complete pinyin with tone marks.
+- Give clear and natural Burmese meanings.
+- Never say “作为AI”.
+- Do not sound like customer service, a robot or a formal textbook.
+- The first line beginning with 中文：will be read aloud.
+- Do not place Burmese or pinyin on the 中文：line.
+`.trim();
+
+const FRIEND_INSTRUCTIONS = `
+MODE: FRIEND CONVERSATION
+
+The user is speaking Chinese and wants a natural conversation.
+
+Reply like a warm Chinese friend:
+- React naturally to what the user said.
+- Use 2 to 4 short spoken Chinese sentences.
+- Ask one short follow-up question when suitable.
+- Do not explain grammar unless the user asks.
+- Do not always answer with only one sentence.
+
+Return exactly:
+
+中文：<complete natural Chinese reply including the question>
+拼音：<complete pinyin for everything on the 中文 line>
+မြန်မာ：<complete Burmese translation>
+`.trim();
+
+const TRANSLATION_INSTRUCTIONS = `
+MODE: BURMESE TO CHINESE SENTENCE BUILDER
+
+The user spoke Burmese because they do not know how to form the Chinese sentence.
+
+IMPORTANT:
+- Do not reply to the Burmese message as a conversation.
+- Do not answer the user's question or continue chatting.
+- Translate the Burmese meaning into natural spoken Mandarin.
+- Begin by confirming what the user wants to say.
+- Preserve the user's original intended meaning.
+- Give an easy version first.
+- Give one more natural native-style version when useful.
+- Briefly explain the sentence order in Burmese.
+- Do not ask a follow-up conversation question.
+
+Return in this format:
+
+中文：你想说的是：“<best simple Chinese translation>”，对吗？
+拼音：<complete pinyin for the entire 中文 line>
+မြန်မာ：နင်ပြောချင်တာ “<original Burmese meaning>” ဒီလိုလား။
+
+အဓိကစာကြောင်း：
+<best simple Chinese sentence>
+
+拼音：
+<complete pinyin>
+
+မြန်မာ：
+<complete Burmese meaning>
+
+ပိုသဘာဝကျတဲ့ပြောပုံ：
+<more conversational Chinese version>
+
+拼音：
+<complete pinyin>
+
+စာကြောင်းဖွဲ့ပုံ：
+<brief Burmese explanation of word order and key vocabulary>
+`.trim();
+
+const TUTOR_INSTRUCTIONS = `
+MODE: DETAILED CHINESE TUTOR
+
+The user asked for explanation, usage, grammar, correction or examples.
+
+Requirements:
+- Explain clearly in Burmese.
+- Do not answer with only one sentence.
+- Give at least 4 examples.
+- Every example must include Chinese, complete pinyin and Burmese meaning.
+- Mention a common mistake when useful.
+- End with one short practice exercise.
+
+Return in this structure:
+
+中文：好呀，我来给你详细解释一下！
+拼音：Hǎo ya, wǒ lái gěi nǐ xiángxì jiěshì yíxià!
+မြန်မာ：ကောင်းပြီ၊ အသေးစိတ်ရှင်းပြပေးမယ်နော်။
+
+ရှင်းလင်းချက်：
+<detailed Burmese explanation>
+
+ဖွဲ့စည်းပုံ：
+<Chinese formula or pattern>
+
+ဥပမာများ：
+
+1. 中文：...
+   拼音：...
+   မြန်မာ：...
+
+2. 中文：...
+   拼音：...
+   မြန်မာ：...
+
+3. 中文：...
+   拼音：...
+   မြန်မာ：...
+
+4. 中文：...
+   拼音：...
+   မြန်မာ：...
+
+မကြာခဏမှားတတ်တာ：
+<common mistake when relevant>
+
+လေ့ကျင့်ရန်：
+<one short practice>
+`.trim();
+
+function buildInstructions(
+  mode: AnnaMode
+) {
+  if (mode === "translation") {
+    return `${BASE_INSTRUCTIONS}\n\n${TRANSLATION_INSTRUCTIONS}`;
+  }
+
+  if (mode === "tutor") {
+    return `${BASE_INSTRUCTIONS}\n\n${TUTOR_INSTRUCTIONS}`;
+  }
+
+  return `${BASE_INSTRUCTIONS}\n\n${FRIEND_INSTRUCTIONS}`;
+}
+
+function getMaxOutputTokens(
+  mode: AnnaMode
+) {
+  if (mode === "tutor") {
+    return 1200;
+  }
+
+  if (mode === "translation") {
+    return 700;
+  }
+
+  return 350;
+}
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof OpenAI.APIError) {
+    return `OpenAI error (${error.status ?? "unknown"}): ${error.message}`;
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return "Anna က အခုမဖြေနိုင်သေးပါ။ ပြန်စမ်းကြည့်ပါ။";
+}
+
+export async function POST(
+  request: Request
+) {
   try {
-    if (!process.env.OPENAI_API_KEY) {
-      return Response.json(
+    const apiKey =
+      process.env.OPENAI_API_KEY;
+
+    if (!apiKey) {
+      return NextResponse.json(
         {
           error:
-            "OPENAI_API_KEY is missing in .env.local",
+            "OPENAI_API_KEY ကို .env.local သို့မဟုတ် Vercel Environment Variables မှာ မတွေ့ပါ။",
         },
-        { status: 500 }
+        {
+          status: 500,
+        }
       );
     }
 
-    const body =
-      (await request.json()) as ChatRequestBody;
+    let body: ChatRequestBody;
 
-    const message = body.message?.trim();
+    try {
+      body =
+        (await request.json()) as ChatRequestBody;
+    } catch {
+      return NextResponse.json(
+        {
+          error:
+            "Request body format မှားနေပါတယ်။",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    const message =
+      typeof body.message === "string"
+        ? body.message.trim()
+        : "";
+
+    const inputLanguage =
+      typeof body.inputLanguage ===
+      "string"
+        ? body.inputLanguage
+        : "";
+
     const previousResponseId =
-      body.previousResponseId?.trim();
+      typeof body.previousResponseId ===
+        "string" &&
+      body.previousResponseId.trim()
+        ? body.previousResponseId.trim()
+        : undefined;
 
     if (!message) {
-      return Response.json(
+      return NextResponse.json(
         {
-          error: "Message is required.",
+          error:
+            "ပြောထားတဲ့စာ မရှိပါ။",
         },
-        { status: 400 }
+        {
+          status: 400,
+        }
       );
     }
 
-    const response = await openai.responses.create({
-      model: "gpt-4.1-mini",
-
-      instructions: `
-You are Anna-AI, a Chinese-speaking AI best friend for Myanmar learners.
-
-Personality:
-- Speak like a close and playful friend, not like a formal teacher.
-- Be warm, cheerful, funny, natural, and supportive.
-- You may tease the user lightly when appropriate.
-- Never insult, humiliate, bully, or use cruel language.
-- Remember information from earlier turns in this conversation.
-- Keep the conversation moving with one short follow-up question.
-- Keep replies suitable for a spoken conversation.
-
-Reply format:
-1. Chinese Hanzi
-2. Natural Pinyin
-3. Clear Burmese translation
-
-Keep the response short and conversational.
-      `,
-
-      input: [
+    if (message.length > 2000) {
+      return NextResponse.json(
         {
-          role: "user",
-          content: message,
+          error:
+            "Message က ရှည်လွန်းပါတယ်။ စာလုံး 2000 အောက်ထားပါ။",
         },
-      ],
+        {
+          status: 400,
+        }
+      );
+    }
 
-      previous_response_id:
-        previousResponseId || undefined,
+    const mode = detectMode(
+      message,
+      inputLanguage
+    );
 
+    const openai = new OpenAI({
+      apiKey,
+    });
+
+    const requestOptions = {
+      model: "gpt-4.1-mini",
+      instructions:
+        buildInstructions(mode),
+      input: message,
+      max_output_tokens:
+        getMaxOutputTokens(mode),
       store: true,
-    });
+    } as const;
 
-    return Response.json({
-      reply:
-        response.output_text ||
-        "抱歉，我刚才没听清楚。你可以再说一次吗？",
-      responseId: response.id,
-    });
-  } catch (error) {
-    console.error("Anna chat API error:", error);
+    let response;
 
-    const errorMessage =
-      error instanceof Error
-        ? error.message
-        : "Anna could not reply.";
+    try {
+      response =
+        await openai.responses.create({
+          ...requestOptions,
 
-    return Response.json(
+          /*
+           * Translation mode မှာ previous
+           * conversation က meaning ကို
+           * မရောစေဖို့ history မချိတ်ပါ။
+           */
+          previous_response_id:
+            mode === "friend"
+              ? previousResponseId
+              : undefined,
+        });
+    } catch (firstError) {
+      /*
+       * Previous response ID expired,
+       * invalid or unavailable ဖြစ်ရင်
+       * history မပါဘဲ တစ်ကြိမ်ပြန်စမ်းမယ်။
+       */
+      if (
+        mode === "friend" &&
+        previousResponseId
+      ) {
+        console.warn(
+          "Retrying without previousResponseId:",
+          getErrorMessage(firstError)
+        );
+
+        response =
+          await openai.responses.create({
+            ...requestOptions,
+          });
+      } else {
+        throw firstError;
+      }
+    }
+
+    const reply =
+      response.output_text?.trim();
+
+    if (!reply) {
+      return NextResponse.json(
+        {
+          error:
+            "OpenAI က စာသားအဖြေမပေးပါ။ နောက်တစ်ကြိမ် ပြန်စမ်းပါ။",
+        },
+        {
+          status: 502,
+        }
+      );
+    }
+
+    return NextResponse.json(
       {
-        error: errorMessage,
+        reply,
+        responseId: response.id,
+        mode,
       },
-      { status: 500 }
+      {
+        status: 200,
+        headers: {
+          "Cache-Control":
+            "no-store, max-age=0",
+        },
+      }
+    );
+  } catch (error) {
+    const message =
+      getErrorMessage(error);
+
+    console.error(
+      "Chat API error:",
+      error
+    );
+
+    return NextResponse.json(
+      {
+        error: message,
+      },
+      {
+        status:
+          error instanceof OpenAI.APIError &&
+          typeof error.status === "number"
+            ? error.status
+            : 500,
+      }
     );
   }
 }
