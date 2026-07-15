@@ -669,7 +669,7 @@ export default function ChatBox({
         document.createElement("audio");
 
       audio.autoplay = true;
-      audio.playsInline = true;
+      audio.setAttribute("playsinline", "true");
       audio.muted = false;
 
       document.body.appendChild(audio);
@@ -926,7 +926,7 @@ export default function ChatBox({
       const audio =
         new Audio(url);
 
-      audio.playsInline = true;
+      audio.setAttribute("playsinline", "true");
 
       playbackAudioRef.current =
         audio;
