@@ -232,12 +232,26 @@ export default function ChatBox({
       ReturnType<typeof setTimeout> | null
     >(null);
 
-  const mobileRecorderRef =
-    useRef<MediaRecorder | null>(null);
   const mobileStreamRef =
     useRef<MediaStream | null>(null);
-  const mobileChunksRef =
-    useRef<BlobPart[]>([]);
+  const mobileAudioContextRef =
+    useRef<AudioContext | null>(null);
+  const mobileSourceRef =
+    useRef<MediaStreamAudioSourceNode | null>(
+      null
+    );
+  const mobileProcessorRef =
+    useRef<ScriptProcessorNode | null>(
+      null
+    );
+  const mobileSilentGainRef =
+    useRef<GainNode | null>(null);
+  const mobilePcmChunksRef =
+    useRef<Float32Array[]>([]);
+  const mobileInputSampleRateRef =
+    useRef(48000);
+  const mobileRecordingStartedAtRef =
+    useRef(0);
 
   const playbackAudioRef =
     useRef<HTMLAudioElement | null>(null);
@@ -324,22 +338,43 @@ export default function ChatBox({
   }
 
   function cleanupMobileRecorder() {
-    const recorder =
-      mobileRecorderRef.current;
+    const processor =
+      mobileProcessorRef.current;
 
-    if (
-      recorder &&
-      recorder.state !== "inactive"
-    ) {
-      recorder.onstop = null;
+    if (processor) {
+      processor.onaudioprocess =
+        null;
 
       try {
-        recorder.stop();
+        processor.disconnect();
       } catch {}
     }
 
-    mobileRecorderRef.current = null;
-    mobileChunksRef.current = [];
+    try {
+      mobileSourceRef.current?.disconnect();
+    } catch {}
+
+    try {
+      mobileSilentGainRef.current?.disconnect();
+    } catch {}
+
+    const context =
+      mobileAudioContextRef.current;
+
+    if (
+      context &&
+      context.state !== "closed"
+    ) {
+      void context.close().catch(() => {});
+    }
+
+    mobileProcessorRef.current = null;
+    mobileSourceRef.current = null;
+    mobileSilentGainRef.current = null;
+    mobileAudioContextRef.current = null;
+    mobilePcmChunksRef.current = [];
+    mobileRecordingStartedAtRef.current = 0;
+
     stopMobileStream();
     setIsMobileRecording(false);
   }
@@ -1223,33 +1258,198 @@ export default function ChatBox({
     }
   }
 
-  function getMobileRecordingMimeType() {
-    if (
-      typeof MediaRecorder === "undefined"
-    ) {
-      return "";
+  function mergePcmChunks(
+    chunks: Float32Array[]
+  ) {
+    const totalLength =
+      chunks.reduce(
+        (total, chunk) =>
+          total + chunk.length,
+        0
+      );
+
+    const merged =
+      new Float32Array(totalLength);
+
+    let offset = 0;
+
+    for (const chunk of chunks) {
+      merged.set(chunk, offset);
+      offset += chunk.length;
     }
 
-    const candidates = [
-      "audio/mp4",
-      "audio/webm;codecs=opus",
-      "audio/webm",
-      "audio/ogg;codecs=opus",
-    ];
+    return merged;
+  }
 
-    return (
-      candidates.find((type) =>
-        MediaRecorder.isTypeSupported(type)
-      ) || ""
+  function downsamplePcm(
+    input: Float32Array,
+    inputSampleRate: number,
+    outputSampleRate: number
+  ) {
+    if (
+      outputSampleRate >=
+      inputSampleRate
+    ) {
+      return input;
+    }
+
+    const ratio =
+      inputSampleRate /
+      outputSampleRate;
+
+    const outputLength =
+      Math.round(
+        input.length / ratio
+      );
+
+    const output =
+      new Float32Array(outputLength);
+
+    let inputOffset = 0;
+
+    for (
+      let outputOffset = 0;
+      outputOffset < outputLength;
+      outputOffset += 1
+    ) {
+      const nextInputOffset =
+        Math.round(
+          (outputOffset + 1) *
+            ratio
+        );
+
+      let sum = 0;
+      let count = 0;
+
+      for (
+        let index = inputOffset;
+        index < nextInputOffset &&
+        index < input.length;
+        index += 1
+      ) {
+        sum += input[index];
+        count += 1;
+      }
+
+      output[outputOffset] =
+        count > 0 ? sum / count : 0;
+
+      inputOffset =
+        nextInputOffset;
+    }
+
+    return output;
+  }
+
+  function writeAscii(
+    view: DataView,
+    offset: number,
+    value: string
+  ) {
+    for (
+      let index = 0;
+      index < value.length;
+      index += 1
+    ) {
+      view.setUint8(
+        offset + index,
+        value.charCodeAt(index)
+      );
+    }
+  }
+
+  function createMonoWavBlob(
+    samples: Float32Array,
+    sampleRate: number
+  ) {
+    const bytesPerSample = 2;
+    const headerSize = 44;
+
+    const buffer =
+      new ArrayBuffer(
+        headerSize +
+          samples.length *
+            bytesPerSample
+      );
+
+    const view =
+      new DataView(buffer);
+
+    writeAscii(view, 0, "RIFF");
+    view.setUint32(
+      4,
+      36 +
+        samples.length *
+          bytesPerSample,
+      true
+    );
+    writeAscii(view, 8, "WAVE");
+    writeAscii(view, 12, "fmt ");
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true);
+    view.setUint32(
+      24,
+      sampleRate,
+      true
+    );
+    view.setUint32(
+      28,
+      sampleRate *
+        bytesPerSample,
+      true
+    );
+    view.setUint16(
+      32,
+      bytesPerSample,
+      true
+    );
+    view.setUint16(34, 16, true);
+    writeAscii(view, 36, "data");
+    view.setUint32(
+      40,
+      samples.length *
+        bytesPerSample,
+      true
+    );
+
+    let offset = headerSize;
+
+    for (
+      let index = 0;
+      index < samples.length;
+      index += 1
+    ) {
+      const sample = Math.max(
+        -1,
+        Math.min(1, samples[index])
+      );
+
+      view.setInt16(
+        offset,
+        sample < 0
+          ? sample * 0x8000
+          : sample * 0x7fff,
+        true
+      );
+
+      offset += bytesPerSample;
+    }
+
+    return new Blob(
+      [buffer],
+      {
+        type: "audio/wav",
+      }
     );
   }
 
   async function transcribeMobileAudio(
     blob: Blob
   ) {
-    if (blob.size < 700) {
+    if (blob.size < 2000) {
       setError(
-        "အသံမဖမ်းမိပါ။ ပြန်နှိပ်ပြီး ပိုရှင်းရှင်း ပြောပါ။"
+        "အသံမဖမ်းမိပါ။ ပြန်နှိပ်ပြီး ၁ စက္ကန့်ကျော် ပိုရှင်းရှင်း ပြောပါ။"
       );
       changeStatus("ready");
       return;
@@ -1260,21 +1460,14 @@ export default function ChatBox({
     changeStatus("thinking");
 
     try {
-      const extension =
-        blob.type.includes("mp4")
-          ? "m4a"
-          : blob.type.includes("ogg")
-            ? "ogg"
-            : "webm";
-
-      const audioFile = new File(
-        [blob],
-        `myanmar-voice.${extension}`,
-        {
-          type:
-            blob.type || "audio/webm",
-        }
-      );
+      const audioFile =
+        new File(
+          [blob],
+          "myanmar-voice.wav",
+          {
+            type: "audio/wav",
+          }
+        );
 
       const formData =
         new FormData();
@@ -1315,7 +1508,9 @@ export default function ChatBox({
         );
       }
 
-      setUserTranscript(transcript);
+      setUserTranscript(
+        transcript
+      );
 
       await buildMyanmarSentence(
         transcript
@@ -1352,12 +1547,10 @@ export default function ChatBox({
 
     if (
       !navigator.mediaDevices
-        ?.getUserMedia ||
-      typeof MediaRecorder ===
-        "undefined"
+        ?.getUserMedia
     ) {
       setError(
-        "ဒီဖုန်း Chrome မှာ voice recording မရပါ။ Chrome ကို update လုပ်ပါ။"
+        "ဒီဖုန်း Browser မှာ microphone recording မရပါ။ Chrome ကို update လုပ်ပါ။"
       );
       return;
     }
@@ -1367,19 +1560,20 @@ export default function ChatBox({
       setUserTranscript("");
       setInterimTranscript("");
       setPendingMobileSpeech("");
-      mobileChunksRef.current = [];
+
+      mobilePcmChunksRef.current = [];
 
       /*
-       * This request runs directly from the user's button tap.
-       * Mobile browsers may reject microphone requests started by
-       * timers or automatic callbacks.
+       * Turn off aggressive browser processing.
+       * Burmese consonants and short syllables can be damaged by
+       * noise suppression and automatic gain control.
        */
       const stream =
         await navigator.mediaDevices.getUserMedia({
           audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false,
             channelCount: 1,
           },
         });
@@ -1387,63 +1581,89 @@ export default function ChatBox({
       mobileStreamRef.current =
         stream;
 
-      const mimeType =
-        getMobileRecordingMimeType();
+      const AudioContextClass =
+        window.AudioContext ||
+        (
+          window as typeof window & {
+            webkitAudioContext?: typeof AudioContext;
+          }
+        ).webkitAudioContext;
 
-      const recorder = mimeType
-        ? new MediaRecorder(
-            stream,
-            { mimeType }
-          )
-        : new MediaRecorder(stream);
+      if (!AudioContextClass) {
+        throw new Error(
+          "ဒီ Browser မှာ AudioContext မရပါ။"
+        );
+      }
 
-      mobileRecorderRef.current =
-        recorder;
+      const audioContext =
+        new AudioContextClass();
 
-      recorder.ondataavailable = (
+      await audioContext.resume();
+
+      mobileAudioContextRef.current =
+        audioContext;
+
+      mobileInputSampleRateRef.current =
+        audioContext.sampleRate;
+
+      const source =
+        audioContext.createMediaStreamSource(
+          stream
+        );
+
+      mobileSourceRef.current =
+        source;
+
+      /*
+       * ScriptProcessorNode is used here for broad mobile compatibility.
+       * We capture raw mono PCM and create an uncompressed 16 kHz WAV.
+       */
+      const processor =
+        audioContext.createScriptProcessor(
+          4096,
+          1,
+          1
+        );
+
+      const silentGain =
+        audioContext.createGain();
+
+      silentGain.gain.value = 0;
+
+      mobileProcessorRef.current =
+        processor;
+      mobileSilentGainRef.current =
+        silentGain;
+
+      processor.onaudioprocess = (
         event
       ) => {
-        if (event.data.size > 0) {
-          mobileChunksRef.current.push(
-            event.data
-          );
+        if (
+          !mobileRecordingStartedAtRef.current
+        ) {
+          return;
         }
-      };
 
-      recorder.onerror = () => {
-        cleanupMobileRecorder();
-
-        setError(
-          "အသံဖမ်းနေစဉ် error ဖြစ်သွားပါတယ်။"
-        );
-
-        changeStatus("ready");
-      };
-
-      recorder.onstop = () => {
-        const recordedBlob =
-          new Blob(
-            mobileChunksRef.current,
-            {
-              type:
-                recorder.mimeType ||
-                mimeType ||
-                "audio/webm",
-            }
+        const channelData =
+          event.inputBuffer.getChannelData(
+            0
           );
 
-        mobileChunksRef.current = [];
-        mobileRecorderRef.current =
-          null;
-        stopMobileStream();
-        setIsMobileRecording(false);
-
-        void transcribeMobileAudio(
-          recordedBlob
+        mobilePcmChunksRef.current.push(
+          new Float32Array(
+            channelData
+          )
         );
       };
 
-      recorder.start(250);
+      source.connect(processor);
+      processor.connect(silentGain);
+      silentGain.connect(
+        audioContext.destination
+      );
+
+      mobileRecordingStartedAtRef.current =
+        Date.now();
 
       setIsMobileRecording(true);
       changeStatus("listening");
@@ -1451,13 +1671,10 @@ export default function ChatBox({
       cleanupMobileRecorder();
 
       const permissionDenied =
-        recordingError instanceof
-          DOMException &&
+        recordingError instanceof DOMException &&
         (
-          recordingError.name ===
-            "NotAllowedError" ||
-          recordingError.name ===
-            "SecurityError"
+          recordingError.name === "NotAllowedError" ||
+          recordingError.name === "SecurityError"
         );
 
       setError(
@@ -1473,15 +1690,53 @@ export default function ChatBox({
   }
 
   function stopMobileMyanmarRecording() {
-    const recorder =
-      mobileRecorderRef.current;
+    if (!isMobileRecording) {
+      return;
+    }
+
+    const durationMs =
+      Date.now() -
+      mobileRecordingStartedAtRef.current;
+
+    const chunks = [
+      ...mobilePcmChunksRef.current,
+    ];
+
+    const inputSampleRate =
+      mobileInputSampleRateRef.current;
+
+    cleanupMobileRecorder();
 
     if (
-      recorder &&
-      recorder.state === "recording"
+      durationMs < 800 ||
+      chunks.length === 0
     ) {
-      recorder.stop();
+      setError(
+        "အသံက တိုလွန်းပါတယ်။ Button ကိုနှိပ်ပြီး စကားတစ်ကြောင်းပြောကာ Stop & Translate နှိပ်ပါ။"
+      );
+      changeStatus("ready");
+      return;
     }
+
+    const merged =
+      mergePcmChunks(chunks);
+
+    const downsampled =
+      downsamplePcm(
+        merged,
+        inputSampleRate,
+        16000
+      );
+
+    const wavBlob =
+      createMonoWavBlob(
+        downsampled,
+        16000
+      );
+
+    void transcribeMobileAudio(
+      wavBlob
+    );
   }
 
   function startMyanmarRecognition() {
