@@ -229,11 +229,11 @@ export default function ChatBox({
       ReturnType<typeof setTimeout> | null
     >(null);
 
-  const mediaRecorderRef =
+  const mobileRecorderRef =
     useRef<MediaRecorder | null>(null);
-  const mediaStreamRef =
+  const mobileStreamRef =
     useRef<MediaStream | null>(null);
-  const recordedChunksRef =
+  const mobileChunksRef =
     useRef<BlobPart[]>([]);
 
   const playbackAudioRef =
@@ -266,44 +266,75 @@ export default function ChatBox({
     }
   }
 
-  function isIOSDevice() {
-    if (typeof navigator === "undefined") return false;
+  function isMobileBrowser() {
+    if (typeof navigator === "undefined") {
+      return false;
+    }
 
-    return (
-      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-      (navigator.platform === "MacIntel" &&
-        navigator.maxTouchPoints > 1)
+    const userAgent =
+      navigator.userAgent || "";
+
+    const userAgentData =
+      navigator as Navigator & {
+        userAgentData?: {
+          mobile?: boolean;
+        };
+      };
+
+    return Boolean(
+      userAgentData.userAgentData?.mobile ||
+      /Android|iPhone|iPad|iPod|Mobile|CriOS|FxiOS|EdgiOS/i.test(
+        userAgent
+      )
     );
   }
 
   function shouldUseMobileRecorder() {
-    if (typeof window === "undefined") return false;
+    if (typeof window === "undefined") {
+      return false;
+    }
 
     const Recognition =
       window.SpeechRecognition ||
       window.webkitSpeechRecognition;
 
-    return isIOSDevice() || !Recognition;
+    /*
+     * All phones use the same MediaRecorder flow.
+     * No Android/iOS branch is required.
+     * Desktop Chrome keeps the old my-MM SpeechRecognition flow.
+     */
+    return (
+      isMobileBrowser() ||
+      !Recognition
+    );
   }
 
-  function stopMobileRecorderTracks() {
-    mediaStreamRef.current
+  function stopMobileStream() {
+    mobileStreamRef.current
       ?.getTracks()
       .forEach((track) => track.stop());
-    mediaStreamRef.current = null;
+
+    mobileStreamRef.current = null;
   }
 
   function cleanupMobileRecorder() {
-    const recorder = mediaRecorderRef.current;
+    const recorder =
+      mobileRecorderRef.current;
 
-    if (recorder && recorder.state !== "inactive") {
+    if (
+      recorder &&
+      recorder.state !== "inactive"
+    ) {
       recorder.onstop = null;
-      try { recorder.stop(); } catch {}
+
+      try {
+        recorder.stop();
+      } catch {}
     }
 
-    mediaRecorderRef.current = null;
-    recordedChunksRef.current = [];
-    stopMobileRecorderTracks();
+    mobileRecorderRef.current = null;
+    mobileChunksRef.current = [];
+    stopMobileStream();
     setIsMobileRecording(false);
   }
 
@@ -1156,8 +1187,12 @@ export default function ChatBox({
     }
   }
 
-  function getSupportedRecordingMimeType() {
-    if (typeof MediaRecorder === "undefined") return "";
+  function getMobileRecordingMimeType() {
+    if (
+      typeof MediaRecorder === "undefined"
+    ) {
+      return "";
+    }
 
     const candidates = [
       "audio/mp4",
@@ -1173,9 +1208,14 @@ export default function ChatBox({
     );
   }
 
-  async function transcribeMobileRecording(blob: Blob) {
-    if (!blob.size) {
-      setError("အသံမဖမ်းမိပါ။ ပြန်စမ်းပါ။");
+  async function transcribeMobileAudio(
+    blob: Blob
+  ) {
+    if (blob.size < 700) {
+      setError(
+        "အသံမဖမ်းမိပါ။ ပြန်နှိပ်ပြီး ပိုရှင်းရှင်း ပြောပါ။"
+      );
+      changeStatus("ready");
       return;
     }
 
@@ -1191,22 +1231,35 @@ export default function ChatBox({
             ? "ogg"
             : "webm";
 
-      const file = new File(
+      const audioFile = new File(
         [blob],
         `myanmar-voice.${extension}`,
-        { type: blob.type || "audio/webm" }
+        {
+          type:
+            blob.type || "audio/webm",
+        }
       );
 
-      const formData = new FormData();
-      formData.append("audio", file);
+      const formData =
+        new FormData();
 
-      const response = await fetch("/api/transcribe", {
-        method: "POST",
-        body: formData,
-        cache: "no-store",
-      });
+      formData.append(
+        "audio",
+        audioFile
+      );
 
-      const data = await response.json().catch(() => null);
+      const response = await fetch(
+        "/api/transcribe",
+        {
+          method: "POST",
+          body: formData,
+          cache: "no-store",
+        }
+      );
+
+      const data = await response
+        .json()
+        .catch(() => null);
 
       if (!response.ok) {
         throw new Error(
@@ -1221,17 +1274,23 @@ export default function ChatBox({
           : "";
 
       if (!transcript) {
-        throw new Error("မြန်မာစာသား မရပါ။");
+        throw new Error(
+          "မြန်မာ transcript မရပါ။"
+        );
       }
 
       setUserTranscript(transcript);
-      await buildMyanmarSentence(transcript);
-    } catch (transcriptionError) {
+
+      await buildMyanmarSentence(
+        transcript
+      );
+    } catch (transcribeError) {
       setError(
-        transcriptionError instanceof Error
-          ? transcriptionError.message
+        transcribeError instanceof Error
+          ? transcribeError.message
           : "မြန်မာအသံကို စာသားပြောင်းမရပါ။"
       );
+
       changeStatus("ready");
     } finally {
       setIsMobileTranscribing(false);
@@ -1244,83 +1303,146 @@ export default function ChatBox({
       isMobileTranscribing ||
       isBuildingSentence ||
       isAnnaSpeaking
-    ) return;
+    ) {
+      return;
+    }
+
+    if (!window.isSecureContext) {
+      setError(
+        "Microphone သုံးရန် HTTPS website လိုပါတယ်။"
+      );
+      return;
+    }
 
     if (
-      !navigator.mediaDevices?.getUserMedia ||
-      typeof MediaRecorder === "undefined"
+      !navigator.mediaDevices
+        ?.getUserMedia ||
+      typeof MediaRecorder ===
+        "undefined"
     ) {
       setError(
-        "ဒီဖုန်း Browser မှာ အသံဖမ်းစနစ် မရပါ။ Safari သို့မဟုတ် Chrome နောက်ဆုံး version သုံးပါ။"
+        "ဒီဖုန်း Chrome မှာ voice recording မရပါ။ Chrome ကို update လုပ်ပါ။"
       );
       return;
     }
 
     try {
       setError("");
-      recordedChunksRef.current = [];
+      setUserTranscript("");
+      setInterimTranscript("");
+      mobileChunksRef.current = [];
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          channelCount: 1,
-        },
-      });
-
-      mediaStreamRef.current = stream;
-      const mimeType = getSupportedRecordingMimeType();
-      const recorder = mimeType
-        ? new MediaRecorder(stream, { mimeType })
-        : new MediaRecorder(stream);
-
-      mediaRecorderRef.current = recorder;
-
-      recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          recordedChunksRef.current.push(event.data);
-        }
-      };
-
-      recorder.onstop = () => {
-        const blob = new Blob(recordedChunksRef.current, {
-          type: recorder.mimeType || mimeType || "audio/webm",
+      /*
+       * This request runs directly from the user's button tap.
+       * Mobile browsers may reject microphone requests started by
+       * timers or automatic callbacks.
+       */
+      const stream =
+        await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+            channelCount: 1,
+          },
         });
 
-        recordedChunksRef.current = [];
-        mediaRecorderRef.current = null;
-        stopMobileRecorderTracks();
-        setIsMobileRecording(false);
-        void transcribeMobileRecording(blob);
+      mobileStreamRef.current =
+        stream;
+
+      const mimeType =
+        getMobileRecordingMimeType();
+
+      const recorder = mimeType
+        ? new MediaRecorder(
+            stream,
+            { mimeType }
+          )
+        : new MediaRecorder(stream);
+
+      mobileRecorderRef.current =
+        recorder;
+
+      recorder.ondataavailable = (
+        event
+      ) => {
+        if (event.data.size > 0) {
+          mobileChunksRef.current.push(
+            event.data
+          );
+        }
       };
 
       recorder.onerror = () => {
         cleanupMobileRecorder();
-        setError("အသံဖမ်းနေစဉ် error ဖြစ်သွားပါတယ်။");
+
+        setError(
+          "အသံဖမ်းနေစဉ် error ဖြစ်သွားပါတယ်။"
+        );
+
         changeStatus("ready");
       };
 
+      recorder.onstop = () => {
+        const recordedBlob =
+          new Blob(
+            mobileChunksRef.current,
+            {
+              type:
+                recorder.mimeType ||
+                mimeType ||
+                "audio/webm",
+            }
+          );
+
+        mobileChunksRef.current = [];
+        mobileRecorderRef.current =
+          null;
+        stopMobileStream();
+        setIsMobileRecording(false);
+
+        void transcribeMobileAudio(
+          recordedBlob
+        );
+      };
+
       recorder.start(250);
+
       setIsMobileRecording(true);
       changeStatus("listening");
     } catch (recordingError) {
       cleanupMobileRecorder();
+
+      const permissionDenied =
+        recordingError instanceof
+          DOMException &&
+        (
+          recordingError.name ===
+            "NotAllowedError" ||
+          recordingError.name ===
+            "SecurityError"
+        );
+
       setError(
-        recordingError instanceof DOMException &&
-          recordingError.name === "NotAllowedError"
-          ? "iPhone Settings → Safari → Microphone ကို Allow လုပ်ပြီး page ကို refresh လုပ်ပါ။"
+        permissionDenied
+          ? "Chrome မှာ Microphone permission ကို Allow လုပ်ပြီး page ကို refresh လုပ်ပါ။"
           : recordingError instanceof Error
             ? recordingError.message
             : "အသံဖမ်းတာ စမရပါ။"
       );
+
       changeStatus("ready");
     }
   }
 
   function stopMobileMyanmarRecording() {
-    const recorder = mediaRecorderRef.current;
-    if (recorder && recorder.state === "recording") {
+    const recorder =
+      mobileRecorderRef.current;
+
+    if (
+      recorder &&
+      recorder.state === "recording"
+    ) {
       recorder.stop();
     }
   }
@@ -1552,12 +1674,15 @@ export default function ChatBox({
   }
 
   function startMyanmarMode() {
-    if (shouldUseMobileRecorder()) {
+    if (
+      shouldUseMobileRecorder()
+    ) {
       if (isMobileRecording) {
         stopMobileMyanmarRecording();
       } else {
         void startMobileMyanmarRecording();
       }
+
       return;
     }
 
@@ -1571,13 +1696,18 @@ export default function ChatBox({
       window.webkitSpeechRecognition;
 
     if (!Recognition) {
-      setError("ဒီ Browser မှာ Myanmar Speech Recognition မရပါ။");
+      setError(
+        "ဒီ Browser မှာ Myanmar Speech Recognition မရပါ။"
+      );
       return;
     }
 
-    myanmarStoppingRef.current = false;
-    myanmarActiveRef.current = true;
-    myanmarBusyRef.current = false;
+    myanmarStoppingRef.current =
+      false;
+    myanmarActiveRef.current =
+      true;
+    myanmarBusyRef.current =
+      false;
 
     setMyanmarActive(true);
     setError("");
