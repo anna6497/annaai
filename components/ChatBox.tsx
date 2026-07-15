@@ -2237,7 +2237,8 @@ export default function ChatBox({
           </section>
         )}
 
-      {!isMobileDevice &&
+      {(mode === "conversation" ||
+        !isMobileDevice) &&
         shownUserTranscript && (
         <section className="rounded-3xl border border-purple-300/20 bg-purple-500/20 p-5">
           <p className="text-xs font-bold uppercase tracking-wide text-purple-200">
