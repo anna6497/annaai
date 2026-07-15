@@ -185,6 +185,9 @@ export default function ChatBox({
   const [isMobileTranscribing, setIsMobileTranscribing] =
     useState(false);
 
+  const [pendingMobileSpeech, setPendingMobileSpeech] =
+    useState("");
+
   const [userTranscript, setUserTranscript] =
     useState("");
   const [interimTranscript, setInterimTranscript] =
@@ -274,18 +277,21 @@ export default function ChatBox({
     const userAgent =
       navigator.userAgent || "";
 
-    const userAgentData =
-      navigator as Navigator & {
-        userAgentData?: {
-          mobile?: boolean;
-        };
-      };
+    const hasTouchScreen =
+      navigator.maxTouchPoints > 0;
+
+    const coarsePointer =
+      typeof window !== "undefined" &&
+      window.matchMedia?.(
+        "(pointer: coarse)"
+      ).matches;
 
     return Boolean(
-      userAgentData.userAgentData?.mobile ||
       /Android|iPhone|iPad|iPod|Mobile|CriOS|FxiOS|EdgiOS/i.test(
         userAgent
-      )
+      ) ||
+      coarsePointer ||
+      hasTouchScreen
     );
   }
 
@@ -962,12 +968,27 @@ export default function ChatBox({
   }
 
   async function speakMyanmarModeChinese(
-    text: string
+    text: string,
+    fromUserTap = false
   ) {
     const clean = text.trim();
 
     if (!clean) {
-      scheduleMyanmarRestart();
+      return;
+    }
+
+    /*
+     * Mobile browsers often block audio.play() after an async API call.
+     * We therefore wait for a direct user tap before playing on phones.
+     */
+    if (
+      shouldUseMobileRecorder() &&
+      !fromUserTap
+    ) {
+      setPendingMobileSpeech(clean);
+      setIsAnnaSpeaking(false);
+      myanmarBusyRef.current = false;
+      changeStatus("ready");
       return;
     }
 
@@ -975,6 +996,7 @@ export default function ChatBox({
 
     myanmarBusyRef.current = true;
     setIsAnnaSpeaking(true);
+    setError("");
     changeStatus("speaking");
 
     try {
@@ -1011,7 +1033,11 @@ export default function ChatBox({
       const audio =
         new Audio(url);
 
-      audio.setAttribute("playsinline", "true");
+      audio.setAttribute(
+        "playsinline",
+        "true"
+      );
+      audio.preload = "auto";
 
       playbackAudioRef.current =
         audio;
@@ -1029,9 +1055,9 @@ export default function ChatBox({
         cleanPlayback();
 
         setIsAnnaSpeaking(false);
+        setPendingMobileSpeech("");
         myanmarBusyRef.current = false;
-
-        scheduleMyanmarRestart();
+        changeStatus("ready");
       };
 
       audio.onended = finish;
@@ -1044,16 +1070,25 @@ export default function ChatBox({
         speechError
       );
 
-      setError(
-        speechError instanceof Error
-          ? speechError.message
-          : "အသံထုတ်မရပါ။"
-      );
+      const isPlayBlocked =
+        speechError instanceof DOMException &&
+        speechError.name ===
+          "NotAllowedError";
+
+      if (isPlayBlocked) {
+        setPendingMobileSpeech(clean);
+        setError("");
+      } else {
+        setError(
+          speechError instanceof Error
+            ? speechError.message
+            : "အသံထုတ်မရပါ။"
+        );
+      }
 
       setIsAnnaSpeaking(false);
       myanmarBusyRef.current = false;
-
-      scheduleMyanmarRestart();
+      changeStatus("ready");
     }
   }
 
@@ -1154,7 +1189,8 @@ export default function ChatBox({
       myanmarBusyRef.current = false;
 
       await speakMyanmarModeChinese(
-        nextReply.hanzi
+        nextReply.hanzi,
+        false
       );
     } catch (buildError) {
       console.error(
@@ -1330,6 +1366,7 @@ export default function ChatBox({
       setError("");
       setUserTranscript("");
       setInterimTranscript("");
+      setPendingMobileSpeech("");
       mobileChunksRef.current = [];
 
       /*
@@ -1746,6 +1783,7 @@ export default function ChatBox({
     setUserTranscript("");
     setInterimTranscript("");
     setLiveHanzi("");
+    setPendingMobileSpeech("");
     setError("");
   }
 
@@ -1925,6 +1963,25 @@ export default function ChatBox({
           )}
         </div>
       </section>
+
+      {mode === "sentence" &&
+        pendingMobileSpeech && (
+          <div className="text-center">
+            <button
+              type="button"
+              onClick={() =>
+                void speakMyanmarModeChinese(
+                  pendingMobileSpeech,
+                  true
+                )
+              }
+              disabled={isAnnaSpeaking}
+              className="rounded-2xl bg-white/10 px-6 py-3 font-semibold text-white disabled:opacity-50"
+            >
+              🔊 တရုတ်အသံ နားထောင်မယ်
+            </button>
+          </div>
+        )}
 
       {error && (
         <p className="rounded-2xl border border-red-400/20 bg-red-500/20 px-4 py-3 text-sm leading-6 text-red-100">
