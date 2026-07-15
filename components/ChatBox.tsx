@@ -188,6 +188,11 @@ export default function ChatBox({
   const [pendingMobileSpeech, setPendingMobileSpeech] =
     useState("");
 
+  const [isMobileDevice, setIsMobileDevice] =
+    useState(false);
+  const [mobileTypedText, setMobileTypedText] =
+    useState("");
+
   const [userTranscript, setUserTranscript] =
     useState("");
   const [interimTranscript, setInterimTranscript] =
@@ -495,6 +500,9 @@ export default function ChatBox({
 
   useEffect(() => {
     mountedRef.current = true;
+    setIsMobileDevice(
+      isMobileBrowser()
+    );
 
     return () => {
       mountedRef.current = false;
@@ -1965,6 +1973,34 @@ export default function ChatBox({
     }
   }
 
+  async function submitMobileTypedBurmese() {
+    const clean =
+      mobileTypedText.trim();
+
+    if (!clean) {
+      setError(
+        "မြန်မာစာကြောင်းကို ရိုက်ထည့်ပါ။"
+      );
+      return;
+    }
+
+    if (
+      isBuildingSentence ||
+      isAnnaSpeaking ||
+      isFormatting
+    ) {
+      return;
+    }
+
+    setError("");
+    setUserTranscript(clean);
+    setPendingMobileSpeech("");
+
+    await buildMyanmarSentence(
+      clean
+    );
+  }
+
   function startMyanmarMode() {
     if (
       shouldUseMobileRecorder()
@@ -2039,6 +2075,7 @@ export default function ChatBox({
     setInterimTranscript("");
     setLiveHanzi("");
     setPendingMobileSpeech("");
+    setMobileTypedText("");
     setError("");
   }
 
@@ -2081,6 +2118,13 @@ export default function ChatBox({
 
     if (myanmarActive) {
       return "🟢 Myanmar listening active — နောက်စာကြောင်း ဆက်ပြောလို့ရပါတယ်";
+    }
+
+    if (
+      mode === "sentence" &&
+      isMobileDevice
+    ) {
+      return "မြန်မာစာကို ရိုက်ထည့်ပြီး Ask Anna နှိပ်ပါ။ Laptop မှာ အသံနဲ့ပြောလို့ရပါတယ်။";
     }
 
     return currentMode.description;
@@ -2141,7 +2185,60 @@ export default function ChatBox({
         </p>
       </section>
 
-      {shownUserTranscript && (
+      {mode === "sentence" &&
+        isMobileDevice && (
+          <section className="rounded-3xl border border-purple-300/25 bg-purple-500/20 p-5">
+            <label
+              htmlFor="mobile-burmese-input"
+              className="text-xs font-bold uppercase tracking-wide text-purple-200"
+            >
+              You said
+            </label>
+
+            <textarea
+              id="mobile-burmese-input"
+              value={mobileTypedText}
+              onChange={(event) =>
+                setMobileTypedText(
+                  event.target.value
+                )
+              }
+              placeholder="ပြောချင်တဲ့ မြန်မာစာကြောင်းကို ဒီနေရာမှာ ရိုက်ထည့်ပါ…"
+              rows={4}
+              maxLength={1500}
+              disabled={
+                isBuildingSentence ||
+                isAnnaSpeaking
+              }
+              className="mt-3 w-full resize-y rounded-2xl border border-white/10 bg-black/25 px-4 py-4 text-lg font-semibold leading-8 text-white outline-none placeholder:text-white/35 focus:border-purple-300 disabled:opacity-60"
+            />
+
+            <div className="mt-3 flex items-center justify-between gap-3 text-xs text-purple-200">
+              <span>
+                {mobileTypedText.length}/1500
+              </span>
+
+              {mobileTypedText && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setMobileTypedText("")
+                  }
+                  disabled={
+                    isBuildingSentence ||
+                    isAnnaSpeaking
+                  }
+                  className="rounded-xl bg-white/10 px-3 py-2 font-semibold disabled:opacity-50"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          </section>
+        )}
+
+      {!isMobileDevice &&
+        shownUserTranscript && (
         <section className="rounded-3xl border border-purple-300/20 bg-purple-500/20 p-5">
           <p className="text-xs font-bold uppercase tracking-wide text-purple-200">
             You said
@@ -2266,6 +2363,24 @@ export default function ChatBox({
               : isConnected
                 ? "⏹ Stop Conversation"
                 : "🎤 တရုတ်လို စကားပြောမယ်"}
+          </button>
+        ) : isMobileDevice ? (
+          <button
+            type="button"
+            onClick={() =>
+              void submitMobileTypedBurmese()
+            }
+            disabled={
+              !mobileTypedText.trim() ||
+              isBuildingSentence ||
+              isAnnaSpeaking ||
+              isFormatting
+            }
+            className="rounded-full bg-purple-600 px-8 py-4 text-lg font-bold transition hover:bg-purple-500 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isBuildingSentence
+              ? "✍️ တရုတ်စာကြောင်း စီနေပါတယ်…"
+              : "✨ Ask Anna"}
           </button>
         ) : (
           <button
