@@ -4,23 +4,24 @@ import { NextResponse } from "next/server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-interface RequestBody {
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+interface Body {
   hanzi?: unknown;
 }
 
 export async function POST(request: Request) {
   try {
-    const apiKey = process.env.OPENAI_API_KEY;
-
-    if (!apiKey) {
+    if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json(
         { error: "OPENAI_API_KEY မတွေ့ပါ။" },
         { status: 500 }
       );
     }
 
-    const body = (await request.json()) as RequestBody;
-
+    const body = (await request.json()) as Body;
     const hanzi =
       typeof body.hanzi === "string"
         ? body.hanzi.trim()
@@ -33,29 +34,26 @@ export async function POST(request: Request) {
       );
     }
 
-    const openai = new OpenAI({ apiKey });
-
     const response = await openai.responses.create({
       model: "gpt-4.1-mini",
       instructions: `
-Return valid JSON only:
-{
-  "hanzi": "the complete original Chinese reply",
-  "pinyin": "complete Hanyu Pinyin with tone marks",
-  "myanmar": "natural Myanmar Unicode translation"
-}
+Format the complete Chinese reply.
+
+Return JSON only.
 
 Rules:
-- Do not omit any Chinese sentence.
-- Pinyin must use tone marks, not tone numbers.
-- Do not add explanations or markdown.
+- Preserve every Chinese sentence.
+- Produce complete Hanyu Pinyin with tone marks.
+- Produce a complete natural Myanmar Unicode translation.
+- Never shorten the reply.
+- Do not add markdown.
 `.trim(),
       input: hanzi,
-      max_output_tokens: 700,
+      max_output_tokens: 2400,
       text: {
         format: {
           type: "json_schema",
-          name: "formatted_chinese_reply",
+          name: "formatted_reply",
           strict: true,
           schema: {
             type: "object",
@@ -71,6 +69,13 @@ Rules:
       },
     });
 
+    if (response.status === "incomplete") {
+      return NextResponse.json(
+        { error: "Pinyin/Myanmar generation မပြည့်စုံပါ။ ပြန်စမ်းပါ။" },
+        { status: 502 }
+      );
+    }
+
     const output = response.output_text?.trim();
 
     if (!output) {
@@ -80,12 +85,17 @@ Rules:
       );
     }
 
-    return NextResponse.json(JSON.parse(output), {
-      status: 200,
-      headers: {
-        "Cache-Control": "no-store, max-age=0",
-      },
-    });
+    try {
+      return NextResponse.json(JSON.parse(output), {
+        headers: { "Cache-Control": "no-store" },
+      });
+    } catch {
+      console.error("Invalid structured output:", output);
+      return NextResponse.json(
+        { error: "Reply format မှားသွားပါတယ်။ ပြန်စမ်းပါ။" },
+        { status: 502 }
+      );
+    }
   } catch (error) {
     console.error("Format reply error:", error);
 

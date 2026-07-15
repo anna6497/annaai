@@ -180,6 +180,11 @@ export default function ChatBox({
   const [isBuildingSentence, setIsBuildingSentence] =
     useState(false);
 
+  const [isMobileRecording, setIsMobileRecording] =
+    useState(false);
+  const [isMobileTranscribing, setIsMobileTranscribing] =
+    useState(false);
+
   const [userTranscript, setUserTranscript] =
     useState("");
   const [interimTranscript, setInterimTranscript] =
@@ -224,6 +229,13 @@ export default function ChatBox({
       ReturnType<typeof setTimeout> | null
     >(null);
 
+  const mediaRecorderRef =
+    useRef<MediaRecorder | null>(null);
+  const mediaStreamRef =
+    useRef<MediaStream | null>(null);
+  const recordedChunksRef =
+    useRef<BlobPart[]>([]);
+
   const playbackAudioRef =
     useRef<HTMLAudioElement | null>(null);
   const playbackUrlRef =
@@ -252,6 +264,47 @@ export default function ChatBox({
       );
       restartTimerRef.current = null;
     }
+  }
+
+  function isIOSDevice() {
+    if (typeof navigator === "undefined") return false;
+
+    return (
+      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === "MacIntel" &&
+        navigator.maxTouchPoints > 1)
+    );
+  }
+
+  function shouldUseMobileRecorder() {
+    if (typeof window === "undefined") return false;
+
+    const Recognition =
+      window.SpeechRecognition ||
+      window.webkitSpeechRecognition;
+
+    return isIOSDevice() || !Recognition;
+  }
+
+  function stopMobileRecorderTracks() {
+    mediaStreamRef.current
+      ?.getTracks()
+      .forEach((track) => track.stop());
+    mediaStreamRef.current = null;
+  }
+
+  function cleanupMobileRecorder() {
+    const recorder = mediaRecorderRef.current;
+
+    if (recorder && recorder.state !== "inactive") {
+      recorder.onstop = null;
+      try { recorder.stop(); } catch {}
+    }
+
+    mediaRecorderRef.current = null;
+    recordedChunksRef.current = [];
+    stopMobileRecorderTracks();
+    setIsMobileRecording(false);
   }
 
   function cleanPlayback() {
@@ -350,6 +403,7 @@ export default function ChatBox({
 
     clearRestartTimer();
     cleanMyanmarRecognition();
+    cleanupMobileRecorder();
     cleanPlayback();
 
     sentenceAbortRef.current?.abort();
@@ -1102,6 +1156,175 @@ export default function ChatBox({
     }
   }
 
+  function getSupportedRecordingMimeType() {
+    if (typeof MediaRecorder === "undefined") return "";
+
+    const candidates = [
+      "audio/mp4",
+      "audio/webm;codecs=opus",
+      "audio/webm",
+      "audio/ogg;codecs=opus",
+    ];
+
+    return (
+      candidates.find((type) =>
+        MediaRecorder.isTypeSupported(type)
+      ) || ""
+    );
+  }
+
+  async function transcribeMobileRecording(blob: Blob) {
+    if (!blob.size) {
+      setError("အသံမဖမ်းမိပါ။ ပြန်စမ်းပါ။");
+      return;
+    }
+
+    setIsMobileTranscribing(true);
+    setError("");
+    changeStatus("thinking");
+
+    try {
+      const extension =
+        blob.type.includes("mp4")
+          ? "m4a"
+          : blob.type.includes("ogg")
+            ? "ogg"
+            : "webm";
+
+      const file = new File(
+        [blob],
+        `myanmar-voice.${extension}`,
+        { type: blob.type || "audio/webm" }
+      );
+
+      const formData = new FormData();
+      formData.append("audio", file);
+
+      const response = await fetch("/api/transcribe", {
+        method: "POST",
+        body: formData,
+        cache: "no-store",
+      });
+
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(
+          data?.error ||
+            `မြန်မာအသံကို စာသားပြောင်းမရပါ။ (${response.status})`
+        );
+      }
+
+      const transcript =
+        typeof data?.text === "string"
+          ? data.text.trim()
+          : "";
+
+      if (!transcript) {
+        throw new Error("မြန်မာစာသား မရပါ။");
+      }
+
+      setUserTranscript(transcript);
+      await buildMyanmarSentence(transcript);
+    } catch (transcriptionError) {
+      setError(
+        transcriptionError instanceof Error
+          ? transcriptionError.message
+          : "မြန်မာအသံကို စာသားပြောင်းမရပါ။"
+      );
+      changeStatus("ready");
+    } finally {
+      setIsMobileTranscribing(false);
+    }
+  }
+
+  async function startMobileMyanmarRecording() {
+    if (
+      isMobileRecording ||
+      isMobileTranscribing ||
+      isBuildingSentence ||
+      isAnnaSpeaking
+    ) return;
+
+    if (
+      !navigator.mediaDevices?.getUserMedia ||
+      typeof MediaRecorder === "undefined"
+    ) {
+      setError(
+        "ဒီဖုန်း Browser မှာ အသံဖမ်းစနစ် မရပါ။ Safari သို့မဟုတ် Chrome နောက်ဆုံး version သုံးပါ။"
+      );
+      return;
+    }
+
+    try {
+      setError("");
+      recordedChunksRef.current = [];
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          channelCount: 1,
+        },
+      });
+
+      mediaStreamRef.current = stream;
+      const mimeType = getSupportedRecordingMimeType();
+      const recorder = mimeType
+        ? new MediaRecorder(stream, { mimeType })
+        : new MediaRecorder(stream);
+
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          recordedChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        const blob = new Blob(recordedChunksRef.current, {
+          type: recorder.mimeType || mimeType || "audio/webm",
+        });
+
+        recordedChunksRef.current = [];
+        mediaRecorderRef.current = null;
+        stopMobileRecorderTracks();
+        setIsMobileRecording(false);
+        void transcribeMobileRecording(blob);
+      };
+
+      recorder.onerror = () => {
+        cleanupMobileRecorder();
+        setError("အသံဖမ်းနေစဉ် error ဖြစ်သွားပါတယ်။");
+        changeStatus("ready");
+      };
+
+      recorder.start(250);
+      setIsMobileRecording(true);
+      changeStatus("listening");
+    } catch (recordingError) {
+      cleanupMobileRecorder();
+      setError(
+        recordingError instanceof DOMException &&
+          recordingError.name === "NotAllowedError"
+          ? "iPhone Settings → Safari → Microphone ကို Allow လုပ်ပြီး page ကို refresh လုပ်ပါ။"
+          : recordingError instanceof Error
+            ? recordingError.message
+            : "အသံဖမ်းတာ စမရပါ။"
+      );
+      changeStatus("ready");
+    }
+  }
+
+  function stopMobileMyanmarRecording() {
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state === "recording") {
+      recorder.stop();
+    }
+  }
+
   function startMyanmarRecognition() {
     clearRestartTimer();
 
@@ -1329,6 +1552,15 @@ export default function ChatBox({
   }
 
   function startMyanmarMode() {
+    if (shouldUseMobileRecorder()) {
+      if (isMobileRecording) {
+        stopMobileMyanmarRecording();
+      } else {
+        void startMobileMyanmarRecording();
+      }
+      return;
+    }
+
     if (myanmarActive) {
       stopMyanmarMode();
       return;
@@ -1339,18 +1571,13 @@ export default function ChatBox({
       window.webkitSpeechRecognition;
 
     if (!Recognition) {
-      setError(
-        "ဒီ Browser မှာ Myanmar Speech Recognition မရပါ။ Desktop/Android Chrome ကိုသုံးပါ။"
-      );
+      setError("ဒီ Browser မှာ Myanmar Speech Recognition မရပါ။");
       return;
     }
 
-    myanmarStoppingRef.current =
-      false;
-    myanmarActiveRef.current =
-      true;
-    myanmarBusyRef.current =
-      false;
+    myanmarStoppingRef.current = false;
+    myanmarActiveRef.current = true;
+    myanmarBusyRef.current = false;
 
     setMyanmarActive(true);
     setError("");
@@ -1405,6 +1632,14 @@ export default function ChatBox({
       return "🎙️ မြန်မာလို နားထောင်နေပါတယ်…";
     }
 
+    if (isMobileRecording) {
+      return "🔴 မြန်မာအသံ ဖမ်းနေပါတယ်… ပြီးရင် Stop & Translate နှိပ်ပါ။";
+    }
+
+    if (isMobileTranscribing) {
+      return "🎧 မြန်မာအသံကို စာသားပြောင်းနေပါတယ်…";
+    }
+
     if (isBuildingSentence) {
       return "✍️ တရုတ်စာကြောင်း စီနေပါတယ်…";
     }
@@ -1457,7 +1692,9 @@ export default function ChatBox({
           disabled={
             isConnected ||
             isConnecting ||
-            myanmarActive
+            myanmarActive ||
+            isMobileRecording ||
+            isMobileTranscribing
           }
           className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-4 text-base font-semibold text-white outline-none disabled:opacity-50"
         >
@@ -1594,17 +1831,21 @@ export default function ChatBox({
             onClick={startMyanmarMode}
             disabled={
               isBuildingSentence ||
-              isAnnaSpeaking
+              isAnnaSpeaking ||
+              isMobileTranscribing
             }
             className={`rounded-full px-8 py-4 text-lg font-bold transition disabled:opacity-50 ${
-              myanmarActive
+              myanmarActive ||
+              isMobileRecording
                 ? "bg-red-500 hover:bg-red-400"
                 : "bg-purple-600 hover:bg-purple-500"
             }`}
           >
-            {myanmarActive
-              ? "⏹ Stop Conversation"
-              : "🎤 မြန်မာလို စကားပြောမယ်"}
+            {isMobileRecording
+              ? "⏹ Stop & Translate"
+              : myanmarActive
+                ? "⏹ Stop Conversation"
+                : "🎤 မြန်မာလို စကားပြောမယ်"}
           </button>
         )}
 

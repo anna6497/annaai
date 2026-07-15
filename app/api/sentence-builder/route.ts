@@ -4,23 +4,24 @@ import { NextResponse } from "next/server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-interface RequestBody {
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+interface Body {
   burmese?: unknown;
 }
 
 export async function POST(request: Request) {
   try {
-    const apiKey = process.env.OPENAI_API_KEY;
-
-    if (!apiKey) {
+    if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json(
         { error: "OPENAI_API_KEY မတွေ့ပါ။" },
         { status: 500 }
       );
     }
 
-    const body = (await request.json()) as RequestBody;
-
+    const body = (await request.json()) as Body;
     const burmese =
       typeof body.burmese === "string"
         ? body.burmese.trim()
@@ -33,38 +34,27 @@ export async function POST(request: Request) {
       );
     }
 
-    const openai = new OpenAI({ apiKey });
-
     const response = await openai.responses.create({
       model: "gpt-4.1-mini",
       instructions: `
-You are a Burmese-to-Chinese sentence builder.
+Convert the user's Burmese sentence into natural Mandarin.
 
-Return valid JSON only:
-{
-  "hanzi": "one simple, natural Mandarin sentence",
-  "pinyin": "complete Hanyu Pinyin with tone marks",
-  "myanmar": "the same Burmese meaning",
-  "alternativeHanzi": "one more natural spoken alternative or an empty string",
-  "alternativePinyin": "complete pinyin for the alternative or an empty string"
-}
+Return JSON only.
 
-CRITICAL RULES:
-- Never answer the Burmese statement as a conversation.
-- Never ask a follow-up question.
-- Never add advice.
-- Preserve exactly what the user is trying to say.
-- Use natural Simplified Chinese.
-- Keep the main sentence concise.
-- Use Myanmar Unicode.
-- Do not add markdown or explanations.
+Rules:
+- Do not answer it as a conversation.
+- Preserve the exact intended meaning.
+- Use Simplified Chinese.
+- Give complete pinyin with tone marks.
+- Keep the original Burmese meaning in Myanmar Unicode.
+- Give one spoken alternative only when useful.
 `.trim(),
       input: burmese,
-      max_output_tokens: 600,
+      max_output_tokens: 1200,
       text: {
         format: {
           type: "json_schema",
-          name: "burmese_to_chinese_sentence",
+          name: "sentence_builder_result",
           strict: true,
           schema: {
             type: "object",
@@ -88,21 +78,33 @@ CRITICAL RULES:
       },
     });
 
-    const output = response.output_text?.trim();
-
-    if (!output) {
+    if (response.status === "incomplete") {
       return NextResponse.json(
-        { error: "တရုတ်စာကြောင်း မရပါ။" },
+        { error: "Chinese sentence generation မပြည့်စုံပါ။ ပြန်စမ်းပါ။" },
         { status: 502 }
       );
     }
 
-    return NextResponse.json(JSON.parse(output), {
-      status: 200,
-      headers: {
-        "Cache-Control": "no-store, max-age=0",
-      },
-    });
+    const output = response.output_text?.trim();
+
+    if (!output) {
+      return NextResponse.json(
+        { error: "Chinese sentence မရပါ။" },
+        { status: 502 }
+      );
+    }
+
+    try {
+      return NextResponse.json(JSON.parse(output), {
+        headers: { "Cache-Control": "no-store" },
+      });
+    } catch {
+      console.error("Invalid structured output:", output);
+      return NextResponse.json(
+        { error: "Chinese result format မှားသွားပါတယ်။ ပြန်စမ်းပါ။" },
+        { status: 502 }
+      );
+    }
   } catch (error) {
     console.error("Sentence builder error:", error);
 
