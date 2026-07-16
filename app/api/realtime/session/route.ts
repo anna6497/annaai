@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { startVoiceUsage, stopVoiceUsage } from "../../../../lib/voice-usage";
+import {
+  startVoiceUsage,
+  stopVoiceUsage,
+} from "../../../../lib/voice-usage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,23 +25,55 @@ You are Anna, the user's warm, playful Chinese-speaking friend.
 - Do not reproduce copyrighted lyrics.
 `.trim();
 
-export async function POST(request: Request) {
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return "Realtime session မဖွင့်နိုင်ပါ။";
+  }
+}
+
+export async function POST(
+  request: Request
+) {
   let usageStarted = false;
 
   try {
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey =
+      process.env.OPENAI_API_KEY;
 
     if (!apiKey) {
       return NextResponse.json(
-        { error: "OPENAI_API_KEY မတွေ့ပါ။" },
+        {
+          error:
+            "OPENAI_API_KEY မတွေ့ပါ။",
+        },
         { status: 500 }
       );
     }
 
-    const usage = await startVoiceUsage();
+    console.log(
+      "Starting voice usage check..."
+    );
+
+    const usage =
+      await startVoiceUsage();
+
+    console.log(
+      "Voice usage result:",
+      usage
+    );
+
     usageStarted = usage.allowed;
 
-    if (!usage.allowed || usage.remainingSeconds <= 0) {
+    if (
+      !usage.allowed ||
+      usage.remainingSeconds <= 0
+    ) {
       return NextResponse.json(
         {
           error:
@@ -49,12 +84,17 @@ export async function POST(request: Request) {
       );
     }
 
-    const sdp = await request.text();
+    const sdp =
+      await request.text();
 
     if (!sdp.trim()) {
       await stopVoiceUsage();
+
       return NextResponse.json(
-        { error: "WebRTC SDP မတွေ့ပါ။" },
+        {
+          error:
+            "WebRTC SDP မတွေ့ပါ။",
+        },
         { status: 400 }
       );
     }
@@ -62,7 +102,8 @@ export async function POST(request: Request) {
     const sessionConfig = {
       type: "realtime",
       model: "gpt-realtime-2.1",
-      instructions: ANNA_INSTRUCTIONS,
+      instructions:
+        ANNA_INSTRUCTIONS,
       output_modalities: ["audio"],
       audio: {
         input: {
@@ -70,7 +111,8 @@ export async function POST(request: Request) {
             type: "near_field",
           },
           transcription: {
-            model: "gpt-4o-transcribe",
+            model:
+              "gpt-4o-transcribe",
             prompt:
               "The speaker is speaking Mandarin Chinese. Transcribe accurately using Simplified Chinese characters. Do not translate or add pinyin.",
           },
@@ -87,76 +129,124 @@ export async function POST(request: Request) {
       },
     };
 
-    const formData = new FormData();
-    formData.set("sdp", sdp);
-    formData.set("session", JSON.stringify(sessionConfig));
+    const formData =
+      new FormData();
 
-    const response = await fetch(
-      "https://api.openai.com/v1/realtime/calls",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: formData,
-        cache: "no-store",
-      }
+    formData.set("sdp", sdp);
+
+    formData.set(
+      "session",
+      JSON.stringify(sessionConfig)
     );
 
-    const body = await response.text();
+    console.log(
+      "Requesting OpenAI Realtime session..."
+    );
+
+    const response =
+      await fetch(
+        "https://api.openai.com/v1/realtime/calls",
+        {
+          method: "POST",
+          headers: {
+            Authorization:
+              `Bearer ${apiKey}`,
+          },
+          body: formData,
+          cache: "no-store",
+        }
+      );
+
+    const responseBody =
+      await response.text();
+
+    console.log(
+      "OpenAI Realtime status:",
+      response.status
+    );
 
     if (!response.ok) {
+      console.error(
+        "OpenAI Realtime response error:",
+        response.status,
+        responseBody
+      );
+
       await stopVoiceUsage();
 
       return NextResponse.json(
         {
           error:
-            body ||
+            responseBody ||
             `Realtime session မဖွင့်နိုင်ပါ။ (${response.status})`,
         },
-        { status: response.status }
+        {
+          status: response.status,
+        }
       );
     }
 
-    return new NextResponse(body, {
-      status: 200,
-      headers: {
-        "Content-Type": "application/sdp",
-        "Cache-Control": "no-store, max-age=0",
-        "X-Voice-Plan": usage.plan,
-        "X-Voice-Limit-Seconds": String(
-          usage.limitSeconds
-        ),
-        "X-Voice-Used-Seconds": String(
-          usage.usedSeconds
-        ),
-        "X-Voice-Remaining-Seconds": String(
-          usage.remainingSeconds
-        ),
-      },
-    });
+    return new NextResponse(
+      responseBody,
+      {
+        status: 200,
+        headers: {
+          "Content-Type":
+            "application/sdp",
+          "Cache-Control":
+            "no-store, max-age=0",
+          "X-Voice-Plan":
+            usage.plan,
+          "X-Voice-Limit-Seconds":
+            String(
+              usage.limitSeconds
+            ),
+          "X-Voice-Used-Seconds":
+            String(
+              usage.usedSeconds
+            ),
+          "X-Voice-Remaining-Seconds":
+            String(
+              usage.remainingSeconds
+            ),
+        },
+      }
+    );
   } catch (error) {
+    console.error(
+      "Realtime session failed:",
+      error
+    );
+
     if (usageStarted) {
       try {
         await stopVoiceUsage();
-      } catch {}
+      } catch (stopError) {
+        console.error(
+          "Failed to stop voice usage:",
+          stopError
+        );
+      }
     }
 
     const message =
-      error instanceof Error
-        ? error.message
-        : "Realtime session မဖွင့်နိုင်ပါ။";
+      getErrorMessage(error);
 
     return NextResponse.json(
       {
         error:
-          message === "UNAUTHORIZED"
+          message ===
+          "UNAUTHORIZED"
             ? "Login ဝင်ပြီးမှ Voice သုံးနိုင်ပါတယ်။"
-            : message,
+            : message ||
+              "Realtime session မဖွင့်နိုင်ပါ။",
       },
       {
         status:
-          message === "UNAUTHORIZED" ? 401 : 500,
+          message ===
+          "UNAUTHORIZED"
+            ? 401
+            : 500,
       }
     );
   }
