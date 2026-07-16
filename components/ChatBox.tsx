@@ -46,6 +46,14 @@ interface DisplayReply {
   alternativePinyin?: string;
 }
 
+interface VoiceUsageStatus {
+  plan: "trial" | "monthly" | "yearly" | "premium";
+  limitSeconds: number;
+  usedSeconds: number;
+  remainingSeconds: number;
+  allowed: boolean;
+}
+
 interface SpeechRecognitionAlternativeLike {
   transcript: string;
   confidence?: number;
@@ -208,6 +216,11 @@ export default function ChatBox({
   const [error, setError] =
     useState("");
 
+  const [voiceUsage, setVoiceUsage] =
+    useState<VoiceUsageStatus | null>(null);
+  const [isLoadingUsage, setIsLoadingUsage] =
+    useState(false);
+
   const pcRef =
     useRef<RTCPeerConnection | null>(null);
   const dcRef =
@@ -270,6 +283,11 @@ export default function ChatBox({
 
   const mountedRef = useRef(true);
 
+  const usageTimeoutRef =
+    useRef<ReturnType<typeof setTimeout> | null>(null);
+  const usageRefreshIntervalRef =
+    useRef<ReturnType<typeof setInterval> | null>(null);
+
   const currentMode =
     MODE_DETAILS[mode];
 
@@ -277,6 +295,142 @@ export default function ChatBox({
     status: ConversationStatus
   ) {
     onStatusChange?.(status);
+  }
+
+  function clearUsageTimers() {
+    if (usageTimeoutRef.current) {
+      clearTimeout(usageTimeoutRef.current);
+      usageTimeoutRef.current = null;
+    }
+
+    if (usageRefreshIntervalRef.current) {
+      clearInterval(usageRefreshIntervalRef.current);
+      usageRefreshIntervalRef.current = null;
+    }
+  }
+
+  function formatUsageTime(seconds: number) {
+    const safe = Math.max(0, Math.floor(seconds));
+    const hours = Math.floor(safe / 3600);
+    const minutes = Math.floor((safe % 3600) / 60);
+    const secs = safe % 60;
+
+    if (hours > 0) {
+      return `${hours} နာရီ ${minutes} မိနစ်`;
+    }
+
+    if (minutes > 0) {
+      return `${minutes} မိနစ် ${secs} စက္ကန့်`;
+    }
+
+    return `${secs} စက္ကန့်`;
+  }
+
+  async function loadVoiceUsage() {
+    setIsLoadingUsage(true);
+
+    try {
+      const response = await fetch("/api/usage/status", {
+        method: "GET",
+        cache: "no-store",
+      });
+
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(
+          data?.error || `Usage status error (${response.status})`
+        );
+      }
+
+      if (!mountedRef.current) return;
+
+      setVoiceUsage(data as VoiceUsageStatus);
+    } catch (usageError) {
+      console.error("loadVoiceUsage error:", usageError);
+    } finally {
+      if (mountedRef.current) {
+        setIsLoadingUsage(false);
+      }
+    }
+  }
+
+  function scheduleUsageLimitStop(remainingSeconds: number) {
+    clearUsageTimers();
+
+    const safeSeconds = Math.max(1, Math.floor(remainingSeconds));
+
+    usageTimeoutRef.current = setTimeout(() => {
+      setError(
+        "ဒီနေ့ Voice Usage limit ပြည့်သွားပါပြီ။ မနက်ဖြန် ပြန်သုံးနိုင်ပါတယ်။"
+      );
+
+      if (isConnected) {
+        closeRealtimeSession();
+      }
+
+      if (myanmarActive) {
+        stopMyanmarMode();
+      }
+
+      void loadVoiceUsage();
+    }, safeSeconds * 1000);
+
+    usageRefreshIntervalRef.current = setInterval(() => {
+      void loadVoiceUsage();
+    }, 60_000);
+  }
+
+  async function startNonRealtimeUsage() {
+    const response = await fetch("/api/usage/start", {
+      method: "POST",
+      cache: "no-store",
+    });
+
+    const data = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      throw new Error(
+        data?.error ||
+          "ဒီနေ့ Voice Usage limit ပြည့်သွားပါပြီ။"
+      );
+    }
+
+    const status = data as VoiceUsageStatus;
+    setVoiceUsage(status);
+    scheduleUsageLimitStop(status.remainingSeconds);
+
+    return status;
+  }
+
+  function stopVoiceUsage() {
+    clearUsageTimers();
+
+    const body = JSON.stringify({});
+
+    if (
+      typeof navigator !== "undefined" &&
+      typeof navigator.sendBeacon === "function"
+    ) {
+      const blob = new Blob([body], {
+        type: "application/json",
+      });
+
+      navigator.sendBeacon("/api/usage/stop", blob);
+    } else {
+      void fetch("/api/usage/stop", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body,
+        keepalive: true,
+      });
+    }
+
+    window.setTimeout(() => {
+      void loadVoiceUsage();
+    }, 500);
   }
 
   function clearRestartTimer() {
@@ -429,6 +583,10 @@ export default function ChatBox({
   }
 
   function closeRealtimeSession() {
+    if (isConnected || isConnecting) {
+      stopVoiceUsage();
+    }
+
     formatAbortRef.current?.abort();
     formatAbortRef.current = null;
 
@@ -468,6 +626,10 @@ export default function ChatBox({
   }
 
   function stopMyanmarMode() {
+    if (myanmarActive) {
+      stopVoiceUsage();
+    }
+
     myanmarStoppingRef.current = true;
     myanmarActiveRef.current = false;
     myanmarBusyRef.current = false;
@@ -503,8 +665,19 @@ export default function ChatBox({
     setIsMobileDevice(
       isMobileBrowser()
     );
+    void loadVoiceUsage();
+
+    const handlePageHide = () => {
+      if (isConnected || myanmarActive) {
+        stopVoiceUsage();
+      }
+    };
+
+    window.addEventListener("pagehide", handlePageHide);
 
     return () => {
+      window.removeEventListener("pagehide", handlePageHide);
+      clearUsageTimers();
       mountedRef.current = false;
       stopEverything();
     };
@@ -951,6 +1124,29 @@ export default function ChatBox({
 
         throw new Error(apiMessage);
       }
+
+      const limitSeconds = Number(
+        response.headers.get("X-Voice-Limit-Seconds") || "0"
+      );
+      const usedSeconds = Number(
+        response.headers.get("X-Voice-Used-Seconds") || "0"
+      );
+      const remainingSeconds = Number(
+        response.headers.get("X-Voice-Remaining-Seconds") || "0"
+      );
+      const plan =
+        (response.headers.get("X-Voice-Plan") ||
+          "trial") as VoiceUsageStatus["plan"];
+
+      setVoiceUsage({
+        plan,
+        limitSeconds,
+        usedSeconds,
+        remainingSeconds,
+        allowed: remainingSeconds > 0,
+      });
+
+      scheduleUsageLimitStop(remainingSeconds);
 
       await pc.setRemoteDescription({
         type: "answer",
@@ -2030,6 +2226,17 @@ export default function ChatBox({
       return;
     }
 
+    try {
+      await startNonRealtimeUsage();
+    } catch (usageError) {
+      setError(
+        usageError instanceof Error
+          ? usageError.message
+          : "Voice Usage စတင်မရပါ။"
+      );
+      return;
+    }
+
     myanmarStoppingRef.current =
       false;
     myanmarActiveRef.current =
@@ -2140,6 +2347,51 @@ export default function ChatBox({
   return (
     <div className="space-y-5">
       <section className="rounded-3xl border border-white/10 bg-black/20 p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-purple-300">
+              Daily Voice Usage
+            </p>
+
+            <p className="mt-2 text-sm text-white/65">
+              {isLoadingUsage && !voiceUsage
+                ? "Usage စစ်နေပါတယ်…"
+                : voiceUsage
+                  ? `${voiceUsage.plan.toUpperCase()} · ${formatUsageTime(
+                      voiceUsage.remainingSeconds
+                    )} ကျန်`
+                  : "Usage information မရသေးပါ။"}
+            </p>
+          </div>
+
+          {voiceUsage && (
+            <div className="min-w-40">
+              <div className="h-2 overflow-hidden rounded-full bg-white/10">
+                <div
+                  className="h-full rounded-full bg-purple-400 transition-all"
+                  style={{
+                    width: `${Math.max(
+                      0,
+                      Math.min(
+                        100,
+                        (voiceUsage.remainingSeconds /
+                          Math.max(1, voiceUsage.limitSeconds)) *
+                          100
+                      )
+                    )}%`,
+                  }}
+                />
+              </div>
+
+              <p className="mt-2 text-right text-xs text-white/45">
+                {formatUsageTime(voiceUsage.usedSeconds)} သုံးပြီး
+              </p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className="rounded-3xl border border-white/10 bg-black/20 p-5">
         <label
           htmlFor="anna-mode"
           className="mb-3 block text-sm font-bold text-purple-200"
@@ -2237,8 +2489,7 @@ export default function ChatBox({
           </section>
         )}
 
-      {(mode === "conversation" ||
-        !isMobileDevice) &&
+      {!isMobileDevice &&
         shownUserTranscript && (
         <section className="rounded-3xl border border-purple-300/20 bg-purple-500/20 p-5">
           <p className="text-xs font-bold uppercase tracking-wide text-purple-200">
@@ -2386,7 +2637,7 @@ export default function ChatBox({
         ) : (
           <button
             type="button"
-            onClick={startMyanmarMode}
+            onClick={() => void startMyanmarMode()}
             disabled={
               isBuildingSentence ||
               isAnnaSpeaking ||
