@@ -1,7 +1,11 @@
 import { createBrowserClient } from "@supabase/ssr";
 import { getSupabaseConfig } from "./config";
 
-export function createClient() {
+export function createSupabaseBrowserClient() {
   const { url, key } = getSupabaseConfig();
+
   return createBrowserClient(url, key);
 }
+
+// Backward compatibility
+export const createClient = createSupabaseBrowserClient;
