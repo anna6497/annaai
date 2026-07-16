@@ -2197,7 +2197,8 @@ export default function ChatBox({
     );
   }
 
-  function startMyanmarMode() {
+  // The 'async' keyword was added here to allow inside awaits
+  async function startMyanmarMode() {
     if (
       shouldUseMobileRecorder()
     ) {
