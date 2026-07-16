@@ -288,6 +288,11 @@ export default function ChatBox({
   const usageRefreshIntervalRef =
     useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const pushToTalkHeldRef =
+    useRef(false);
+  const pushToTalkReleaseTimerRef =
+    useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const currentMode =
     MODE_DETAILS[mode];
 
@@ -431,6 +436,70 @@ export default function ChatBox({
     window.setTimeout(() => {
       void loadVoiceUsage();
     }, 500);
+  }
+
+  function clearPushToTalkReleaseTimer() {
+    if (pushToTalkReleaseTimerRef.current) {
+      clearTimeout(pushToTalkReleaseTimerRef.current);
+      pushToTalkReleaseTimerRef.current = null;
+    }
+  }
+
+  function setRealtimeMicrophoneEnabled(
+    enabled: boolean
+  ) {
+    const track =
+      realtimeStreamRef.current
+        ?.getAudioTracks()[0];
+
+    if (!track) {
+      return;
+    }
+
+    track.enabled = enabled;
+    setIsMuted(!enabled);
+  }
+
+  function beginPushToTalk() {
+    clearPushToTalkReleaseTimer();
+    pushToTalkHeldRef.current = true;
+    setError("");
+
+    if (isConnected) {
+      setRealtimeMicrophoneEnabled(true);
+      setIsUserSpeaking(true);
+      changeStatus("listening");
+      return;
+    }
+
+    if (!isConnecting) {
+      void startRealtimeSession();
+    }
+  }
+
+  function endPushToTalk() {
+    if (!pushToTalkHeldRef.current) {
+      return;
+    }
+
+    pushToTalkHeldRef.current = false;
+    clearPushToTalkReleaseTimer();
+
+    /*
+     * Keep the microphone open very briefly so the last Chinese
+     * syllable is not clipped. Then muting the track sends silence,
+     * allowing server VAD to finish the turn and create Anna's reply.
+     */
+    pushToTalkReleaseTimerRef.current =
+      setTimeout(() => {
+        pushToTalkReleaseTimerRef.current = null;
+        setRealtimeMicrophoneEnabled(false);
+        setIsUserSpeaking(false);
+
+        if (isConnected) {
+          changeStatus("thinking");
+        }
+      }, 280);
   }
 
   function clearRestartTimer() {
@@ -583,6 +652,9 @@ export default function ChatBox({
   }
 
   function closeRealtimeSession() {
+    clearPushToTalkReleaseTimer();
+    pushToTalkHeldRef.current = false;
+
     if (isConnected || isConnecting) {
       stopVoiceUsage();
     }
@@ -878,14 +950,11 @@ export default function ChatBox({
           realtimeReplyRef.current =
             finalHanzi;
           setLiveHanzi(finalHanzi);
+          void formatRealtimeReply(
+            finalHanzi
+          );
         }
 
-        /*
-         * Do not call /api/format-reply here.
-         * Realtime can emit both transcript.done and response.done.
-         * Calling the formatter in both places creates duplicate paid requests.
-         * The formatter is called once in response.done below.
-         */
         return;
       }
 
@@ -910,7 +979,8 @@ export default function ChatBox({
 
         realtimeReplyRef.current = "";
         setIsAnnaSpeaking(false);
-        changeStatus("listening");
+        setRealtimeMicrophoneEnabled(false);
+        changeStatus("ready");
         return;
       }
 
@@ -1011,6 +1081,17 @@ export default function ChatBox({
         );
       }
 
+      /*
+       * Push-to-talk:
+       * the microphone is off unless the user is holding the button.
+       */
+      microphoneTrack.enabled =
+        pushToTalkHeldRef.current;
+
+      setIsMuted(
+        !microphoneTrack.enabled
+      );
+
       pc.addTrack(
         microphoneTrack,
         stream
@@ -1051,7 +1132,16 @@ export default function ChatBox({
           setIsConnected(true);
           setIsConnecting(false);
           setError("");
-          changeStatus("listening");
+
+          setRealtimeMicrophoneEnabled(
+            pushToTalkHeldRef.current
+          );
+
+          changeStatus(
+            pushToTalkHeldRef.current
+              ? "listening"
+              : "ready"
+          );
         }
       );
 
@@ -2323,7 +2413,7 @@ export default function ChatBox({
     }
 
     if (isConnected) {
-      return "🟢 Connected — ဆက်ပြောလို့ရပါတယ်";
+      return "🟢 Connected — ခလုတ်ကို ဖိထားပြီးပြောပါ။ လွှတ်လိုက်ရင် Anna ပြန်ပြောမယ်။";
     }
 
     if (myanmarActive) {
@@ -2599,27 +2689,79 @@ export default function ChatBox({
 
       <div className="text-center">
         {mode === "conversation" ? (
-          <button
-            type="button"
-            onClick={
-              isConnected
-                ? closeRealtimeSession
-                : () =>
-                    void startRealtimeSession()
-            }
-            disabled={isConnecting}
-            className={`rounded-full px-8 py-4 text-lg font-bold transition disabled:opacity-50 ${
-              isConnected
-                ? "bg-red-500 hover:bg-red-400"
-                : "bg-purple-600 hover:bg-purple-500"
-            }`}
-          >
-            {isConnecting
-              ? "⏳ Connecting…"
-              : isConnected
-                ? "⏹ Stop Conversation"
-                : "🎤 တရုတ်လို စကားပြောမယ်"}
-          </button>
+          <div className="space-y-3">
+            <button
+              type="button"
+              onPointerDown={(event) => {
+                event.preventDefault();
+
+                try {
+                  event.currentTarget.setPointerCapture(
+                    event.pointerId
+                  );
+                } catch {}
+
+                beginPushToTalk();
+              }}
+              onPointerUp={(event) => {
+                event.preventDefault();
+                endPushToTalk();
+              }}
+              onPointerCancel={endPushToTalk}
+              onLostPointerCapture={endPushToTalk}
+              onContextMenu={(event) =>
+                event.preventDefault()
+              }
+              onKeyDown={(event) => {
+                if (
+                  event.repeat ||
+                  (
+                    event.key !== " " &&
+                    event.key !== "Enter"
+                  )
+                ) {
+                  return;
+                }
+
+                event.preventDefault();
+                beginPushToTalk();
+              }}
+              onKeyUp={(event) => {
+                if (
+                  event.key !== " " &&
+                  event.key !== "Enter"
+                ) {
+                  return;
+                }
+
+                event.preventDefault();
+                endPushToTalk();
+              }}
+              className={`touch-none select-none rounded-full px-9 py-5 text-lg font-black transition active:scale-95 ${
+                isUserSpeaking
+                  ? "bg-red-500 ring-4 ring-red-300/30"
+                  : "bg-purple-600 hover:bg-purple-500"
+              }`}
+            >
+              {isConnecting
+                ? "⏳ Connecting — ဆက်ဖိထားပါ"
+                : isUserSpeaking
+                  ? "🎙️ ပြောနေပါတယ် — ပြီးရင်လွှတ်ပါ"
+                  : "🎤 ဖိထားပြီး တရုတ်လိုပြောပါ"}
+            </button>
+
+            {isConnected && (
+              <div>
+                <button
+                  type="button"
+                  onClick={closeRealtimeSession}
+                  className="rounded-xl border border-white/10 bg-white/10 px-4 py-2 text-sm font-semibold text-white/75 hover:bg-white/15"
+                >
+                  End Call
+                </button>
+              </div>
+            )}
+          </div>
         ) : isMobileDevice ? (
           <button
             type="button"
@@ -2667,20 +2809,6 @@ export default function ChatBox({
         </p>
       </div>
 
-      {mode === "conversation" &&
-        isConnected && (
-          <div className="flex justify-center">
-            <button
-              type="button"
-              onClick={toggleMute}
-              className="rounded-xl bg-white/10 px-5 py-3 text-sm font-semibold"
-            >
-              {isMuted
-                ? "🎤 Unmute"
-                : "🔇 Mute"}
-            </button>
-          </div>
-        )}
     </div>
   );
 }

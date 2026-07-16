@@ -7,19 +7,33 @@ export const dynamic = "force-dynamic";
 const ANNA_INSTRUCTIONS = `
 You are Anna, the user's warm, playful Chinese-speaking friend.
 
-- Speak natural Simplified Mandarin.
+LANGUAGE:
+- Speak natural Simplified Mandarin Chinese.
 - Speak and output Hanzi only.
-- Never speak pinyin or Burmese.
-- Normally answer with 2–5 natural sentences.
+- Never speak pinyin, Burmese, English, headings, or formatting labels.
+
+NORMAL CONVERSATION:
+- Reply with one or two short natural Chinese sentences only.
+- Never exceed two sentences unless the user explicitly asks for a story,
+  a detailed explanation, a role-play, or a song.
+- Keep ordinary replies concise and let the user speak more than you.
+- Ask at most one short follow-up question.
+- Do not repeat or summarize what the user just said.
+
+SPECIAL REQUESTS:
 - If the user asks you to speak slowly, actually use shorter clauses,
-  clear pauses, and a noticeably slower pace until they ask for normal speed.
-- If asked for a complete story or detailed explanation, finish it from
-  beginning to end before asking one final question.
+  simple words, clear pauses, and a noticeably slower speaking pace.
+- If asked for a complete story, finish the story before asking one final question.
 - Do not repeatedly ask whether the user wants to continue.
-- Correct important pronunciation mistakes playfully but kindly.
+- Correct important pronunciation mistakes briefly, playfully, and kindly.
 - You may gently scold laziness without insulting the user.
-- You may sing short original Chinese songs or hum.
-- Do not reproduce copyrighted lyrics.
+- You may sing a short original Chinese song or hum.
+- Never reproduce copyrighted song lyrics.
+
+PUSH-TO-TALK BEHAVIOR:
+- The user speaks only while holding the microphone button.
+- Wait for the user's completed turn, then answer.
+- Do not fill silence with extra speech.
 `.trim();
 
 export async function POST(request: Request) {
@@ -66,25 +80,14 @@ export async function POST(request: Request) {
       output_modalities: ["audio"],
       audio: {
         input: {
-          /*
-           * Do not apply Realtime noise reduction here.
-           * Some phones already process the microphone audio.
-           * Test this version against the previous one and keep
-           * whichever produces the better transcript on your devices.
-           */
           transcription: {
             model: "gpt-4o-transcribe",
             prompt: [
               "The speaker is speaking Mandarin Chinese.",
               "Transcribe the exact spoken words into Simplified Chinese.",
-              "Do not paraphrase or replace the sentence with a more common phrase.",
+              "Do not paraphrase or replace words with a more common phrase.",
               "Preserve short beginner expressions exactly.",
-              "Examples of possible phrases include:",
-              "我不想听。",
-              "我不想说。",
-              "我不喜欢吃。",
-              "我听不懂。",
-              "请再说一次。",
+              "Possible phrases include 我不想听, 我不喜欢吃, 我听不懂, 请再说一次.",
               "Output only Simplified Chinese.",
               "Do not translate and do not add pinyin.",
             ].join(" "),
@@ -93,7 +96,7 @@ export async function POST(request: Request) {
             type: "server_vad",
             threshold: 0.5,
             prefix_padding_ms: 400,
-            silence_duration_ms: 900,
+            silence_duration_ms: 550,
             create_response: true,
             interrupt_response: true,
           },
