@@ -2197,8 +2197,7 @@ export default function ChatBox({
     );
   }
 
-  // The 'async' keyword was added here to allow inside awaits
-  async function startMyanmarMode() {
+  function startMyanmarMode() {
     if (
       shouldUseMobileRecorder()
     ) {
@@ -2490,24 +2489,25 @@ export default function ChatBox({
           </section>
         )}
 
-      {!isMobileDevice &&
-        shownUserTranscript && (
-        <section className="rounded-3xl border border-purple-300/20 bg-purple-500/20 p-5">
-          <p className="text-xs font-bold uppercase tracking-wide text-purple-200">
-            You said
-          </p>
-
-          <p className="mt-2 whitespace-pre-line text-left text-lg font-semibold leading-8 text-white">
-            {shownUserTranscript}
-          </p>
-
-          {interimTranscript && (
-            <p className="mt-2 text-xs text-purple-200">
-              နားထောင်နေဆဲ…
+      {shownUserTranscript &&
+        (mode === "conversation" ||
+          !isMobileDevice) && (
+          <section className="rounded-3xl border border-purple-300/20 bg-purple-500/20 p-5">
+            <p className="text-xs font-bold uppercase tracking-wide text-purple-200">
+              YOU SAID
             </p>
-          )}
-        </section>
-      )}
+
+            <p className="mt-2 whitespace-pre-line text-left text-lg font-semibold leading-8 text-white">
+              {shownUserTranscript}
+            </p>
+
+            {interimTranscript && (
+              <p className="mt-2 text-xs text-purple-200">
+                နားထောင်နေဆဲ…
+              </p>
+            )}
+          </section>
+        )}
 
       <section className="min-h-64 max-h-[40rem] overflow-y-auto rounded-3xl border border-white/10 bg-black/30 p-6">
         <div className="space-y-5 text-left">
