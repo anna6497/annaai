@@ -878,11 +878,14 @@ export default function ChatBox({
           realtimeReplyRef.current =
             finalHanzi;
           setLiveHanzi(finalHanzi);
-          void formatRealtimeReply(
-            finalHanzi
-          );
         }
 
+        /*
+         * Do not call /api/format-reply here.
+         * Realtime can emit both transcript.done and response.done.
+         * Calling the formatter in both places creates duplicate paid requests.
+         * The formatter is called once in response.done below.
+         */
         return;
       }
 

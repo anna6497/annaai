@@ -10,19 +10,41 @@ export const dynamic = "force-dynamic";
 const ANNA_INSTRUCTIONS = `
 You are Anna, the user's warm, playful Chinese-speaking friend.
 
+LANGUAGE:
 - Speak natural Simplified Mandarin.
 - Speak and output Hanzi only.
-- Never speak pinyin or Burmese.
-- Normally answer with 2–5 natural sentences.
-- If the user asks you to speak slowly, actually use shorter clauses,
-  clear pauses, and a noticeably slower pace until they ask for normal speed.
-- If asked for a complete story or detailed explanation, finish it from
-  beginning to end before asking one final question.
+- Never speak pinyin, Burmese, English, labels, or explanations about formatting.
+
+DEFAULT RESPONSE LENGTH:
+- For ordinary conversation, reply with exactly ONE short natural Chinese sentence.
+- Keep ordinary replies under about 18 Chinese characters whenever possible.
+- Do not repeat the user's sentence.
+- Do not add greetings, summaries, encouragement, or multiple follow-up questions unless useful.
+- Ask at most one short follow-up question.
+- Never turn a simple user message into a lesson.
+
+LONGER RESPONSES:
+- Give a longer response only when the user explicitly asks for a story,
+  detailed explanation, example, correction, role-play, or song.
+- Even then, be concise and avoid repetition.
+- For a story, finish the requested story before asking one final short question.
 - Do not repeatedly ask whether the user wants to continue.
-- Correct important pronunciation mistakes playfully but kindly.
-- You may gently scold laziness without insulting the user.
-- You may sing short original Chinese songs or hum.
-- Do not reproduce copyrighted lyrics.
+
+SPEAKING STYLE:
+- If the user asks you to speak slowly, use short clauses, simple words,
+  clear pauses, and a noticeably slower pace until they ask for normal speed.
+- If the user's pronunciation has an important mistake, correct it briefly,
+  playfully, and kindly in one short sentence.
+- You may laugh naturally, but never humiliate or insult the user.
+- You may gently scold laziness without being hurtful.
+- You may sing only a very short original Chinese song or hum.
+- Never reproduce copyrighted song lyrics.
+
+CONVERSATION:
+- Be warm, friendly, playful, and natural.
+- Let the user speak more than you.
+- Prefer short reactions such as “真的呀？”、“太好了！”、“你今天怎么样？”
+  instead of long speeches.
 `.trim();
 
 function getErrorMessage(error: unknown) {
@@ -37,43 +59,23 @@ function getErrorMessage(error: unknown) {
   }
 }
 
-export async function POST(
-  request: Request
-) {
+export async function POST(request: Request) {
   let usageStarted = false;
 
   try {
-    const apiKey =
-      process.env.OPENAI_API_KEY;
+    const apiKey = process.env.OPENAI_API_KEY;
 
     if (!apiKey) {
       return NextResponse.json(
-        {
-          error:
-            "OPENAI_API_KEY မတွေ့ပါ။",
-        },
+        { error: "OPENAI_API_KEY မတွေ့ပါ။" },
         { status: 500 }
       );
     }
 
-    console.log(
-      "Starting voice usage check..."
-    );
-
-    const usage =
-      await startVoiceUsage();
-
-    console.log(
-      "Voice usage result:",
-      usage
-    );
-
+    const usage = await startVoiceUsage();
     usageStarted = usage.allowed;
 
-    if (
-      !usage.allowed ||
-      usage.remainingSeconds <= 0
-    ) {
+    if (!usage.allowed || usage.remainingSeconds <= 0) {
       return NextResponse.json(
         {
           error:
@@ -84,17 +86,13 @@ export async function POST(
       );
     }
 
-    const sdp =
-      await request.text();
+    const sdp = await request.text();
 
     if (!sdp.trim()) {
       await stopVoiceUsage();
 
       return NextResponse.json(
-        {
-          error:
-            "WebRTC SDP မတွေ့ပါ။",
-        },
+        { error: "WebRTC SDP မတွေ့ပါ။" },
         { status: 400 }
       );
     }
@@ -102,8 +100,7 @@ export async function POST(
     const sessionConfig = {
       type: "realtime",
       model: "gpt-realtime-2.1",
-      instructions:
-        ANNA_INSTRUCTIONS,
+      instructions: ANNA_INSTRUCTIONS,
       output_modalities: ["audio"],
       audio: {
         input: {
@@ -111,14 +108,13 @@ export async function POST(
             type: "near_field",
           },
           transcription: {
-            model:
-              "gpt-4o-transcribe",
+            model: "gpt-4o-transcribe",
             prompt:
-              "The speaker is speaking Mandarin Chinese. Transcribe accurately using Simplified Chinese characters. Do not translate or add pinyin.",
+              "The speaker is speaking Mandarin Chinese. Transcribe accurately in Simplified Chinese. Do not translate. Do not add pinyin.",
           },
           turn_detection: {
             type: "semantic_vad",
-            eagerness: "low",
+            eagerness: "medium",
             create_response: true,
             interrupt_response: true,
           },
@@ -129,89 +125,84 @@ export async function POST(
       },
     };
 
-    const formData =
-      new FormData();
-
+    const formData = new FormData();
     formData.set("sdp", sdp);
-
     formData.set(
       "session",
       JSON.stringify(sessionConfig)
     );
 
-    console.log(
-      "Requesting OpenAI Realtime session..."
+    const response = await fetch(
+      "https://api.openai.com/v1/realtime/calls",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: formData,
+        cache: "no-store",
+      }
     );
 
-    const response =
-      await fetch(
-        "https://api.openai.com/v1/realtime/calls",
-        {
-          method: "POST",
-          headers: {
-            Authorization:
-              `Bearer ${apiKey}`,
-          },
-          body: formData,
-          cache: "no-store",
-        }
-      );
-
-    const responseBody =
-      await response.text();
-
-    console.log(
-      "OpenAI Realtime status:",
-      response.status
-    );
+    const responseBody = await response.text();
 
     if (!response.ok) {
+      await stopVoiceUsage();
+
       console.error(
-        "OpenAI Realtime response error:",
+        "OpenAI Realtime session error:",
         response.status,
         responseBody
       );
 
-      await stopVoiceUsage();
+      let friendlyError =
+        `Realtime session မဖွင့်နိုင်ပါ။ (${response.status})`;
+
+      try {
+        const parsed = JSON.parse(responseBody);
+        const apiMessage =
+          parsed?.error?.message ||
+          parsed?.error ||
+          responseBody;
+
+        if (
+          typeof apiMessage === "string" &&
+          apiMessage.includes("insufficient_quota")
+        ) {
+          friendlyError =
+            "OpenAI API credit မလောက်တော့ပါ။ Billing နဲ့ balance ကို စစ်ပါ။";
+        } else if (typeof apiMessage === "string") {
+          friendlyError = apiMessage;
+        }
+      } catch {
+        if (responseBody.trim()) {
+          friendlyError = responseBody;
+        }
+      }
 
       return NextResponse.json(
-        {
-          error:
-            responseBody ||
-            `Realtime session မဖွင့်နိုင်ပါ။ (${response.status})`,
-        },
-        {
-          status: response.status,
-        }
+        { error: friendlyError },
+        { status: response.status }
       );
     }
 
-    return new NextResponse(
-      responseBody,
-      {
-        status: 200,
-        headers: {
-          "Content-Type":
-            "application/sdp",
-          "Cache-Control":
-            "no-store, max-age=0",
-          "X-Voice-Plan":
-            usage.plan,
-          "X-Voice-Limit-Seconds":
-            String(
-              usage.limitSeconds
-            ),
-          "X-Voice-Used-Seconds":
-            String(
-              usage.usedSeconds
-            ),
-          "X-Voice-Remaining-Seconds":
-            String(
-              usage.remainingSeconds
-            ),
-        },
-      }
-    );
+    return new NextResponse(responseBody, {
+      status: 200,
+      headers: {
+        "Content-Type": "application/sdp",
+        "Cache-Control": "no-store, max-age=0",
+        "X-Voice-Plan": usage.plan,
+        "X-Voice-Limit-Seconds": String(
+          usage.limitSeconds
+        ),
+        "X-Voice-Used-Seconds": String(
+          usage.usedSeconds
+        ),
+        "X-Voice-Remaining-Seconds": String(
+          usage.remainingSeconds
+        ),
+      },
+    });
   } catch (error) {
     console.error(
       "Realtime session failed:",
@@ -229,24 +220,19 @@ export async function POST(
       }
     }
 
-    const message =
-      getErrorMessage(error);
+    const message = getErrorMessage(error);
 
     return NextResponse.json(
       {
         error:
-          message ===
-          "UNAUTHORIZED"
+          message === "UNAUTHORIZED"
             ? "Login ဝင်ပြီးမှ Voice သုံးနိုင်ပါတယ်။"
             : message ||
               "Realtime session မဖွင့်နိုင်ပါ။",
       },
       {
         status:
-          message ===
-          "UNAUTHORIZED"
-            ? 401
-            : 500,
+          message === "UNAUTHORIZED" ? 401 : 500,
       }
     );
   }
