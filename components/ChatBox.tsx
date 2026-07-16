@@ -2197,7 +2197,7 @@ export default function ChatBox({
     );
   }
 
-  function startMyanmarMode() {
+  async function startMyanmarMode() {
     if (
       shouldUseMobileRecorder()
     ) {
