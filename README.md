@@ -1,27 +1,26 @@
-Anna AI — HSK Store Update
+Anna AI payment product code fix
 
-Included:
-- app/hsk/store/page.tsx
-- app/hsk/store/store-animations.css
+Problem:
+The store links used:
+- hsk-full-package
+- hsk-2 ... hsk-9
+
+But lib/payment-products.ts defines:
+- hsk_full
+- hsk_2 ... hsk_9
+
+Included files:
 - components/hsk/HskStoreGrid.tsx
+- lib/payment-products.ts
 
-Changes:
-- HSK 2–9 Full Package is rendered first.
-- Animated glow, shimmer, sparkles and discount badge.
-- Individual HSK 2–9 cards appear below.
-- Mobile responsive.
-- No extra npm package required.
-
-Install:
-1. Extract the ZIP in your project root.
+Installation:
+1. Extract this ZIP into the project root.
 2. Replace the existing files.
 3. Run:
    npm run type-check
    npm run build
+4. Test:
+   /payment?product=hsk_full
+   /payment?product=hsk_2
 
-Payment query values used:
-- Full package: /payment?product=hsk-full-package
-- Individual: /payment?product=hsk-2 through hsk-9
-
-If your current payment product IDs differ, update the href product values in:
-components/hsk/HskStoreGrid.tsx
+No database changes are required for this fix.

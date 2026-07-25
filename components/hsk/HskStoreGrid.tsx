@@ -54,7 +54,7 @@ export default function HskStoreGrid() {
             </div>
 
             <Link
-              href={paymentHref("hsk-full-package")}
+              href={paymentHref("hsk_full")}
               className="store-buy-button group relative inline-flex min-h-16 min-w-64 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-r from-fuchsia-600 via-purple-600 to-fuchsia-600 px-8 py-5 text-center text-lg font-black shadow-[0_0_40px_rgba(217,70,239,0.35)] transition duration-300 hover:-translate-y-1 hover:scale-[1.03] hover:shadow-[0_0_60px_rgba(217,70,239,0.55)]"
             >
               <span className="store-button-shine pointer-events-none absolute inset-y-0 -left-1/2 w-1/3 skew-x-[-20deg] bg-white/25" />
@@ -88,7 +88,7 @@ export default function HskStoreGrid() {
             </p>
             <p className="mt-7 text-3xl font-black">10,000 MMK</p>
             <Link
-              href={paymentHref(`hsk-${level}`)}
+              href={paymentHref(`hsk_${level}`)}
               className="mt-6 flex w-full items-center justify-center rounded-2xl bg-fuchsia-600 px-5 py-4 font-black transition group-hover:bg-fuchsia-500"
             >
               Buy HSK {level}
