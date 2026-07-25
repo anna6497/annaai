@@ -1,0 +1,476 @@
+[
+  {
+    "id": "L1-0004",
+    "hanzi": "爸爸|爸",
+    "pinyin": "bàba|bà",
+    "level": "1"
+  },
+  {
+    "id": "L1-0044",
+    "hanzi": "车上",
+    "pinyin": "chē shang",
+    "level": "1"
+  },
+  {
+    "id": "L1-0074",
+    "hanzi": "弟弟|弟",
+    "pinyin": "dìdi|dì",
+    "level": "1"
+  },
+  {
+    "id": "L1-0075",
+    "hanzi": "第（第二）",
+    "pinyin": "dì (dì-èr)",
+    "level": "1"
+  },
+  {
+    "id": "L1-0118",
+    "hanzi": "哥哥|哥",
+    "pinyin": "gēge|gē",
+    "level": "1"
+  },
+  {
+    "id": "L1-0178",
+    "hanzi": "姐姐|姐",
+    "pinyin": "jiějie|jiě",
+    "level": "1"
+  },
+  {
+    "id": "L1-0216",
+    "hanzi": "零|〇",
+    "pinyin": "líng|líng",
+    "level": "1"
+  },
+  {
+    "id": "L1-0224",
+    "hanzi": "妈妈|妈",
+    "pinyin": "māma|mā",
+    "level": "1"
+  },
+  {
+    "id": "L1-0237",
+    "hanzi": "妹妹|妹",
+    "pinyin": "mèimei|mèi",
+    "level": "1"
+  },
+  {
+    "id": "L1-0241",
+    "hanzi": "们（朋友们）",
+    "pinyin": "men (péngyoumen)",
+    "level": "1"
+  },
+  {
+    "id": "L1-0444",
+    "hanzi": "有时候|有时",
+    "pinyin": "yǒushíhou|yǒushí",
+    "level": "1"
+  },
+  {
+    "id": "L1-0445",
+    "hanzi": "有（一）些",
+    "pinyin": "yǒu(yī)xiē",
+    "level": "1"
+  },
+  {
+    "id": "L1-0489",
+    "hanzi": "子（桌子）",
+    "pinyin": "zi (zhuōzi)",
+    "level": "1"
+  },
+  {
+    "id": "L2-0034",
+    "hanzi": "不太",
+    "pinyin": "bù tài",
+    "level": "2"
+  },
+  {
+    "id": "L2-0044",
+    "hanzi": "不一会儿",
+    "pinyin": "bù yīhuìr",
+    "level": "2"
+  },
+  {
+    "id": "L2-0062",
+    "hanzi": "称1",
+    "pinyin": "chēng",
+    "level": "2"
+  },
+  {
+    "id": "L2-0257",
+    "hanzi": "家（科学家）",
+    "pinyin": "jiā (kēxuéjiā)",
+    "level": "2"
+  },
+  {
+    "id": "L2-0264",
+    "hanzi": "见过",
+    "pinyin": "jiànguo",
+    "level": "2"
+  },
+  {
+    "id": "L2-0340",
+    "hanzi": "老（老王）",
+    "pinyin": "lǎo (Lǎo Wáng)",
+    "level": "2"
+  },
+  {
+    "id": "L2-0377",
+    "hanzi": "面1",
+    "pinyin": "miàn",
+    "level": "2"
+  },
+  {
+    "id": "L2-0378",
+    "hanzi": "面2",
+    "pinyin": "miàn",
+    "level": "2"
+  },
+  {
+    "id": "L2-0390",
+    "hanzi": "那时候|那时",
+    "pinyin": "nà shíhou|nà shí",
+    "level": "2"
+  },
+  {
+    "id": "L2-0507",
+    "hanzi": "送到",
+    "pinyin": "sòngdào",
+    "level": "2"
+  },
+  {
+    "id": "L2-0550",
+    "hanzi": "头（里头）",
+    "pinyin": "tou (lǐtou)",
+    "level": "2"
+  },
+  {
+    "id": "L2-0602",
+    "hanzi": "小（小王）",
+    "pinyin": "xiǎo (Xiǎo Wáng)",
+    "level": "2"
+  },
+  {
+    "id": "L2-0627",
+    "hanzi": "姓名",
+    "pinyin": "xìngmíng",
+    "level": "2"
+  },
+  {
+    "id": "L2-0686",
+    "hanzi": "有（一）点儿",
+    "pinyin": "yǒu(yī)diǎnr",
+    "level": "2"
+  },
+  {
+    "id": "L2-0722",
+    "hanzi": "这时候|这时",
+    "pinyin": "zhè shíhou|zhè shí",
+    "level": "2"
+  },
+  {
+    "id": "L3-0103",
+    "hanzi": "初（初一）",
+    "pinyin": "chū (chūyī)",
+    "level": "3"
+  },
+  {
+    "id": "L3-0192",
+    "hanzi": "放到",
+    "pinyin": "fàngdào",
+    "level": "3"
+  },
+  {
+    "id": "L3-0223",
+    "hanzi": "干吗",
+    "pinyin": "gànmá",
+    "level": "3"
+  },
+  {
+    "id": "L3-0301",
+    "hanzi": "化（现代化）",
+    "pinyin": "huà (xiàndàihuà)",
+    "level": "3"
+  },
+  {
+    "id": "L3-0318",
+    "hanzi": "…极了",
+    "pinyin": "…jí le",
+    "level": "3"
+  },
+  {
+    "id": "L3-0324",
+    "hanzi": "纪录",
+    "pinyin": "jìlù",
+    "level": "3"
+  },
+  {
+    "id": "L3-0508",
+    "hanzi": "能不能",
+    "pinyin": "néng bu néng",
+    "level": "3"
+  },
+  {
+    "id": "L3-0810",
+    "hanzi": "性（积极性）",
+    "pinyin": "xìng(jījíxìng)",
+    "level": "3"
+  },
+  {
+    "id": "L3-0869",
+    "hanzi": "员（服务员）",
+    "pinyin": "yuán (fúwùyuán)",
+    "level": "3"
+  },
+  {
+    "id": "L3-0885",
+    "hanzi": "者（志愿者）",
+    "pinyin": "zhě (zhìyuànzhě)",
+    "level": "3"
+  },
+  {
+    "id": "L4-0242",
+    "hanzi": "…分之…",
+    "pinyin": "…fēn zhī…",
+    "level": "4"
+  },
+  {
+    "id": "L4-0853",
+    "hanzi": "眼里",
+    "pinyin": "yǎnli",
+    "level": "4"
+  },
+  {
+    "id": "L4-0897",
+    "hanzi": "有劲儿",
+    "pinyin": "yǒujìnr",
+    "level": "4"
+  },
+  {
+    "id": "L5-0087",
+    "hanzi": "差（一）点儿",
+    "pinyin": "chà(yī)diǎnr",
+    "level": "5"
+  },
+  {
+    "id": "L5-0101",
+    "hanzi": "称2",
+    "pinyin": "chēng",
+    "level": "5"
+  },
+  {
+    "id": "L5-0108",
+    "hanzi": "城里",
+    "pinyin": "chénglǐ",
+    "level": "5"
+  },
+  {
+    "id": "L5-0139",
+    "hanzi": "辞典",
+    "pinyin": "cídiǎn",
+    "level": "5"
+  },
+  {
+    "id": "L5-0559",
+    "hanzi": "品（工艺品）",
+    "pinyin": "pǐn (gōngyìpǐn)",
+    "level": "5"
+  },
+  {
+    "id": "L6-0368",
+    "hanzi": "好（不）容易",
+    "pinyin": "hǎo(bù)róngyì",
+    "level": "6"
+  },
+  {
+    "id": "L6-0376",
+    "hanzi": "很难说",
+    "pinyin": "hěn nánshuō",
+    "level": "6"
+  },
+  {
+    "id": "L6-0453",
+    "hanzi": "界（文艺界）",
+    "pinyin": "jiè(wényìjiè)",
+    "level": "6"
+  },
+  {
+    "id": "L6-0536",
+    "hanzi": "力（影响力）",
+    "pinyin": "lì(yǐngxiǎnglì)",
+    "level": "6"
+  },
+  {
+    "id": "L6-0957",
+    "hanzi": "一番",
+    "pinyin": "yīfān",
+    "level": "6"
+  },
+  {
+    "id": "L6-1043",
+    "hanzi": "长（秘书长）",
+    "pinyin": "zhǎng (mìshūzhǎng)",
+    "level": "6"
+  },
+  {
+    "id": "L6-1079",
+    "hanzi": "指着",
+    "pinyin": "zhǐzhe",
+    "level": "6"
+  },
+  {
+    "id": "L6-1128",
+    "hanzi": "族（上班族）",
+    "pinyin": "zú (shàngbānzú)",
+    "level": "6"
+  },
+  {
+    "id": "L7-0253",
+    "hanzi": "不利于",
+    "pinyin": "bùlì yú",
+    "level": "7-9"
+  },
+  {
+    "id": "L7-0283",
+    "hanzi": "不肯",
+    "pinyin": "bù kěn",
+    "level": "7-9"
+  },
+  {
+    "id": "L7-0286",
+    "hanzi": "不难",
+    "pinyin": "bù nán",
+    "level": "7-9"
+  },
+  {
+    "id": "L7-0290",
+    "hanzi": "不如说",
+    "pinyin": "bùrú shuō",
+    "level": "7-9"
+  },
+  {
+    "id": "L7-0300",
+    "hanzi": "不予",
+    "pinyin": "bù yǔ",
+    "level": "7-9"
+  },
+  {
+    "id": "L7-0443",
+    "hanzi": "趁着",
+    "pinyin": "chènzhe",
+    "level": "7-9"
+  },
+  {
+    "id": "L7-0610",
+    "hanzi": "纯朴",
+    "pinyin": "chúnpǔ",
+    "level": "7-9"
+  },
+  {
+    "id": "L7-0797",
+    "hanzi": "得意扬扬",
+    "pinyin": "déyì-yángyáng",
+    "level": "7-9"
+  },
+  {
+    "id": "L7-0896",
+    "hanzi": "定为",
+    "pinyin": "dìngwéi",
+    "level": "7-9"
+  },
+  {
+    "id": "L7-0948",
+    "hanzi": "度（知名度）",
+    "pinyin": "dù(zhīmíngdù)",
+    "level": "7-9"
+  },
+  {
+    "id": "L7-1092",
+    "hanzi": "飞往",
+    "pinyin": "fēiwǎng",
+    "level": "7-9"
+  },
+  {
+    "id": "L7-1095",
+    "hanzi": "非（非金属）",
+    "pinyin": "fēi (fēijīnshǔ)",
+    "level": "7-9"
+  },
+  {
+    "id": "L7-1257",
+    "hanzi": "感（责任感）",
+    "pinyin": "gǎn (zérèngǎn)",
+    "level": "7-9"
+  },
+  {
+    "id": "L7-1362",
+    "hanzi": "公益性",
+    "pinyin": "gōngyìxìng",
+    "level": "7-9"
+  },
+  {
+    "id": "L7-1743",
+    "hanzi": "怀着",
+    "pinyin": "huáizhe",
+    "level": "7-9"
+  },
+  {
+    "id": "L7-1826",
+    "hanzi": "火暴",
+    "pinyin": "huǒbào",
+    "level": "7-9"
+  },
+  {
+    "id": "L7-2733",
+    "hanzi": "率（成功率）",
+    "pinyin": "lǜ (chénggōnglǜ)",
+    "level": "7-9"
+  },
+  {
+    "id": "L7-2799",
+    "hanzi": "茅台（酒）",
+    "pinyin": "Máotái(jiǔ)",
+    "level": "7-9"
+  },
+  {
+    "id": "L7-2972",
+    "hanzi": "难以想象",
+    "pinyin": "nányǐ-xiǎngxiàng",
+    "level": "7-9"
+  },
+  {
+    "id": "L7-3893",
+    "hanzi": "说起来",
+    "pinyin": "shuō qǐlái",
+    "level": "7-9"
+  },
+  {
+    "id": "L7-4454",
+    "hanzi": "下功夫",
+    "pinyin": "xià gōngfu",
+    "level": "7-9"
+  },
+  {
+    "id": "L7-4858",
+    "hanzi": "业（服务业）",
+    "pinyin": "yè (fúwùyè)",
+    "level": "7-9"
+  },
+  {
+    "id": "L7-5399",
+    "hanzi": "致力于",
+    "pinyin": "zhìlì yú",
+    "level": "7-9"
+  },
+  {
+    "id": "L7-5538",
+    "hanzi": "着眼于",
+    "pinyin": "zhuóyǎn yú",
+    "level": "7-9"
+  },
+  {
+    "id": "L7-5636",
+    "hanzi": "做证",
+    "pinyin": "zuòzhèng",
+    "level": "7-9"
+  }
+]

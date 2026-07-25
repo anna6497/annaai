@@ -1,25 +1,29 @@
-import { redirect } from "next/navigation";
-import { createClient as createServerClient } from "./supabase/server";
-import { createSupabaseAdminClient } from "./supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 
 export async function requireAdmin() {
-  const supabase = await createServerClient();
-  const { data, error } = await supabase.auth.getClaims();
-  const userId = typeof data?.claims?.sub === "string" ? data.claims.sub : "";
+  const supabase = await createClient();
 
-  if (error || !userId) redirect("/login");
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
 
-  const admin = createSupabaseAdminClient();
-  const { data: profile, error: profileError } = await admin
+  if (userError || !user) {
+    throw new Error("Authentication required.");
+  }
+
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("id,email,role")
-    .eq("id", userId)
-    .maybeSingle();
+    .select("role")
+    .eq("id", user.id)
+    .single();
 
-  if (profileError || !profile || profile.role !== "admin") redirect("/call");
+  if (profileError || profile?.role !== "admin") {
+    throw new Error("Admin access required.");
+  }
 
   return {
-    userId,
-    email: typeof profile.email === "string" ? profile.email : "",
+    supabase,
+    user,
   };
 }

@@ -1,384 +1,227 @@
-"use client";
-
-import Link from "next/link";
+import Image from "next/image";
+import { requireAdmin } from "@/lib/admin-auth";
 import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+  paymentStatusClass,
+  paymentStatusLabel,
+  type PaymentStatus,
+} from "@/lib/payment-status";
+import {
+  approvePayment,
+  rejectPayment,
+} from "./actions";
 
-import { createSupabaseBrowserClient } from "@/lib/supabase";
+export const dynamic = "force-dynamic";
 
-type PaymentStatus = "pending" | "approved" | "rejected";
-type FilterStatus = PaymentStatus | "all";
+export default async function AdminPaymentsPage() {
+  const { supabase } = await requireAdmin();
 
-interface PaymentRecord {
-  id: string;
-  user_id: string;
-  user_email: string | null;
-  plan: "monthly" | "yearly";
-  payment_method: "kbzpay" | "promptpay";
-  amount: number | null;
-  currency: string | null;
-  transfer_reference: string | null;
-  note: string | null;
-  screenshot_path: string;
-  status: PaymentStatus;
-  created_at: string;
-}
+  const { data: payments, error } = await supabase
+    .from("payment_requests_admin")
+    .select("*")
+    .order("created_at", { ascending: false });
 
-interface PaymentWithUrl extends PaymentRecord {
-  screenshotUrl: string;
-}
+  if (error) {
+    throw new Error(error.message);
+  }
 
-export default function AdminPaymentsPage() {
-  const supabase = useMemo(
-    () => createSupabaseBrowserClient(),
-    []
+  const rows = payments ?? [];
+
+  return (
+    <main className="min-h-screen bg-[#080011] px-4 py-8 text-white">
+      <section className="mx-auto max-w-7xl">
+        <div className="mb-8">
+          <p className="text-sm font-black uppercase tracking-[0.25em] text-fuchsia-300">
+            Anna AI Admin
+          </p>
+          <h1 className="mt-2 text-4xl font-black">
+            Payment Requests
+          </h1>
+          <p className="mt-2 text-white/50">
+            Review payment slips and unlock purchased HSK access.
+          </p>
+        </div>
+
+        {rows.length === 0 ? (
+          <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-10 text-center text-white/50">
+            No payment requests yet.
+          </div>
+        ) : (
+          <div className="grid gap-5">
+            {rows.map((payment) => {
+              const status = payment.status as PaymentStatus;
+
+              return (
+                <article
+                  key={payment.id}
+                  className="grid gap-5 rounded-3xl border border-white/10 bg-white/[0.04] p-5 lg:grid-cols-[220px_1fr]"
+                >
+                  <SlipPreview
+                    supabase={supabase}
+                    path={payment.slip_path}
+                  />
+
+                  <div>
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <h2 className="text-2xl font-black">
+                          {payment.product_title}
+                        </h2>
+                        <p className="mt-1 text-sm text-white/45">
+                          {payment.user_email ?? payment.user_id}
+                        </p>
+                      </div>
+
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-black uppercase ${paymentStatusClass(status)}`}
+                      >
+                        {paymentStatusLabel(status)}
+                      </span>
+                    </div>
+
+                    <dl className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                      <Info
+                        label="Product"
+                        value={payment.product_code}
+                      />
+                      <Info
+                        label="Amount"
+                        value={`${Number(payment.amount_mmk).toLocaleString()} MMK`}
+                      />
+                      <Info
+                        label="Method"
+                        value={
+                          payment.payment_method === "kpay"
+                            ? "KPay"
+                            : "QR Pay"
+                        }
+                      />
+                      <Info
+                        label="Submitted"
+                        value={new Date(payment.created_at).toLocaleString()}
+                      />
+                    </dl>
+
+                    {payment.admin_note ? (
+                      <div className="mt-5 rounded-2xl bg-white/[0.05] p-4">
+                        <p className="text-xs font-black uppercase tracking-wider text-white/35">
+                          Admin note
+                        </p>
+                        <p className="mt-2 text-sm text-white/70">
+                          {payment.admin_note}
+                        </p>
+                      </div>
+                    ) : null}
+
+                    {status === "pending" ? (
+                      <form className="mt-5 grid gap-3">
+                        <textarea
+                          name="adminNote"
+                          rows={3}
+                          placeholder="Optional admin note"
+                          className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 outline-none placeholder:text-white/25 focus:border-fuchsia-400"
+                        />
+
+                        <input
+                          type="hidden"
+                          name="paymentId"
+                          value={payment.id}
+                        />
+
+                        <div className="flex flex-wrap gap-3">
+                          <button
+                            formAction={approvePayment}
+                            className="rounded-2xl bg-emerald-600 px-5 py-3 font-black transition hover:bg-emerald-500"
+                          >
+                            Approve & Unlock
+                          </button>
+
+                          <button
+                            formAction={rejectPayment}
+                            className="rounded-2xl bg-rose-600 px-5 py-3 font-black transition hover:bg-rose-500"
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      </form>
+                    ) : null}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </section>
+    </main>
   );
+}
 
-  const [payments, setPayments] = useState<PaymentWithUrl[]>([]);
-  const [filter, setFilter] = useState<FilterStatus>("pending");
+function Info({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div>
+      <dt className="text-xs font-black uppercase tracking-wider text-white/30">
+        {label}
+      </dt>
+      <dd className="mt-1 font-bold text-white/80">
+        {value}
+      </dd>
+    </div>
+  );
+}
 
-  const [loading, setLoading] = useState(true);
-  const [workingId, setWorkingId] = useState("");
-  const [error, setError] = useState("");
+async function SlipPreview({
+  supabase,
+  path,
+}: {
+  supabase: Awaited<ReturnType<typeof requireAdmin>>["supabase"];
+  path: string;
+}) {
+  const { data, error } = await supabase.storage
+    .from("payment-slips")
+    .createSignedUrl(path, 60 * 10);
 
-  const loadPayments = useCallback(async () => {
-    setLoading(true);
-    setError("");
-
-    try {
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
-
-      if (userError || !user) {
-        window.location.replace("/login");
-        return;
-      }
-
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single();
-
-      if (profileError || profile?.role !== "admin") {
-        window.location.replace("/");
-        return;
-      }
-
-      let query = supabase
-        .from("payments")
-        .select(
-          `
-            id,
-            user_id,
-            user_email,
-            plan,
-            payment_method,
-            amount,
-            currency,
-            transfer_reference,
-            note,
-            screenshot_path,
-            status,
-            created_at
-          `
-        )
-        .order("created_at", { ascending: false });
-
-      if (filter !== "all") {
-        query = query.eq("status", filter);
-      }
-
-      const { data, error: paymentsError } = await query;
-
-      if (paymentsError) {
-        throw paymentsError;
-      }
-
-      const records = (data ?? []) as PaymentRecord[];
-
-      const withUrls = await Promise.all(
-        records.map(async (payment) => {
-          const { data: signedData, error: signedError } =
-            await supabase.storage
-              .from("payment-slips")
-              .createSignedUrl(payment.screenshot_path, 60 * 10);
-
-          if (signedError) {
-            console.error("Signed URL error:", signedError);
-          }
-
-          return {
-            ...payment,
-            screenshotUrl: signedData?.signedUrl ?? "",
-          };
-        })
-      );
-
-      setPayments(withUrls);
-    } catch (loadError) {
-      console.error("Admin payments error:", loadError);
-
-      setError(
-        loadError instanceof Error
-          ? loadError.message
-          : "Payments မဖတ်နိုင်ပါ။"
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [filter, supabase]);
-
-  useEffect(() => {
-    void loadPayments();
-  }, [loadPayments]);
-
-  async function approvePayment(paymentId: string) {
-    if (!window.confirm("ဒီ Payment ကို Approve လုပ်မှာ သေချာပါသလား?")) {
-      return;
-    }
-
-    setWorkingId(paymentId);
-    setError("");
-
-    try {
-      const { error: rpcError } = await supabase.rpc("approve_payment", {
-        payment_id_input: paymentId,
-      });
-
-      if (rpcError) throw rpcError;
-
-      await loadPayments();
-    } catch (approveError) {
-      setError(
-        approveError instanceof Error
-          ? approveError.message
-          : "Approve လုပ်မရပါ။"
-      );
-    } finally {
-      setWorkingId("");
-    }
+  if (error || !data?.signedUrl) {
+    return (
+      <div className="flex min-h-56 items-center justify-center rounded-2xl border border-white/10 bg-black/20 text-sm text-white/40">
+        Slip unavailable
+      </div>
+    );
   }
 
-  async function rejectPayment(paymentId: string) {
-    if (!window.confirm("ဒီ Payment ကို Reject လုပ်မှာ သေချာပါသလား?")) {
-      return;
-    }
+  const isPdf = path.toLowerCase().endsWith(".pdf");
 
-    setWorkingId(paymentId);
-    setError("");
-
-    try {
-      const { error: rpcError } = await supabase.rpc("reject_payment", {
-        payment_id_input: paymentId,
-      });
-
-      if (rpcError) throw rpcError;
-
-      await loadPayments();
-    } catch (rejectError) {
-      setError(
-        rejectError instanceof Error
-          ? rejectError.message
-          : "Reject လုပ်မရပါ။"
-      );
-    } finally {
-      setWorkingId("");
-    }
-  }
-
-  async function logout() {
-    await supabase.auth.signOut();
-    window.location.replace("/login");
+  if (isPdf) {
+    return (
+      <a
+        href={data.signedUrl}
+        target="_blank"
+        rel="noreferrer"
+        className="flex min-h-56 items-center justify-center rounded-2xl border border-white/10 bg-black/20 font-black text-fuchsia-300 hover:bg-black/30"
+      >
+        Open PDF slip
+      </a>
+    );
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 p-5 text-white">
-      <div className="mx-auto max-w-6xl">
-        <header className="flex flex-wrap items-center justify-between gap-4 py-4">
-          <div>
-            <p className="text-sm text-purple-300">Anna-AI Admin</p>
-            <h1 className="text-3xl font-black">Payment Approvals</h1>
-          </div>
-
-          <div className="flex flex-wrap gap-3">
-            <Link
-              href="/"
-              className="rounded-full bg-white/10 px-4 py-2 text-sm transition hover:bg-white/20"
-            >
-              Home
-            </Link>
-
-            <button
-              type="button"
-              onClick={() => void loadPayments()}
-              className="rounded-full bg-purple-600 px-4 py-2 text-sm font-semibold transition hover:bg-purple-500"
-            >
-              Refresh
-            </button>
-
-            <button
-              type="button"
-              onClick={() => void logout()}
-              className="rounded-full bg-red-500/20 px-4 py-2 text-sm font-semibold text-red-100 transition hover:bg-red-500/30"
-            >
-              Logout
-            </button>
-          </div>
-        </header>
-
-        <div className="mt-6 flex flex-wrap gap-2">
-          {(["pending", "approved", "rejected", "all"] as FilterStatus[]).map(
-            (item) => (
-              <button
-                key={item}
-                type="button"
-                onClick={() => setFilter(item)}
-                className={`rounded-full px-4 py-2 text-sm capitalize transition ${
-                  filter === item
-                    ? "bg-purple-600"
-                    : "bg-white/10 hover:bg-white/20"
-                }`}
-              >
-                {item}
-              </button>
-            )
-          )}
-        </div>
-
-        {error && (
-          <p className="mt-6 rounded-2xl border border-red-400/20 bg-red-500/20 p-4 text-red-100">
-            {error}
-          </p>
-        )}
-
-        {loading ? (
-          <div className="py-24 text-center">
-            <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-purple-300/20 border-t-purple-400" />
-            <p className="mt-4">Loading payments...</p>
-          </div>
-        ) : payments.length === 0 ? (
-          <div className="mt-10 rounded-3xl border border-white/10 bg-white/5 p-12 text-center">
-            <p className="text-5xl">📭</p>
-            <p className="mt-4 text-xl font-bold">Payment မရှိသေးပါ။</p>
-          </div>
-        ) : (
-          <section className="mt-8 grid gap-6 lg:grid-cols-2">
-            {payments.map((payment) => (
-              <article
-                key={payment.id}
-                className="overflow-hidden rounded-3xl border border-white/10 bg-white/5"
-              >
-                <div className="bg-black/25 p-5">
-                  {payment.screenshotUrl ? (
-                    <a
-                      href={payment.screenshotUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      <img
-                        src={payment.screenshotUrl}
-                        alt="Payment slip"
-                        className="mx-auto max-h-96 w-full rounded-2xl object-contain"
-                      />
-                    </a>
-                  ) : (
-                    <div className="flex h-60 items-center justify-center rounded-2xl bg-white/5 text-white/50">
-                      Screenshot unavailable
-                    </div>
-                  )}
-                </div>
-
-                <div className="p-6">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <h2 className="text-xl font-bold capitalize">
-                        {payment.plan} Plan
-                      </h2>
-
-                      <p className="mt-1 text-sm uppercase text-purple-300">
-                        {payment.payment_method}
-                      </p>
-                    </div>
-
-                    <span
-                      className={`rounded-full px-3 py-1 text-xs font-bold ${
-                        payment.status === "approved"
-                          ? "bg-green-500/20 text-green-200"
-                          : payment.status === "rejected"
-                            ? "bg-red-500/20 text-red-200"
-                            : "bg-yellow-500/20 text-yellow-200"
-                      }`}
-                    >
-                      {payment.status}
-                    </span>
-                  </div>
-
-                  <div className="mt-5 space-y-4 text-sm">
-                    <div>
-                      <p className="text-white/45">User</p>
-                      <p className="break-all">
-                        {payment.user_email ?? payment.user_id}
-                      </p>
-                    </div>
-
-                    <div>
-                      <p className="text-white/45">Amount</p>
-                      <p>
-                        {payment.amount ?? "Not specified"}{" "}
-                        {payment.currency ?? ""}
-                      </p>
-                    </div>
-
-                    <div>
-                      <p className="text-white/45">Reference</p>
-                      <p>{payment.transfer_reference ?? "-"}</p>
-                    </div>
-
-                    <div>
-                      <p className="text-white/45">Note</p>
-                      <p>{payment.note ?? "-"}</p>
-                    </div>
-
-                    <div>
-                      <p className="text-white/45">Submitted</p>
-                      <p>{new Date(payment.created_at).toLocaleString()}</p>
-                    </div>
-                  </div>
-
-                  {payment.status === "pending" && (
-                    <div className="mt-6 grid grid-cols-2 gap-3">
-                      <button
-                        type="button"
-                        onClick={() => void approvePayment(payment.id)}
-                        disabled={workingId === payment.id}
-                        className="rounded-2xl bg-green-600 px-4 py-3 font-bold transition hover:bg-green-500 disabled:opacity-50"
-                      >
-                        {workingId === payment.id ? "Working..." : "Approve"}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => void rejectPayment(payment.id)}
-                        disabled={workingId === payment.id}
-                        className="rounded-2xl bg-red-600 px-4 py-3 font-bold transition hover:bg-red-500 disabled:opacity-50"
-                      >
-                        {workingId === payment.id ? "Working..." : "Reject"}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </article>
-            ))}
-          </section>
-        )}
-      </div>
-    </main>
+    <a
+      href={data.signedUrl}
+      target="_blank"
+      rel="noreferrer"
+      className="relative block min-h-56 overflow-hidden rounded-2xl border border-white/10 bg-black/20"
+    >
+      <Image
+        src={data.signedUrl}
+        alt="Payment slip"
+        fill
+        unoptimized
+        className="object-contain"
+      />
+    </a>
   );
 }

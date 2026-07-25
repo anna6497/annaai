@@ -1,0 +1,10 @@
+{
+  "datasetVersion": "anna-ai-hsk-final-v1",
+  "generatedAt": "2026-07-25T04:40:26.890Z",
+  "total": 11092,
+  "coverage": {
+    "pinyin": 11092,
+    "english": 11013,
+    "myanmar": 11008
+  }
+}

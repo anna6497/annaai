@@ -1,0 +1,9 @@
+{
+  "scripts": {
+    "hsk:2026:audit": "node scripts/audit-hsk-2026-counts.mjs",
+    "hsk:2026:backup": "node scripts/backup-before-hsk-2026-import.mjs",
+    "hsk:2026:build": "npm run hsk:2026:backup && node scripts/build-hsk-2026-from-official-mapping.mjs",
+    "hsk:2026:validate": "node scripts/validate-hsk-2026-dataset.mjs",
+    "hsk:2026:migrate": "npm run hsk:2026:build && npm run hsk:2026:validate"
+  }
+}

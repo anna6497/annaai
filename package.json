@@ -4,27 +4,66 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "dev:webpack": "next dev --webpack",
+
+    "build": "npm run copy:hanzi && npm run generate:hsk && next build",
     "start": "next start",
-    "lint": "eslint"
+
+    "lint": "eslint .",
+    "type-check": "tsc --noEmit",
+
+    "copy:hanzi": "node scripts/copy-hanzi-data.mjs",
+    "generate:hsk": "tsx scripts/generate-hsk-json.ts",
+
+    "postinstall": "npm run copy:hanzi",
+
+    "hsk:validate": "node scripts/validate-hsk-data.mjs",
+    "hsk:lessons": "node scripts/assign-lessons.mjs 20",
+
+    "meanings:download": "node scripts/download-cedict.mjs",
+    "meanings:english": "node scripts/merge-cedict-meanings.mjs",
+    "meanings:myanmar": "node scripts/import-myanmar-meanings.mjs",
+    "meanings:check": "node scripts/check-meaning-coverage.mjs",
+    "meanings:setup": "npm run meanings:download && npm run meanings:english && npm run meanings:check",
+
+    "meanings:myanmar:generate": "node --env-file=.env.local scripts/generate-myanmar-meanings.mjs",
+    "meanings:myanmar:review": "node scripts/create-myanmar-review-sample.mjs",
+    "meanings:myanmar:apply": "node scripts/apply-myanmar-meanings.mjs",
+    "meanings:myanmar:all": "npm run meanings:myanmar:generate && npm run meanings:myanmar:review",
+
+    "hsk:backup": "node scripts/backup-hsk-dataset.mjs",
+    "hsk:finalize": "npm run hsk:backup && node scripts/finalize-hsk-dataset.mjs",
+    "hsk:final:validate": "node scripts/validate-final-hsk-dataset.mjs",
+    "hsk:final:build": "npm run hsk:finalize && npm run hsk:final:validate",
+
+    "hsk:2026:audit": "node scripts/audit-hsk-2026-counts.mjs",
+    "hsk:2026:backup": "node scripts/backup-before-hsk-2026-import.mjs",
+    "hsk:2026:build": "npm run hsk:2026:backup && node scripts/build-hsk-2026-from-official-mapping.mjs",
+    "hsk:2026:validate": "node scripts/validate-hsk-2026-dataset.mjs",
+    "hsk:2026:migrate": "npm run hsk:2026:build && npm run hsk:2026:validate"
   },
+
   "dependencies": {
-    "@supabase/auth-helpers-nextjs": "^0.15.0",
-    "@supabase/ssr": "^0.12.3",
-    "@supabase/supabase-js": "^2.110.6",
-    "next": "^16.2.10",
-    "openai": "^6.47.0",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "@supabase/ssr": "^0.7.0",
+    "@supabase/supabase-js": "^2.52.0",
+    "hanzi-writer": "^3.7.3",
+    "hanzi-writer-data": "^2.0.1",
+    "next": "16.2.10",
+    "openai": "^5.12.2",
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
   },
+
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
-    "tailwindcss": "^4",
+    "postcss": "^8.5.22",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.20.3",
     "typescript": "^5"
   }
 }

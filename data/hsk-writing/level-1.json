@@ -1,0 +1,38 @@
+[
+  {
+    "hanzi": "一",
+    "pinyin": "yī",
+    "myanmar": "တစ်",
+    "radical": "一",
+    "example": "一个人",
+    "examplePinyin": "yí ge rén",
+    "exampleMyanmar": "လူတစ်ယောက်"
+  },
+  {
+    "hanzi": "人",
+    "pinyin": "rén",
+    "myanmar": "လူ",
+    "radical": "人",
+    "example": "中国人",
+    "examplePinyin": "Zhōngguó rén",
+    "exampleMyanmar": "တရုတ်လူမျိုး"
+  },
+  {
+    "hanzi": "大",
+    "pinyin": "dà",
+    "myanmar": "ကြီးသည်",
+    "radical": "大",
+    "example": "大学",
+    "examplePinyin": "dàxué",
+    "exampleMyanmar": "တက္ကသိုလ်"
+  },
+  {
+    "hanzi": "学",
+    "pinyin": "xué",
+    "myanmar": "သင်ယူသည်",
+    "radical": "子",
+    "example": "学习中文",
+    "examplePinyin": "xuéxí Zhōngwén",
+    "exampleMyanmar": "တရုတ်စာလေ့လာသည်"
+  }
+]

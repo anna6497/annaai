@@ -4,22 +4,36 @@ import { getSupabaseConfig } from "./config";
 
 export async function createClient() {
   const cookieStore = await cookies();
-  const { url, key } = getSupabaseConfig();
 
-  return createServerClient(url, key, {
-    cookies: {
-      getAll() {
-        return cookieStore.getAll();
+  const { url, publicKey } =
+    getSupabaseConfig();
+
+  return createServerClient(
+    url,
+    publicKey,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(
+              ({ name, value, options }) => {
+                cookieStore.set(
+                  name,
+                  value,
+                  options
+                );
+              }
+            );
+          } catch {
+            // Server Components may not allow cookie writes.
+            // proxy.ts handles session refresh.
+          }
+        },
       },
-      setAll(cookiesToSet) {
-        try {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set(name, value, options);
-          });
-        } catch {
-          // Root proxy.ts refreshes cookies when Server Components cannot.
-        }
-      },
-    },
-  });
+    }
+  );
 }

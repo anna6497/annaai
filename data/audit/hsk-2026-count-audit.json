@@ -1,0 +1,63 @@
+{
+  "generatedAt": "2026-07-25T04:33:11.138Z",
+  "actualTotal": 11092,
+  "expectedTotal": 11000,
+  "report": [
+    {
+      "level": "1",
+      "filename": "hsk1.json",
+      "actual": 500,
+      "expected": 300,
+      "difference": 200,
+      "matches": false
+    },
+    {
+      "level": "2",
+      "filename": "hsk2.json",
+      "actual": 772,
+      "expected": 200,
+      "difference": 572,
+      "matches": false
+    },
+    {
+      "level": "3",
+      "filename": "hsk3.json",
+      "actual": 973,
+      "expected": 500,
+      "difference": 473,
+      "matches": false
+    },
+    {
+      "level": "4",
+      "filename": "hsk4.json",
+      "actual": 1000,
+      "expected": 1000,
+      "difference": 0,
+      "matches": true
+    },
+    {
+      "level": "5",
+      "filename": "hsk5.json",
+      "actual": 1071,
+      "expected": 1600,
+      "difference": -529,
+      "matches": false
+    },
+    {
+      "level": "6",
+      "filename": "hsk6.json",
+      "actual": 1140,
+      "expected": 1800,
+      "difference": -660,
+      "matches": false
+    },
+    {
+      "level": "7-9",
+      "filename": "hsk7-9.json",
+      "actual": 5636,
+      "expected": 5600,
+      "difference": 36,
+      "matches": false
+    }
+  ]
+}

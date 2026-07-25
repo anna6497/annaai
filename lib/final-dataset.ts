@@ -1,0 +1,12 @@
+import type {FinalHskVocabularyItem} from "@/types/final-hsk-vocabulary";
+import hsk1 from "@/data/hsk/hsk1.json";
+import hsk2 from "@/data/hsk/hsk2.json";
+import hsk3 from "@/data/hsk/hsk3.json";
+import hsk4 from "@/data/hsk/hsk4.json";
+import hsk5 from "@/data/hsk/hsk5.json";
+import hsk6 from "@/data/hsk/hsk6.json";
+import hskAdvanced from "@/data/hsk/hsk7-9.json";
+export type FinalHskLevel=1|2|3|4|5|6|7|8|9;
+const DATA:Record<FinalHskLevel,FinalHskVocabularyItem[]>={1:hsk1 as FinalHskVocabularyItem[],2:hsk2 as FinalHskVocabularyItem[],3:hsk3 as FinalHskVocabularyItem[],4:hsk4 as FinalHskVocabularyItem[],5:hsk5 as FinalHskVocabularyItem[],6:hsk6 as FinalHskVocabularyItem[],7:hskAdvanced as FinalHskVocabularyItem[],8:hskAdvanced as FinalHskVocabularyItem[],9:hskAdvanced as FinalHskVocabularyItem[]};
+export const getFinalHskVocabulary=(level:FinalHskLevel)=>DATA[level];
+export const searchFinalHskVocabulary=(level:FinalHskLevel,query:string)=>{const q=query.trim().toLowerCase();return q?DATA[level].filter(w=>w.searchKeywords.some(k=>k.includes(q))):DATA[level]};

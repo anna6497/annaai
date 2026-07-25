@@ -1,0 +1,47 @@
+{
+  "missing": [],
+  "countErrors": [
+    {
+      "level": "1",
+      "actual": 1,
+      "expected": 300,
+      "difference": -299
+    },
+    {
+      "level": "2",
+      "actual": 1,
+      "expected": 200,
+      "difference": -199
+    },
+    {
+      "level": "3",
+      "actual": 0,
+      "expected": 500,
+      "difference": -500
+    },
+    {
+      "level": "4",
+      "actual": 0,
+      "expected": 1000,
+      "difference": -1000
+    },
+    {
+      "level": "5",
+      "actual": 0,
+      "expected": 1600,
+      "difference": -1600
+    },
+    {
+      "level": "6",
+      "actual": 0,
+      "expected": 1800,
+      "difference": -1800
+    },
+    {
+      "level": "7-9",
+      "actual": 0,
+      "expected": 5600,
+      "difference": -5600
+    }
+  ]
+}
