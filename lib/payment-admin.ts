@@ -23,7 +23,7 @@ async function requireAdmin() {
 export async function getAdminPayments() {
   const { admin } = await requireAdmin();
   const { data, error } = await admin
-    .from("payment_requests_admin")
+    .from("payment_requests")
     .select("*")
     .order("created_at", { ascending: false });
 
