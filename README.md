@@ -1,23 +1,27 @@
-# Anna AI Final Type Fixes
+Anna AI — HSK Store Update
 
-Copy all ZIP contents into the project root and replace matching files.
+Included:
+- app/hsk/store/page.tsx
+- app/hsk/store/store-animations.css
+- components/hsk/HskStoreGrid.tsx
 
-Then run:
+Changes:
+- HSK 2–9 Full Package is rendered first.
+- Animated glow, shimmer, sparkles and discount badge.
+- Individual HSK 2–9 cards appear below.
+- Mobile responsive.
+- No extra npm package required.
 
-```powershell
-node scripts/apply-final-type-fixes.mjs
-npm run type-check
-```
+Install:
+1. Extract the ZIP in your project root.
+2. Replace the existing files.
+3. Run:
+   npm run type-check
+   npm run build
 
-Full replacements included:
+Payment query values used:
+- Full package: /payment?product=hsk-full-package
+- Individual: /payment?product=hsk-2 through hsk-9
 
-- `app/admin/actions.ts`
-- `app/admin/page.tsx`
-- `lib/load-hanzi-data.ts`
-
-The patch script safely updates these existing full files without removing their UI or business logic:
-
-- `app/hsk/flashcards/[level]/FlashcardsClient.tsx`
-- `app/hsk/writing/[level]/WritingClient.tsx`
-- `app/hsk/writing/[level]/lessons/page.tsx`
-- `components.example/FlashcardsDataExample.tsx`
+If your current payment product IDs differ, update the href product values in:
+components/hsk/HskStoreGrid.tsx
