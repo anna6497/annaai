@@ -1,12 +1,3 @@
-export default async function AdminPaymentsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ status?: string }>;
-}) {
-  throw new Error("DEPLOY_MARKER_NEW_PAYMENT_PAGE_001");
-
-  // ကျန်တဲ့ code...
-}
 import Image from "next/image";
 import Link from "next/link";
 import { requireAdmin } from "@/lib/admin-auth";
@@ -29,6 +20,7 @@ export default async function AdminPaymentsPage({
   searchParams: Promise<{ status?: string }>;
 }) {
   const params = await searchParams;
+
   const filter = ["pending", "approved", "rejected"].includes(
     params.status ?? "",
   )
@@ -37,17 +29,22 @@ export default async function AdminPaymentsPage({
 
   await requireAdmin();
 
-const admin = createSupabaseAdminClient();
+  const admin = createSupabaseAdminClient();
 
-let query = admin
-  .from("payment_requests")
+  let query = admin
+    .from("payment_requests")
     .select("*")
     .order("created_at", { ascending: false });
 
-  if (filter !== "all") query = query.eq("status", filter);
+  if (filter !== "all") {
+    query = query.eq("status", filter);
+  }
 
   const { data, error } = await query;
-  if (error) throw new Error(error.message);
+
+  if (error) {
+    throw new Error(error.message);
+  }
 
   const rows = data ?? [];
 
@@ -59,7 +56,9 @@ let query = admin
             <p className="text-sm font-black uppercase tracking-[0.25em] text-fuchsia-300">
               Payment Management
             </p>
+
             <h1 className="mt-2 text-4xl font-black">Payment Requests</h1>
+
             <p className="mt-2 text-white/50">
               Slip စစ်ပြီး approve လုပ်တာနဲ့ lifetime access အလိုအလျောက်ရပါမယ်။
             </p>
@@ -111,8 +110,9 @@ let query = admin
                         <h2 className="text-2xl font-black">
                           {payment.product_title}
                         </h2>
+
                         <p className="mt-1 text-sm text-white/45">
-                          {payment.user_email ?? payment.user_id}
+                          {payment.user_id}
                         </p>
                       </div>
 
@@ -124,11 +124,18 @@ let query = admin
                     </div>
 
                     <dl className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                      <Info label="Product" value={payment.product_code} />
+                      <Info
+                        label="Product"
+                        value={String(payment.product_code)}
+                      />
+
                       <Info
                         label="Amount"
-                        value={`${Number(payment.amount_mmk).toLocaleString("en-US")} MMK`}
+                        value={`${Number(payment.amount_mmk).toLocaleString(
+                          "en-US",
+                        )} MMK`}
                       />
+
                       <Info
                         label="Method"
                         value={
@@ -137,6 +144,7 @@ let query = admin
                             : "QR Pay"
                         }
                       />
+
                       <Info
                         label="Submitted"
                         value={new Date(payment.created_at).toLocaleString(
@@ -150,6 +158,7 @@ let query = admin
                         <p className="text-xs font-black uppercase tracking-wider text-white/35">
                           Admin note
                         </p>
+
                         <p className="mt-2 text-sm text-white/70">
                           {payment.admin_note}
                         </p>
@@ -164,6 +173,7 @@ let query = admin
                           placeholder="Optional admin note"
                           className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 outline-none placeholder:text-white/25 focus:border-fuchsia-400"
                         />
+
                         <input
                           type="hidden"
                           name="paymentId"
@@ -177,6 +187,7 @@ let query = admin
                           >
                             Approve & Unlock
                           </button>
+
                           <button
                             formAction={rejectPayment}
                             className="rounded-2xl bg-rose-600 px-5 py-3 font-black transition hover:bg-rose-500"
@@ -197,12 +208,19 @@ let query = admin
   );
 }
 
-function Info({ label, value }: { label: string; value: string }) {
+function Info({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
   return (
     <div>
       <dt className="text-xs font-black uppercase tracking-wider text-white/30">
         {label}
       </dt>
+
       <dd className="mt-1 font-bold text-white/80">{value}</dd>
     </div>
   );
