@@ -1,3 +1,12 @@
+export default async function AdminPaymentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string }>;
+}) {
+  throw new Error("DEPLOY_MARKER_NEW_PAYMENT_PAGE_001");
+
+  // ကျန်တဲ့ code...
+}
 import Image from "next/image";
 import Link from "next/link";
 import { requireAdmin } from "@/lib/admin-auth";
