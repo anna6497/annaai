@@ -1,67 +1,100 @@
 import Image from "next/image";
+import Link from "next/link";
 import { requireAdmin } from "@/lib/admin-auth";
-import {
-  paymentStatusClass,
-  paymentStatusLabel,
-  type PaymentStatus,
-} from "@/lib/payment-status";
-import {
-  approvePayment,
-  rejectPayment,
-} from "./actions";
+import { approvePayment, rejectPayment } from "./actions";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminPaymentsPage() {
+type Status = "pending" | "approved" | "rejected";
+
+const statusStyle: Record<Status, string> = {
+  pending: "bg-amber-400/15 text-amber-200",
+  approved: "bg-emerald-400/15 text-emerald-200",
+  rejected: "bg-rose-400/15 text-rose-200",
+};
+
+export default async function AdminPaymentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string }>;
+}) {
+  const params = await searchParams;
+  const filter = ["pending", "approved", "rejected"].includes(
+    params.status ?? "",
+  )
+    ? params.status!
+    : "all";
+
   const { supabase } = await requireAdmin();
 
-  const { data: payments, error } = await supabase
+  let query = supabase
     .from("payment_requests_admin")
     .select("*")
     .order("created_at", { ascending: false });
 
-  if (error) {
-    throw new Error(error.message);
-  }
+  if (filter !== "all") query = query.eq("status", filter);
 
-  const rows = payments ?? [];
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+
+  const rows = data ?? [];
 
   return (
-    <main className="min-h-screen bg-[#080011] px-4 py-8 text-white">
-      <section className="mx-auto max-w-7xl">
-        <div className="mb-8">
-          <p className="text-sm font-black uppercase tracking-[0.25em] text-fuchsia-300">
-            Anna AI Admin
-          </p>
-          <h1 className="mt-2 text-4xl font-black">
-            Payment Requests
-          </h1>
-          <p className="mt-2 text-white/50">
-            Review payment slips and unlock purchased HSK access.
-          </p>
+    <main className="px-4 py-8 sm:px-7 lg:px-10">
+      <section className="mx-auto max-w-[1500px]">
+        <div className="flex flex-col gap-5 rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-sm font-black uppercase tracking-[0.25em] text-fuchsia-300">
+              Payment Management
+            </p>
+            <h1 className="mt-2 text-4xl font-black">Payment Requests</h1>
+            <p className="mt-2 text-white/50">
+              Slip စစ်ပြီး approve လုပ်တာနဲ့ lifetime access အလိုအလျောက်ရပါမယ်။
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {["all", "pending", "approved", "rejected"].map((status) => (
+              <Link
+                key={status}
+                href={
+                  status === "all"
+                    ? "/admin/payments"
+                    : `/admin/payments?status=${status}`
+                }
+                className={`rounded-xl px-4 py-2 text-sm font-black capitalize ${
+                  filter === status
+                    ? "bg-fuchsia-500"
+                    : "border border-white/10 bg-white/[0.05] text-white/55"
+                }`}
+              >
+                {status}
+              </Link>
+            ))}
+          </div>
         </div>
 
-        {rows.length === 0 ? (
-          <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-10 text-center text-white/50">
-            No payment requests yet.
-          </div>
-        ) : (
-          <div className="grid gap-5">
-            {rows.map((payment) => {
-              const status = payment.status as PaymentStatus;
+        <div className="mt-6 grid gap-5">
+          {rows.length === 0 ? (
+            <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-12 text-center text-white/45">
+              No payment requests found.
+            </div>
+          ) : (
+            rows.map((payment) => {
+              const status = payment.status as Status;
 
               return (
                 <article
                   key={payment.id}
-                  className="grid gap-5 rounded-3xl border border-white/10 bg-white/[0.04] p-5 lg:grid-cols-[220px_1fr]"
+                  className="grid gap-5 rounded-[2rem] border border-white/10 bg-white/[0.04] p-5 lg:grid-cols-[240px_1fr]"
                 >
                   <SlipPreview
                     supabase={supabase}
-                    path={payment.slip_path}
+                    path={String(payment.slip_path)}
                   />
 
                   <div>
-                    <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="flex flex-wrap items-start justify-between gap-4">
                       <div>
                         <h2 className="text-2xl font-black">
                           {payment.product_title}
@@ -72,32 +105,31 @@ export default async function AdminPaymentsPage() {
                       </div>
 
                       <span
-                        className={`rounded-full px-3 py-1 text-xs font-black uppercase ${paymentStatusClass(status)}`}
+                        className={`rounded-full px-3 py-1 text-xs font-black uppercase ${statusStyle[status]}`}
                       >
-                        {paymentStatusLabel(status)}
+                        {status}
                       </span>
                     </div>
 
                     <dl className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                      <Info
-                        label="Product"
-                        value={payment.product_code}
-                      />
+                      <Info label="Product" value={payment.product_code} />
                       <Info
                         label="Amount"
-                        value={`${Number(payment.amount_mmk).toLocaleString()} MMK`}
+                        value={`${Number(payment.amount_mmk).toLocaleString("en-US")} MMK`}
                       />
                       <Info
                         label="Method"
                         value={
                           payment.payment_method === "kpay"
-                            ? "KPay"
+                            ? "KBZPay"
                             : "QR Pay"
                         }
                       />
                       <Info
                         label="Submitted"
-                        value={new Date(payment.created_at).toLocaleString()}
+                        value={new Date(payment.created_at).toLocaleString(
+                          "en-GB",
+                        )}
                       />
                     </dl>
 
@@ -120,7 +152,6 @@ export default async function AdminPaymentsPage() {
                           placeholder="Optional admin note"
                           className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 outline-none placeholder:text-white/25 focus:border-fuchsia-400"
                         />
-
                         <input
                           type="hidden"
                           name="paymentId"
@@ -134,7 +165,6 @@ export default async function AdminPaymentsPage() {
                           >
                             Approve & Unlock
                           </button>
-
                           <button
                             formAction={rejectPayment}
                             className="rounded-2xl bg-rose-600 px-5 py-3 font-black transition hover:bg-rose-500"
@@ -147,29 +177,21 @@ export default async function AdminPaymentsPage() {
                   </div>
                 </article>
               );
-            })}
-          </div>
-        )}
+            })
+          )}
+        </div>
       </section>
     </main>
   );
 }
 
-function Info({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
+function Info({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <dt className="text-xs font-black uppercase tracking-wider text-white/30">
         {label}
       </dt>
-      <dd className="mt-1 font-bold text-white/80">
-        {value}
-      </dd>
+      <dd className="mt-1 font-bold text-white/80">{value}</dd>
     </div>
   );
 }
@@ -193,9 +215,7 @@ async function SlipPreview({
     );
   }
 
-  const isPdf = path.toLowerCase().endsWith(".pdf");
-
-  if (isPdf) {
+  if (path.toLowerCase().endsWith(".pdf")) {
     return (
       <a
         href={data.signedUrl}

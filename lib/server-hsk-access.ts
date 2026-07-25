@@ -1,109 +1,41 @@
 import { createClient } from "@/lib/supabase/server";
+import type { HskLevel } from "@/types/hsk-vocabulary";
 
-export interface ServerHskAccessResult {
+export type ServerHskAccessResult = {
   allowed: boolean;
-  reason: string;
-  userId: string | null;
-  source: "free" | "admin" | "level" | "full" | "none";
-}
+  reason: "free" | "authenticated" | "purchase_required";
+};
 
 export async function getServerHskAccess(
-  level: number,
+  level: HskLevel,
 ): Promise<ServerHskAccessResult> {
-  if (!Number.isInteger(level) || level < 1 || level > 9) {
-    return {
-      allowed: false,
-      reason: "Invalid HSK level.",
-      userId: null,
-      source: "none",
-    };
+  if (level === 1) {
+    return { allowed: true, reason: "free" };
   }
 
   const supabase = await createClient();
-
   const {
     data: { user },
-    error: userError,
   } = await supabase.auth.getUser();
 
-  // HSK 1 stays publicly accessible.
-  if (level === 1) {
-    return {
-      allowed: true,
-      reason: "HSK 1 is free.",
-      userId: user?.id ?? null,
-      source: "free",
-    };
+  if (!user) {
+    return { allowed: false, reason: "authenticated" };
   }
 
-  if (userError || !user) {
-    return {
-      allowed: false,
-      reason: "Please log in to access this HSK level.",
-      userId: null,
-      source: "none",
-    };
-  }
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (profile?.role === "admin") {
-    return {
-      allowed: true,
-      reason: "Admin access.",
-      userId: user.id,
-      source: "admin",
-    };
-  }
-
-  const { data: accessRows, error: accessError } = await supabase
+  const { data, error } = await supabase
     .from("user_hsk_access")
-    .select("product_code,level")
-    .eq("user_id", user.id);
+    .select("product_code,level,lifetime")
+    .eq("user_id", user.id)
+    .or(`product_code.eq.hsk_full,product_code.eq.hsk_${level},level.eq.${level}`)
+    .limit(1);
 
-  if (accessError) {
-    return {
-      allowed: false,
-      reason: accessError.message,
-      userId: user.id,
-      source: "none",
-    };
-  }
-
-  const rows = accessRows ?? [];
-
-  if (rows.some((row) => row.product_code === "hsk_full")) {
-    return {
-      allowed: true,
-      reason: "Full package access granted.",
-      userId: user.id,
-      source: "full",
-    };
-  }
-
-  if (
-    rows.some(
-      (row) =>
-        row.product_code === `hsk_${level}` ||
-        Number(row.level) === level,
-    )
-  ) {
-    return {
-      allowed: true,
-      reason: `HSK ${level} access granted.`,
-      userId: user.id,
-      source: "level",
-    };
+  if (error) {
+    console.error("HSK access check failed:", error);
+    return { allowed: false, reason: "purchase_required" };
   }
 
   return {
-    allowed: false,
-    reason: `HSK ${level} has not been purchased.`,
-    userId: user.id,
-    source: "none",
+    allowed: (data?.length ?? 0) > 0,
+    reason: (data?.length ?? 0) > 0 ? "free" : "purchase_required",
   };
 }

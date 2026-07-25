@@ -1,32 +1,39 @@
-Anna AI Payment Selector + THB Display Patch
+# Anna AI Admin Portal V2 Patch
 
-Included:
-- components/payment/PaymentMethodSelector.tsx
-- components/payment/PaymentForm.tsx
-- types/payment.ts
-- lib/payment-products.ts
+This ZIP uses your existing tables:
 
-Changes:
-- Payment selector shows text/radio only; QR images are removed from the top cards.
-- The selected QR image appears only in the Scan QR section.
-- KBZPay displays MMK.
-- QR Pay displays THB.
-- QR image and amount change automatically when the user switches methods.
-- Existing slip upload and Supabase payment request flow are preserved.
+- `profiles`
+- `payment_requests`
+- `payment_requests_admin`
+- `user_hsk_access`
 
-Default THB prices:
-- One HSK level: 100 THB
-- HSK 2–9 Full Package: 250 THB
-- Full Package original price: 800 THB
+It does **not** require `review_payment_request()`.
 
-You can change these values in lib/payment-products.ts.
+## Install
 
-Install:
-1. Extract into the project root and replace existing files.
-2. Run:
-   npm run type-check
-   npm run build
+1. Extract this ZIP into the Anna AI project root.
+2. Allow it to replace files with the same paths.
+3. Confirm `.env.local` contains your existing Supabase URL, anon key, and service-role key used by `lib/supabase/admin.ts`.
+4. Run:
 
-Note:
-The database continues storing amount_mmk as the canonical amount, so no database
-migration is required.
+```bash
+npm run type-check
+npm run build
+```
+
+## Routes
+
+- `/admin` — summary dashboard
+- `/admin/payments` — payment approval/rejection
+- `/admin/users` — manual lifetime access management
+
+## Approval behavior
+
+Approve & Unlock directly:
+
+1. updates `payment_requests` to `approved`;
+2. inserts a lifetime row into `user_hsk_access`;
+3. uses `product_code = hsk_full` and `level = null` for the full package;
+4. uses `product_code = hsk_2 ... hsk_9` and matching numeric `level` for individual levels.
+
+No SQL migration is included because the required tables and admin view already exist in your Supabase project.
