@@ -7,7 +7,9 @@ export interface PaymentProduct {
   description: string;
   level: number | null;
   priceMmk: number;
+  priceThb: number;
   originalPriceMmk: number | null;
+  originalPriceThb: number | null;
   active: boolean;
 }
 

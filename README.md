@@ -1,32 +1,32 @@
-Anna AI Direct QR Payment Fix
+Anna AI Payment Selector + THB Display Patch
 
-Included files:
-- app/payment/page.tsx
+Included:
+- components/payment/PaymentMethodSelector.tsx
 - components/payment/PaymentForm.tsx
-- public/payment/kbzpay-qr.png
-- public/payment/promptpay-qr.png
+- types/payment.ts
+- lib/payment-products.ts
 
-What this fixes:
-1. Payment page now reads ?product=... used by the HSK store.
-2. It keeps ?hsk=... as a fallback for old links.
-3. KBZPay and PromptPay QR images appear immediately on the payment page.
-4. User can scan, pay, upload the slip, and submit for admin approval.
+Changes:
+- Payment selector shows text/radio only; QR images are removed from the top cards.
+- The selected QR image appears only in the Scan QR section.
+- KBZPay displays MMK.
+- QR Pay displays THB.
+- QR image and amount change automatically when the user switches methods.
+- Existing slip upload and Supabase payment request flow are preserved.
 
-Expected product URLs:
-- /payment?product=hsk_full
-- /payment?product=hsk_2
-- /payment?product=hsk_3
-- through /payment?product=hsk_9
+Default THB prices:
+- One HSK level: 100 THB
+- HSK 2–9 Full Package: 250 THB
+- Full Package original price: 800 THB
+
+You can change these values in lib/payment-products.ts.
 
 Install:
-1. Extract the ZIP into the project root.
-2. Replace the existing files.
-3. Run:
+1. Extract into the project root and replace existing files.
+2. Run:
    npm run type-check
    npm run build
-4. Test Buy Full Package and Buy HSK 2.
 
-Important:
-The code assumes PaymentMethod uses "kpay" for KBZPay and another value
-(such as "qrpay") for PromptPay. The current PaymentForm already defaulted
-to "kpay", so this preserves the existing flow.
+Note:
+The database continues storing amount_mmk as the canonical amount, so no database
+migration is required.

@@ -6,23 +6,9 @@ import { useRouter } from "next/navigation";
 
 import PaymentMethodSelector from "@/components/payment/PaymentMethodSelector";
 import { createPaymentRequest } from "@/lib/payment-client";
-import { formatMmk } from "@/lib/payment-products";
+import { PAYMENT_CONFIG } from "@/lib/payment-config";
+import { formatMmk, formatThb } from "@/lib/payment-products";
 import type { PaymentMethod, PaymentProduct } from "@/types/payment";
-
-const PAYMENT_DETAILS = {
-  kpay: {
-    label: "KBZPay",
-    image: "/payment/kbzpay-qr.png",
-    accountName: "DAW INNGYIN HMWE",
-    note: "KBZPay QR ကို scan လုပ်ပြီး ငွေပေးချေပါ။",
-  },
-  qrpay: {
-    label: "PromptPay",
-    image: "/payment/promptpay-qr.png",
-    accountName: "MISS MYA THINZAR KHIN",
-    note: "Thai banking app ဖြင့် PromptPay QR ကို scan လုပ်ပါ။",
-  },
-} as const;
 
 export default function PaymentForm({
   product,
@@ -36,10 +22,11 @@ export default function PaymentForm({
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const selected =
+  const config = PAYMENT_CONFIG[method];
+  const displayAmount =
     method === "kpay"
-      ? PAYMENT_DETAILS.kpay
-      : PAYMENT_DETAILS.qrpay;
+      ? formatMmk(product.priceMmk)
+      : formatThb(product.priceThb);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -47,11 +34,6 @@ export default function PaymentForm({
 
     if (!slip) {
       setMessage("ငွေလွှဲပြီး Payment slip ကို upload လုပ်ပေးပါ။");
-      return;
-    }
-
-    if (slip.size > 5 * 1024 * 1024) {
-      setMessage("Payment slip file size သည် 5 MB ထက် မကျော်ရပါ။");
       return;
     }
 
@@ -86,17 +68,36 @@ export default function PaymentForm({
       <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.04]">
         <div className="border-b border-white/10 p-5">
           <p className="text-sm font-black uppercase tracking-[0.16em] text-emerald-300">
-            Scan and Pay
+            Scan QR
           </p>
-          <h3 className="mt-2 text-2xl font-black">{selected.label}</h3>
-          <p className="mt-2 text-sm text-white/50">{selected.note}</p>
+
+          <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h3 className="text-2xl font-black">{config.label}</h3>
+              <p className="mt-1 text-sm text-white/50">
+                {method === "kpay"
+                  ? "KBZPay ဖြင့် Myanmar Kyat ပေးချေပါ။"
+                  : "Thai banking app ဖြင့် Thai Baht ပေးချေပါ။"}
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-fuchsia-500/10 px-4 py-3 text-right">
+              <p className="text-xs font-bold uppercase tracking-[0.15em] text-white/40">
+                Amount
+              </p>
+              <p className="mt-1 text-2xl font-black text-fuchsia-200">
+                {displayAmount}
+              </p>
+            </div>
+          </div>
         </div>
 
         <div className="grid gap-6 p-5 md:grid-cols-[minmax(0,420px)_1fr] md:items-center">
-          <div className="mx-auto w-full max-w-[420px] overflow-hidden rounded-3xl bg-white p-2">
+          <div className="mx-auto w-full max-w-[420px] overflow-hidden rounded-3xl bg-white p-3">
             <Image
-              src={selected.image}
-              alt={`${selected.label} payment QR`}
+              key={config.qrImage}
+              src={config.qrImage}
+              alt={`${config.label} payment QR`}
               width={900}
               height={1200}
               priority
@@ -105,21 +106,22 @@ export default function PaymentForm({
           </div>
 
           <div>
-            <p className="text-sm font-bold text-white/40">Account name</p>
-            <p className="mt-2 text-xl font-black">{selected.accountName}</p>
+            <p className="text-sm font-bold text-white/40">
+              Account name
+            </p>
+            <p className="mt-2 text-xl font-black">
+              {config.accountName}
+            </p>
 
-            <div className="mt-5 rounded-2xl border border-fuchsia-400/20 bg-fuchsia-500/10 p-4">
-              <p className="text-sm text-white/55">Amount to pay</p>
-              <p className="mt-1 text-3xl font-black text-fuchsia-200">
-                {formatMmk(product.priceMmk)}
-              </p>
-            </div>
+            <p className="mt-1 text-sm text-white/50">
+              {config.accountNumber}
+            </p>
 
-            <ol className="mt-5 space-y-2 text-sm leading-6 text-white/55">
-              <li>1. QR ကို banking app ဖြင့် scan လုပ်ပါ။</li>
-              <li>2. Amount ကိုစစ်ပြီး ငွေလွှဲပါ။</li>
-              <li>3. Payment slip screenshot ကို save လုပ်ပါ။</li>
-              <li>4. အောက်တွင် slip upload လုပ်ပြီး Submit နှိပ်ပါ။</li>
+            <ol className="mt-6 space-y-2 text-sm leading-6 text-white/55">
+              <li>1. အပေါ်က payment method ကိုရွေးပါ။</li>
+              <li>2. ပြောင်းလဲလာတဲ့ QR ကို scan လုပ်ပါ။</li>
+              <li>3. ပြထားတဲ့ amount အတိုင်း ငွေလွှဲပါ။</li>
+              <li>4. Payment slip ကို upload လုပ်ပြီး Submit နှိပ်ပါ။</li>
             </ol>
           </div>
         </div>
@@ -163,7 +165,7 @@ export default function PaymentForm({
       >
         {submitting
           ? "Submitting..."
-          : `Submit ${formatMmk(product.priceMmk)} Payment`}
+          : `Submit ${displayAmount} Payment`}
       </button>
     </form>
   );
