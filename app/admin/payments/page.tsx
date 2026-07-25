@@ -1,7 +1,7 @@
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import Image from "next/image";
 import Link from "next/link";
 import { requireAdmin } from "@/lib/admin-auth";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { approvePayment, rejectPayment } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -31,7 +31,7 @@ export default async function AdminPaymentsPage({
 const admin = createSupabaseAdminClient();
 
 let query = admin
-  .from("payment_requests_admin")
+  .from("payment_requests")
     .select("*")
     .order("created_at", { ascending: false });
 
