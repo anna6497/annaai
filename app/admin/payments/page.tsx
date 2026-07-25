@@ -1,3 +1,4 @@
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import Image from "next/image";
 import Link from "next/link";
 import { requireAdmin } from "@/lib/admin-auth";
@@ -25,10 +26,12 @@ export default async function AdminPaymentsPage({
     ? params.status!
     : "all";
 
-  const { supabase } = await requireAdmin();
+  await requireAdmin();
 
-  let query = supabase
-    .from("payment_requests_admin")
+const admin = createSupabaseAdminClient();
+
+let query = admin
+  .from("payment_requests_admin")
     .select("*")
     .order("created_at", { ascending: false });
 
@@ -89,7 +92,7 @@ export default async function AdminPaymentsPage({
                   className="grid gap-5 rounded-[2rem] border border-white/10 bg-white/[0.04] p-5 lg:grid-cols-[240px_1fr]"
                 >
                   <SlipPreview
-                    supabase={supabase}
+                    supabase={admin}
                     path={String(payment.slip_path)}
                   />
 
@@ -200,7 +203,7 @@ async function SlipPreview({
   supabase,
   path,
 }: {
-  supabase: Awaited<ReturnType<typeof requireAdmin>>["supabase"];
+  supabase: ReturnType<typeof createSupabaseAdminClient>;
   path: string;
 }) {
   const { data, error } = await supabase.storage
