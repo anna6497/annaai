@@ -1,4 +1,8 @@
+import "server-only";
+
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 export async function requireAdmin() {
   const supabase = await createClient();
@@ -9,21 +13,29 @@ export async function requireAdmin() {
   } = await supabase.auth.getUser();
 
   if (userError || !user) {
-    throw new Error("Authentication required.");
+    redirect("/login?redirect=/admin");
   }
 
-  const { data: profile, error: profileError } = await supabase
+  const admin = createSupabaseAdminClient();
+
+  const { data: profile, error: profileError } = await admin
     .from("profiles")
     .select("role")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
 
-  if (profileError || profile?.role !== "admin") {
-    throw new Error("Admin access required.");
+  if (profileError) {
+    console.error("Admin profile check failed:", profileError);
+    throw new Error("Unable to verify admin access.");
+  }
+
+  if (profile?.role !== "admin") {
+    redirect("/dashboard");
   }
 
   return {
     supabase,
+    admin,
     user,
   };
 }
