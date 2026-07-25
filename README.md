@@ -1,26 +1,32 @@
-Anna AI payment product code fix
-
-Problem:
-The store links used:
-- hsk-full-package
-- hsk-2 ... hsk-9
-
-But lib/payment-products.ts defines:
-- hsk_full
-- hsk_2 ... hsk_9
+Anna AI Direct QR Payment Fix
 
 Included files:
-- components/hsk/HskStoreGrid.tsx
-- lib/payment-products.ts
+- app/payment/page.tsx
+- components/payment/PaymentForm.tsx
+- public/payment/kbzpay-qr.png
+- public/payment/promptpay-qr.png
 
-Installation:
-1. Extract this ZIP into the project root.
+What this fixes:
+1. Payment page now reads ?product=... used by the HSK store.
+2. It keeps ?hsk=... as a fallback for old links.
+3. KBZPay and PromptPay QR images appear immediately on the payment page.
+4. User can scan, pay, upload the slip, and submit for admin approval.
+
+Expected product URLs:
+- /payment?product=hsk_full
+- /payment?product=hsk_2
+- /payment?product=hsk_3
+- through /payment?product=hsk_9
+
+Install:
+1. Extract the ZIP into the project root.
 2. Replace the existing files.
 3. Run:
    npm run type-check
    npm run build
-4. Test:
-   /payment?product=hsk_full
-   /payment?product=hsk_2
+4. Test Buy Full Package and Buy HSK 2.
 
-No database changes are required for this fix.
+Important:
+The code assumes PaymentMethod uses "kpay" for KBZPay and another value
+(such as "qrpay") for PromptPay. The current PaymentForm already defaulted
+to "kpay", so this preserves the existing flow.
