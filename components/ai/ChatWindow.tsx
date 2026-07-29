@@ -383,23 +383,21 @@ export default function ChatWindow() {
                 result.reply
               );
 
-              const updatedHistory: ConversationHistoryMessage[] =
-                [
-                  ...historyRef.current,
-                  {
-                    role: "user",
-                    content:
-                      result.transcript,
-                  },
-                  {
-                    role:
-                      "assistant",
-                    content:
-                      result.reply.hanzi,
-                  },
-                ].slice(
-                  -MAX_MEMORY_MESSAGES
-                );
+              const newMessages: ConversationHistoryMessage[] = [
+                {
+                  role: "user",
+                  content: result.transcript,
+                },
+                {
+                  role: "assistant",
+                  content: result.reply.hanzi,
+                },
+              ];
+
+              const updatedHistory: ConversationHistoryMessage[] = [
+                ...historyRef.current,
+                ...newMessages,
+              ].slice(-MAX_MEMORY_MESSAGES);
 
               historyRef.current =
                 updatedHistory;

@@ -12,8 +12,7 @@ const sizeClasses = {
   sm: {
     wrapper: "h-11 w-11",
     imageSize: 44,
-    status:
-      "h-3.5 w-3.5 border-2",
+    status: "h-3.5 w-3.5 border-2",
     firstRing: "-inset-1",
     secondRing: "-inset-2",
   },
@@ -21,22 +20,19 @@ const sizeClasses = {
   md: {
     wrapper: "h-16 w-16",
     imageSize: 64,
-    status:
-      "h-4 w-4 border-[3px]",
+    status: "h-4 w-4 border-[3px]",
     firstRing: "-inset-2",
     secondRing: "-inset-3",
   },
 
   lg: {
-    wrapper:
-      "h-20 w-20 sm:h-24 sm:w-24",
+    wrapper: "h-20 w-20 sm:h-24 sm:w-24",
     imageSize: 96,
-    status:
-      "h-[18px] w-[18px] border-[3px]",
+    status: "h-[18px] w-[18px] border-[3px]",
     firstRing: "-inset-3",
     secondRing: "-inset-5",
   },
-};
+} as const;
 
 export default function AnnaAvatar({
   size = "md",

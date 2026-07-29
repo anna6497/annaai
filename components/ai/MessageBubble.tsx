@@ -25,15 +25,15 @@ export default function MessageBubble({
   const isUser =
     message.sender === "user";
 
+  const messageText =
+    message.text?.trim() ?? "";
+
   const hanzi =
     message.reply?.hanzi?.trim() ||
-    message.text.trim();
+    messageText;
 
   const pinyin =
     message.reply?.pinyin?.trim() || "";
-
-  const myanmar =
-    message.reply?.myanmar?.trim() || "";
 
 
   const stopSpeaking = useCallback(() => {
@@ -110,7 +110,7 @@ export default function MessageBubble({
         <div className="max-w-[86%] sm:max-w-[72%]">
           <div className="rounded-[24px] rounded-br-[8px] border border-violet-300/20 bg-gradient-to-br from-violet-500/90 to-fuchsia-600/90 px-5 py-3.5 shadow-[0_18px_45px_rgba(88,28,135,0.2)] backdrop-blur-xl">
             <p className="whitespace-pre-wrap break-words text-[16px] leading-7 text-white">
-              {message.text}
+              {message.text ?? ""}
             </p>
           </div>
         </div>
@@ -164,24 +164,6 @@ export default function MessageBubble({
               </>
             )}
 
-            {myanmar && (
-              <>
-                <div className="my-3.5 h-px bg-gradient-to-r from-transparent via-purple-300/20 to-transparent" />
-
-                <div>
-                  <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.18em] text-purple-300/55">
-                    Myanmar
-                  </span>
-
-                  <p
-                    lang="my"
-                    className="whitespace-pre-wrap break-words text-[15px] leading-8 text-purple-50/85 sm:text-[16px]"
-                  >
-                    {myanmar}
-                  </p>
-                </div>
-              </>
-            )}
           </div>
 
           <div className="flex items-center justify-end border-t border-white/[0.07] px-4 py-2.5">

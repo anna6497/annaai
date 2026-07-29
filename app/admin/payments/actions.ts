@@ -4,147 +4,140 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin-auth";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
-const VALID_PRODUCTS = [
-  "hsk_2",
-  "hsk_3",
-  "hsk_4",
-  "hsk_5",
-  "hsk_6",
-  "hsk_7",
-  "hsk_8",
-  "hsk_9",
-  "hsk_full",
-] as const;
+const AI_PLAN_DAYS: Record<string, number> = {
+  "ai-monthly": 30,
+  "ai-six-months": 180,
+  "ai-yearly": 365,
+};
 
-type HskProductCode = (typeof VALID_PRODUCTS)[number];
-
-function parseLevel(productCode: HskProductCode): number | null {
-  if (productCode === "hsk_full") return null;
-  const level = Number(productCode.replace("hsk_", ""));
-  return Number.isInteger(level) && level >= 2 && level <= 9 ? level : null;
+function addDays(date: Date, days: number): Date {
+  const result = new Date(date);
+  result.setUTCDate(result.getUTCDate() + days);
+  return result;
 }
 
-function revalidateAdminPaths() {
-  [
-    "/admin",
-    "/admin/payments",
-    "/admin/users",
-    "/dashboard",
-    "/dashboard/payments",
-    "/hsk/store",
-  ].forEach((path) => revalidatePath(path));
-}
-
-export async function approvePayment(formData: FormData) {
-  const paymentId = String(formData.get("paymentId") ?? "").trim();
-  const adminNote = String(formData.get("adminNote") ?? "").trim();
-
-  if (!paymentId) throw new Error("Payment ID is required.");
-
-  const { user } = await requireAdmin();
+async function reviewAiPayment(
+  paymentId: string,
+  decision: "approved" | "rejected",
+  adminNote: string,
+) {
+  await requireAdmin();
   const admin = createSupabaseAdminClient();
 
   const { data: payment, error: paymentError } = await admin
     .from("payment_requests")
-    .select("id,user_id,product_code,status")
+    .select("id, user_id, product_code, status")
     .eq("id", paymentId)
     .single();
 
   if (paymentError || !payment) {
-    throw new Error(paymentError?.message ?? "Payment request not found.");
+    throw new Error(paymentError?.message ?? "Payment not found.");
   }
 
-  const productCode = String(payment.product_code) as HskProductCode;
-  if (!VALID_PRODUCTS.includes(productCode)) {
-    throw new Error("This payment has an unsupported product code.");
+  if (payment.status !== "pending") {
+    throw new Error("This payment was already reviewed.");
   }
 
-  if (payment.status === "rejected") {
-    throw new Error("A rejected payment cannot be approved directly.");
-  }
+  const now = new Date();
 
-  const reviewedAt = new Date().toISOString();
+  if (decision === "approved") {
+    const durationDays = AI_PLAN_DAYS[String(payment.product_code)];
+    if (!durationDays) throw new Error("Unknown AI Speaking plan.");
+
+    const { data: current } = await admin
+      .from("ai_speaking_subscriptions")
+      .select("expires_at")
+      .eq("user_id", payment.user_id)
+      .eq("status", "active")
+      .gt("expires_at", now.toISOString())
+      .order("expires_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const base = current?.expires_at && new Date(current.expires_at) > now
+      ? new Date(current.expires_at)
+      : now;
+
+    const { error: subscriptionError } = await admin
+      .from("ai_speaking_subscriptions")
+      .insert({
+        user_id: payment.user_id,
+        payment_id: payment.id,
+        plan_code: payment.product_code,
+        starts_at: now.toISOString(),
+        expires_at: addDays(base, durationDays).toISOString(),
+        status: "active",
+      });
+
+    if (subscriptionError) throw new Error(subscriptionError.message);
+  }
 
   const { error: updateError } = await admin
     .from("payment_requests")
     .update({
-      status: "approved",
+      status: decision,
       admin_note: adminNote || null,
-      reviewed_at: reviewedAt,
-      reviewed_by: user.id,
+      reviewed_at: now.toISOString(),
     })
-    .eq("id", paymentId);
+    .eq("id", payment.id)
+    .eq("status", "pending");
 
   if (updateError) throw new Error(updateError.message);
+}
 
-  const { data: existingAccess, error: existingError } = await admin
-    .from("user_hsk_access")
-    .select("id")
-    .eq("user_id", payment.user_id)
-    .eq("product_code", productCode)
-    .limit(1);
+async function reviewExistingHskPayment(
+  paymentId: string,
+  decision: "approved" | "rejected",
+  adminNote: string,
+) {
+  await requireAdmin();
+  const admin = createSupabaseAdminClient();
 
-  if (existingError) {
-    await admin
-      .from("payment_requests")
-      .update({
-        status: "pending",
-        reviewed_at: null,
-        reviewed_by: null,
-      })
-      .eq("id", paymentId);
-    throw new Error(existingError.message);
+  const { error } = await admin.rpc("review_payment_request", {
+    p_payment_id: paymentId,
+    p_decision: decision,
+    p_admin_note: adminNote || null,
+    p_reviewer: null,
+  });
+
+  if (error) throw new Error(error.message);
+}
+
+async function reviewFromForm(
+  formData: FormData,
+  decision: "approved" | "rejected",
+) {
+  const paymentId = String(formData.get("paymentId") ?? "").trim();
+  const adminNote = String(formData.get("adminNote") ?? "").trim();
+  if (!paymentId) throw new Error("Payment ID is required.");
+
+  await requireAdmin();
+  const admin = createSupabaseAdminClient();
+  const { data: payment, error } = await admin
+    .from("payment_requests")
+    .select("product_code")
+    .eq("id", paymentId)
+    .single();
+
+  if (error || !payment) throw new Error(error?.message ?? "Payment not found.");
+
+  if (String(payment.product_code).startsWith("ai-")) {
+    await reviewAiPayment(paymentId, decision, adminNote);
+  } else {
+    await reviewExistingHskPayment(paymentId, decision, adminNote);
   }
 
-  if ((existingAccess?.length ?? 0) === 0) {
-    const { error: insertError } = await admin.from("user_hsk_access").insert({
-      user_id: payment.user_id,
-      product_code: productCode,
-      level: parseLevel(productCode),
-      lifetime: true,
-      granted_at: reviewedAt,
-      granted_by: user.id,
-      notes: adminNote || `Approved payment ${paymentId}`,
-      source: "payment",
-    });
+  revalidatePath("/admin/payments");
+  revalidatePath("/dashboard/ai");
+  revalidatePath("/dashboard/ai/pricing");
+  revalidatePath("/dashboard");
+  revalidatePath("/hsk");
+}
 
-    if (insertError) {
-      await admin
-        .from("payment_requests")
-        .update({
-          status: "pending",
-          reviewed_at: null,
-          reviewed_by: null,
-        })
-        .eq("id", paymentId);
-      throw new Error(insertError.message);
-    }
-  }
-
-  revalidateAdminPaths();
+export async function approvePayment(formData: FormData) {
+  await reviewFromForm(formData, "approved");
 }
 
 export async function rejectPayment(formData: FormData) {
-  const paymentId = String(formData.get("paymentId") ?? "").trim();
-  const adminNote = String(formData.get("adminNote") ?? "").trim();
-
-  if (!paymentId) throw new Error("Payment ID is required.");
-
-  const { user } = await requireAdmin();
-  const admin = createSupabaseAdminClient();
-
-  const { error } = await admin
-    .from("payment_requests")
-    .update({
-      status: "rejected",
-      admin_note: adminNote || null,
-      reviewed_at: new Date().toISOString(),
-      reviewed_by: user.id,
-    })
-    .eq("id", paymentId)
-    .eq("status", "pending");
-
-  if (error) throw new Error(error.message);
-
-  revalidateAdminPaths();
+  await reviewFromForm(formData, "rejected");
 }

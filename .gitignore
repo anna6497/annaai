@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+voice-server/venv/
+voice-server/.venv/
+voice-server/__pycache__/
+voice-server/**/*.pyc
+

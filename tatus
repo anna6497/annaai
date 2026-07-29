@@ -1,0 +1,15 @@
+warning: in the working copy of '.gitignore', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/.gitignore b/.gitignore[m
+[1mindex 5ef6a52..cc2debd 100644[m
+[1m--- a/.gitignore[m
+[1m+++ b/.gitignore[m
+[36m@@ -39,3 +39,9 @@[m [myarn-error.log*[m
+ # typescript[m
+ *.tsbuildinfo[m
+ next-env.d.ts[m
+[32m+[m
+[32m+[m[32mvoice-server/venv/[m
+[32m+[m[32mvoice-server/.venv/[m
+[32m+[m[32mvoice-server/__pycache__/[m
+[32m+[m[32mvoice-server/**/*.pyc[m
+[41m+[m

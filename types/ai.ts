@@ -2,30 +2,86 @@ export type AiPracticeMode =
   | "practice"
   | "sentence_builder";
 
-export interface ConversationHistoryMessage {
-  role: "user" | "assistant";
-  content: string;
-}
+export type ConversationRole =
+  | "user"
+  | "assistant";
 
-export interface AnnaReply {
+export type ConversationHistoryMessage = {
+  role: ConversationRole;
+  content: string;
+};
+
+export type AnnaReply = {
   hanzi: string;
   pinyin: string;
-}
 
-export interface TextChatResponse {
-  message: string;
-  mode: AiPracticeMode;
-  reply: AnnaReply;
-}
+  /**
+   * Kept optional for compatibility with older
+   * MessageBubble versions.
+   */
+  myanmar?: string;
+};
 
-export interface VoiceChatResponse {
+export type ChatMessage = {
+  /**
+   * Unique message identifier.
+   */
+  id: string;
+
+  /**
+   * Required by conversation storage and history.
+   */
+  sender: ConversationRole;
+
+  /**
+   * Required by MessageBubble and conversation memory.
+   */
+  text: string;
+
+  /**
+   * Anna's structured Chinese reply.
+   * User messages may not have this value.
+   */
+  reply?: AnnaReply | null;
+
+  /**
+   * Unix timestamp created with Date.now().
+   */
+  createdAt: number;
+
+  /**
+   * Optional compatibility fields.
+   * These do not replace sender and text.
+   */
+  role?: ConversationRole;
+  content?: string;
+  transcript?: string;
+};
+
+export type VoiceChatResponse = {
   transcript: string;
-  mode: AiPracticeMode;
   reply: AnnaReply;
-}
+};
 
-export interface VoiceServerHealth {
-  status: "ok" | "degraded";
+export type TextChatResponse = {
+  /**
+   * The backend response includes the original
+   * or processed message together with Anna's reply.
+   */
+  message: string;
+  reply: AnnaReply;
+};
+
+export type VoiceServerHealth = {
+  status: string;
   ollama_running: boolean;
-  version?: string;
-}
+
+  /**
+   * Optional backend service details.
+   */
+  whisper_loaded?: boolean;
+  model?: string;
+};
+
+export type VoiceServerHealthResponse =
+  VoiceServerHealth;
