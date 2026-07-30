@@ -1,17 +1,25 @@
-export type AiSpeakingPlanId = "ai-monthly" | "ai-six-months" | "ai-yearly";
+export type AiSpeakingPlanId =
+  | "ai-monthly"
+  | "ai-six-months"
+  | "ai-yearly"
+  | "ai-lifetime";
 
 export type AiSpeakingPlan = {
   id: AiSpeakingPlanId;
   title: string;
   shortTitle: string;
   durationLabel: string;
-  durationDays: number;
+  durationDays: number | null;
   priceMmk: number;
   originalPriceMmk: number;
   badge: string;
+  lifetime?: boolean;
 };
 
-export const AI_SPEAKING_PLANS: Record<AiSpeakingPlanId, AiSpeakingPlan> = {
+export const AI_SPEAKING_PLANS: Record<
+  AiSpeakingPlanId,
+  AiSpeakingPlan
+> = {
   "ai-monthly": {
     id: "ai-monthly",
     title: "AI Speaking Monthly",
@@ -22,6 +30,7 @@ export const AI_SPEAKING_PLANS: Record<AiSpeakingPlanId, AiSpeakingPlan> = {
     originalPriceMmk: 50_000,
     badge: "Launch Price",
   },
+
   "ai-six-months": {
     id: "ai-six-months",
     title: "AI Speaking 6 Months",
@@ -32,6 +41,7 @@ export const AI_SPEAKING_PLANS: Record<AiSpeakingPlanId, AiSpeakingPlan> = {
     originalPriceMmk: 300_000,
     badge: "Most Popular",
   },
+
   "ai-yearly": {
     id: "ai-yearly",
     title: "AI Speaking Yearly",
@@ -42,18 +52,57 @@ export const AI_SPEAKING_PLANS: Record<AiSpeakingPlanId, AiSpeakingPlan> = {
     originalPriceMmk: 600_000,
     badge: "Best Value",
   },
+
+  "ai-lifetime": {
+    id: "ai-lifetime",
+    title: "AI Speaking Lifetime",
+    shortTitle: "Lifetime",
+    durationLabel: "Lifetime",
+    durationDays: null,
+    priceMmk: 0,
+    originalPriceMmk: 0,
+    badge: "Admin Only",
+    lifetime: true,
+  },
 };
 
-export const AI_SPEAKING_PLAN_IDS = Object.keys(AI_SPEAKING_PLANS) as AiSpeakingPlanId[];
+export const AI_SPEAKING_PLAN_IDS =
+  Object.keys(
+    AI_SPEAKING_PLANS,
+  ) as AiSpeakingPlanId[];
 
-export function isAiSpeakingPlanId(value: string | null | undefined): value is AiSpeakingPlanId {
-  return Boolean(value && Object.prototype.hasOwnProperty.call(AI_SPEAKING_PLANS, value));
+export function isAiSpeakingPlanId(
+  value: string | null | undefined,
+): value is AiSpeakingPlanId {
+  return Boolean(
+    value &&
+      Object.prototype.hasOwnProperty.call(
+        AI_SPEAKING_PLANS,
+        value,
+      ),
+  );
 }
 
-export function formatMmk(amount: number): string {
+export function formatMmk(
+  amount: number,
+): string {
   return `${amount.toLocaleString("en-US")} MMK`;
 }
 
-export function getDiscountPercent(plan: AiSpeakingPlan): number {
-  return Math.round((1 - plan.priceMmk / plan.originalPriceMmk) * 100);
+export function getDiscountPercent(
+  plan: AiSpeakingPlan,
+): number {
+  if (
+    plan.originalPriceMmk <= 0 ||
+    plan.priceMmk <= 0
+  ) {
+    return 0;
+  }
+
+  return Math.round(
+    (1 -
+      plan.priceMmk /
+        plan.originalPriceMmk) *
+      100,
+  );
 }

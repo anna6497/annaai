@@ -1,7 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+
 import { requireAdmin } from "@/lib/admin-auth";
+import {
+  AI_SPEAKING_PLANS,
+  isAiSpeakingPlanId,
+  type AiSpeakingPlanId,
+} from "@/lib/ai-speaking-plans";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 const VALID_PRODUCTS = [
@@ -16,75 +22,362 @@ const VALID_PRODUCTS = [
   "hsk_full",
 ] as const;
 
-type ProductCode = (typeof VALID_PRODUCTS)[number];
+type ProductCode =
+  (typeof VALID_PRODUCTS)[number];
 
-function readInput(formData: FormData) {
-  const userId = String(formData.get("userId") ?? "").trim();
-  const productCode = String(formData.get("productCode") ?? "").trim();
+const AI_LIFETIME_EXPIRY =
+  "2099-12-31T23:59:59.999Z";
 
-  if (!userId) throw new Error("User ID is required.");
-  if (!VALID_PRODUCTS.includes(productCode as ProductCode)) {
+function readHskInput(
+  formData: FormData,
+) {
+  const userId = String(
+    formData.get("userId") ?? "",
+  ).trim();
+
+  const productCode = String(
+    formData.get("productCode") ?? "",
+  ).trim();
+
+  if (!userId) {
+    throw new Error(
+      "User ID is required.",
+    );
+  }
+
+  if (
+    !VALID_PRODUCTS.includes(
+      productCode as ProductCode,
+    )
+  ) {
     throw new Error("Invalid product.");
   }
 
-  return { userId, productCode: productCode as ProductCode };
+  return {
+    userId,
+    productCode:
+      productCode as ProductCode,
+  };
 }
 
-function levelFromProduct(productCode: ProductCode) {
-  if (productCode === "hsk_full") return null;
-  return Number(productCode.replace("hsk_", ""));
+function readAiInput(
+  formData: FormData,
+): {
+  userId: string;
+  planCode: AiSpeakingPlanId;
+} {
+  const userId = String(
+    formData.get("userId") ?? "",
+  ).trim();
+
+  const planCode = String(
+    formData.get("aiPlanCode") ?? "",
+  ).trim();
+
+  if (!userId) {
+    throw new Error(
+      "User ID is required.",
+    );
+  }
+
+  if (
+    !isAiSpeakingPlanId(planCode)
+  ) {
+    throw new Error(
+      "Invalid AI Speaking plan.",
+    );
+  }
+
+  return {
+    userId,
+    planCode,
+  };
 }
 
-function refresh() {
-  ["/admin", "/admin/users", "/dashboard", "/hsk/store"].forEach(
-    (path) => revalidatePath(path),
+function readAiUserId(
+  formData: FormData,
+): string {
+  const userId = String(
+    formData.get("userId") ?? "",
+  ).trim();
+
+  if (!userId) {
+    throw new Error(
+      "User ID is required.",
+    );
+  }
+
+  return userId;
+}
+
+function levelFromProduct(
+  productCode: ProductCode,
+) {
+  if (productCode === "hsk_full") {
+    return null;
+  }
+
+  return Number(
+    productCode.replace("hsk_", ""),
   );
 }
 
-export async function grantLifetimeAccess(formData: FormData) {
-  const { user } = await requireAdmin();
-  const { userId, productCode } = readInput(formData);
-  const admin = createSupabaseAdminClient();
+function addDays(
+  date: Date,
+  days: number,
+): Date {
+  const result = new Date(date);
 
-  const { data: existing, error: findError } = await admin
+  result.setUTCDate(
+    result.getUTCDate() + days,
+  );
+
+  return result;
+}
+
+function refreshAdminPages() {
+  [
+    "/admin",
+    "/admin/users",
+    "/admin/payments",
+    "/dashboard",
+    "/dashboard/ai",
+    "/dashboard/ai/pricing",
+    "/hsk",
+    "/hsk/store",
+  ].forEach((path) => {
+    revalidatePath(path);
+  });
+}
+
+/**
+ * HSK manual lifetime grant
+ */
+export async function grantLifetimeAccess(
+  formData: FormData,
+) {
+  const { user } =
+    await requireAdmin();
+
+  const {
+    userId,
+    productCode,
+  } = readHskInput(formData);
+
+  const admin =
+    createSupabaseAdminClient();
+
+  const {
+    data: existing,
+    error: findError,
+  } = await admin
     .from("user_hsk_access")
     .select("id")
     .eq("user_id", userId)
-    .eq("product_code", productCode)
+    .eq(
+      "product_code",
+      productCode,
+    )
     .limit(1);
 
-  if (findError) throw new Error(findError.message);
-
-  if ((existing?.length ?? 0) === 0) {
-    const { error } = await admin.from("user_hsk_access").insert({
-      user_id: userId,
-      product_code: productCode,
-      level: levelFromProduct(productCode),
-      lifetime: true,
-      granted_at: new Date().toISOString(),
-      granted_by: user.id,
-      notes: "Granted manually by admin",
-      source: "admin_manual",
-    });
-
-    if (error) throw new Error(error.message);
+  if (findError) {
+    throw new Error(
+      findError.message,
+    );
   }
 
-  refresh();
+  if (
+    (existing?.length ?? 0) === 0
+  ) {
+    const { error } = await admin
+      .from("user_hsk_access")
+      .insert({
+        user_id: userId,
+        product_code: productCode,
+        level:
+          levelFromProduct(
+            productCode,
+          ),
+        lifetime: true,
+        granted_at:
+          new Date().toISOString(),
+        granted_by: user.id,
+        notes:
+          "Granted manually by admin",
+        source: "admin_manual",
+      });
+
+    if (error) {
+      throw new Error(
+        error.message,
+      );
+    }
+  }
+
+  refreshAdminPages();
 }
 
-export async function revokeLifetimeAccess(formData: FormData) {
+/**
+ * HSK manual revoke
+ */
+export async function revokeLifetimeAccess(
+  formData: FormData,
+) {
   await requireAdmin();
-  const { userId, productCode } = readInput(formData);
-  const admin = createSupabaseAdminClient();
+
+  const {
+    userId,
+    productCode,
+  } = readHskInput(formData);
+
+  const admin =
+    createSupabaseAdminClient();
 
   const { error } = await admin
     .from("user_hsk_access")
     .delete()
     .eq("user_id", userId)
-    .eq("product_code", productCode);
+    .eq(
+      "product_code",
+      productCode,
+    );
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    throw new Error(error.message);
+  }
 
-  refresh();
+  refreshAdminPages();
+}
+
+/**
+ * AI Speaking manual plan grant.
+ *
+ * This does not require a payment request.
+ * Existing active AI plans are revoked first,
+ * and the selected plan becomes the active plan.
+ */
+export async function grantAiSpeakingAccess(
+  formData: FormData,
+) {
+  const { user: adminUser } =
+    await requireAdmin();
+
+  const {
+    userId,
+    planCode,
+  } = readAiInput(formData);
+
+  const admin =
+    createSupabaseAdminClient();
+
+  const plan =
+    AI_SPEAKING_PLANS[planCode];
+
+  const now = new Date();
+
+  const expiresAt =
+    plan.lifetime ||
+    plan.durationDays === null
+      ? AI_LIFETIME_EXPIRY
+      : addDays(
+          now,
+          plan.durationDays,
+        ).toISOString();
+
+  /*
+   * Disable previous active plans so that
+   * the newly selected plan becomes the
+   * user's current AI Speaking plan.
+   */
+  const {
+    error: revokeExistingError,
+  } = await admin
+    .from(
+      "ai_speaking_subscriptions",
+    )
+    .update({
+      status: "revoked",
+    })
+    .eq("user_id", userId)
+    .eq("status", "active");
+
+  if (revokeExistingError) {
+    throw new Error(
+      revokeExistingError.message,
+    );
+  }
+
+  const {
+    error: insertError,
+  } = await admin
+    .from(
+      "ai_speaking_subscriptions",
+    )
+    .insert({
+      user_id: userId,
+
+      /*
+       * Manual access does not have a
+       * payment request.
+       *
+       * This requires payment_id to be
+       * nullable in Supabase.
+       */
+      payment_id: null,
+
+      plan_code: planCode,
+      starts_at: now.toISOString(),
+      expires_at: expiresAt,
+      status: "active",
+    });
+
+  if (insertError) {
+    throw new Error(
+      insertError.message,
+    );
+  }
+
+  console.info(
+    "AI Speaking plan manually granted",
+    {
+      userId,
+      planCode,
+      grantedBy: adminUser.id,
+      expiresAt,
+    },
+  );
+
+  refreshAdminPages();
+}
+
+/**
+ * Revoke all active AI Speaking access
+ * for the selected user.
+ */
+export async function revokeAiSpeakingAccess(
+  formData: FormData,
+) {
+  await requireAdmin();
+
+  const userId =
+    readAiUserId(formData);
+
+  const admin =
+    createSupabaseAdminClient();
+
+  const { error } = await admin
+    .from(
+      "ai_speaking_subscriptions",
+    )
+    .update({
+      status: "revoked",
+    })
+    .eq("user_id", userId)
+    .eq("status", "active");
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  refreshAdminPages();
 }

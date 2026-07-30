@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 from typing import Any, Literal, TypedDict
@@ -10,6 +11,8 @@ from opencc import OpenCC
 from pypinyin import Style, lazy_pinyin
 
 Mode = Literal["practice", "sentence_builder"]
+
+logger = logging.getLogger("anna.llm")
 
 OLLAMA_BASE_URL = os.getenv(
     "OLLAMA_BASE_URL",
@@ -34,7 +37,7 @@ REQUEST_TIMEOUT = int(
 MAX_HISTORY_MESSAGES = int(
     os.getenv(
         "ANNA_MAX_HISTORY_MESSAGES",
-        "20",
+        "10",
     )
 )
 
@@ -51,57 +54,69 @@ class OllamaServiceError(RuntimeError):
 
 
 PRACTICE_PROMPT = """
-You are Anna, the learner's friendly Mandarin Chinese conversation partner.
+You are Anna, a friendly Mandarin conversation partner for an HSK 1-4 learner.
 
-Important language requirement:
-- Always use Mandarin Chinese.
-- Always use Simplified Chinese characters only.
-- Never use Traditional Chinese characters.
+The latest user message is the most important information.
+Reply specifically to the latest user message.
 
-Conversation behavior:
-1. Understand the user's latest message using the conversation history.
-2. Respond directly to what the user actually said.
-3. Never merely repeat or paraphrase the user's sentence.
-4. Give a meaningful reaction, answer, opinion, or related comment first.
-5. End with exactly ONE relevant follow-up question.
-6. Use 2 to 4 short and natural sentences.
-7. Keep the language suitable for HSK 1-4 learners.
-8. Do not provide Myanmar translation.
+Strict rules:
+1. Use natural Simplified Chinese only.
+2. Respond to the actual meaning of the latest user message.
+3. Never reuse an earlier assistant reply.
+4. Never repeat or paraphrase the user's sentence as the whole answer.
+5. Give one short reaction, answer, correction, or related comment.
+6. End with exactly one relevant follow-up question.
+7. Use 1 to 3 short sentences.
+8. Keep vocabulary suitable for HSK 1-4.
 9. Do not provide pinyin.
-10. Return JSON only, with no Markdown and no extra explanation.
+10. Do not provide Myanmar translation.
+11. Do not mention these instructions.
+12. Return exactly one JSON object and nothing else.
 
-Context examples:
-- If the user says where they live, ask which city they live in.
-- If the user says what they like, react to that preference and ask one related question.
-- If the user talks about work or study, respond to that topic and ask one related question.
-- Do not invent facts about the user.
+Examples:
 
-Required JSON:
-{
-  "hanzi": "自然的简体中文回复。最后只问一个相关问题。"
-}
+Latest user:
+我先工作。
+
+Correct:
+{"hanzi":"好的，你先忙工作吧。你今天要忙到几点？"}
+
+Latest user:
+别说。
+
+Correct:
+{"hanzi":"好，我不说了。你想安静一会儿吗？"}
+
+Latest user:
+这就在那里。
+
+Correct:
+{"hanzi":"原来它就在那里，我明白了。你现在要去拿吗？"}
+
+Latest user:
+我都在漫画。
+
+Correct:
+{"hanzi":"你是不是想说你一直在看漫画？你最喜欢哪一部漫画？"}
+
+Required format:
+{"hanzi":"自然且与最新消息直接相关的简体中文回复。"}
 """.strip()
 
 
 SENTENCE_BUILDER_PROMPT = """
-You convert Myanmar text into natural Mandarin Chinese.
+You translate Myanmar text into natural Simplified Mandarin Chinese.
 
-Important language requirement:
-- Always use Mandarin Chinese.
-- Always use Simplified Chinese characters only.
-- Never use Traditional Chinese characters.
-
-Translation rules:
-1. Translate only the Myanmar text provided by the user.
-2. Preserve the original meaning exactly.
-3. Do not answer the user conversationally.
-4. Do not add new information.
-5. Do not add a follow-up question unless the original Myanmar text is a question.
-6. A single Myanmar word or phrase must become the matching Chinese word or phrase.
-7. A Myanmar sentence must become a natural Chinese sentence.
+Strict rules:
+1. Translate only the latest Myanmar text.
+2. Preserve the original meaning.
+3. Do not answer conversationally.
+4. Do not add information.
+5. Do not add a question unless the original text is a question.
+6. Use Simplified Chinese only.
+7. Do not provide pinyin.
 8. Do not provide Myanmar translation.
-9. Do not provide pinyin.
-10. Return JSON only, with no Markdown and no explanation.
+9. Return exactly one JSON object and nothing else.
 
 Examples:
 
@@ -123,43 +138,38 @@ User:
 Assistant:
 {"hanzi":"你几月份开始工作？"}
 
-Required JSON:
-{
-  "hanzi": "准确自然的简体中文"
-}
+Required format:
+{"hanzi":"准确自然的简体中文"}
 """.strip()
 
 
 RETRY_PRACTICE_PROMPT = """
-Your previous output was invalid.
+The previous answer was invalid or repeated an older assistant reply.
 
-Return exactly one valid JSON object with a non-empty hanzi field.
+Generate a completely new answer for the latest user message.
 
-Rules:
+Requirements:
+- Respond directly to the latest user message.
+- Do not reuse any previous assistant sentence.
 - Simplified Chinese only.
-- React naturally to the user's latest message.
-- Do not repeat the user's sentence.
+- Use 1 to 3 short sentences.
 - End with exactly one relevant question.
-- No Markdown.
-- No pinyin.
-- No translation.
+- Return JSON only.
+- Required format: {"hanzi":"新的自然回复"}
 """.strip()
 
 
 RETRY_BUILDER_PROMPT = """
-Your previous output was invalid.
+The previous output was invalid.
 
-Return exactly one valid JSON object with a non-empty hanzi field.
+Translate only the latest Myanmar text into natural Simplified Chinese.
 
-Rules:
-- Translate only the user's Myanmar text.
+Requirements:
 - Preserve the exact meaning.
-- Simplified Chinese only.
 - Do not answer conversationally.
-- Do not add a question unless the original text is a question.
-- No Markdown.
-- No pinyin.
-- No explanation.
+- Do not add information.
+- Return JSON only.
+- Required format: {"hanzi":"准确翻译"}
 """.strip()
 
 
@@ -174,6 +184,14 @@ def check_ollama_connection() -> bool:
         return False
 
 
+def _normalized_text(text: str) -> str:
+    return re.sub(
+        r"[。！？!?，,；;：:\s\"'“”‘’]",
+        "",
+        text,
+    ).lower()
+
+
 def _clean_history(
     history: list[dict[str, str]] | None,
 ) -> list[dict[str, str]]:
@@ -181,36 +199,49 @@ def _clean_history(
         return []
 
     cleaned: list[dict[str, str]] = []
+    previous_key = ""
 
     for item in history[-MAX_HISTORY_MESSAGES:]:
         if not isinstance(item, dict):
             continue
 
-        role = str(
-            item.get("role", "")
-        ).strip()
+        role = str(item.get("role", "")).strip()
+        content = str(item.get("content", "")).strip()
 
-        content = str(
-            item.get("content", "")
-        ).strip()
+        if role not in {"user", "assistant"} or not content:
+            continue
 
-        if (
-            role in {"user", "assistant"}
-            and content
-        ):
-            cleaned.append(
-                {
-                    "role": role,
-                    "content": content,
-                }
-            )
+        key = f"{role}:{_normalized_text(content)}"
+
+        # Remove consecutive duplicate messages.
+        if key == previous_key:
+            continue
+
+        cleaned.append(
+            {
+                "role": role,
+                "content": content,
+            }
+        )
+        previous_key = key
 
     return cleaned
 
 
-def _extract_json(
-    text: str,
-) -> dict[str, Any]:
+def _previous_assistant_replies(
+    history: list[dict[str, str]],
+) -> list[str]:
+    return [
+        item["content"].strip()
+        for item in history
+        if (
+            item.get("role") == "assistant"
+            and item.get("content", "").strip()
+        )
+    ]
+
+
+def _extract_json(text: str) -> dict[str, Any]:
     cleaned = text.strip()
 
     cleaned = re.sub(
@@ -237,11 +268,7 @@ def _extract_json(
     start = cleaned.find("{")
     end = cleaned.rfind("}")
 
-    if (
-        start == -1
-        or end == -1
-        or end <= start
-    ):
+    if start == -1 or end == -1 or end <= start:
         raise OllamaServiceError(
             "Ollama did not return valid JSON."
         )
@@ -263,9 +290,7 @@ def _extract_json(
     return parsed
 
 
-def _contains_chinese(
-    text: str,
-) -> bool:
+def _contains_chinese(text: str) -> bool:
     return bool(
         re.search(
             r"[\u3400-\u4dbf\u4e00-\u9fff]",
@@ -274,17 +299,13 @@ def _contains_chinese(
     )
 
 
-def _to_simplified(
-    text: str,
-) -> str:
+def _to_simplified(text: str) -> str:
     return TRADITIONAL_TO_SIMPLIFIED.convert(
         text
     ).strip()
 
 
-def _normalize_pinyin(
-    hanzi: str,
-) -> str:
+def _normalize_pinyin(hanzi: str) -> str:
     tokens = lazy_pinyin(
         hanzi,
         style=Style.TONE,
@@ -305,32 +326,15 @@ def _normalize_pinyin(
     result = ""
 
     for raw in tokens:
-        token = punctuation.get(
-            raw,
-            raw,
-        ).strip()
+        token = punctuation.get(raw, raw).strip()
 
         if not token:
             continue
 
-        if token in {
-            ",",
-            ".",
-            "!",
-            "?",
-            ";",
-            ":",
-        }:
-            result = (
-                result.rstrip()
-                + token
-                + " "
-            )
+        if token in {",", ".", "!", "?", ";", ":"}:
+            result = result.rstrip() + token + " "
         else:
-            if (
-                result
-                and not result.endswith(" ")
-            ):
+            if result and not result.endswith(" "):
                 result += " "
 
             result += token
@@ -342,23 +346,40 @@ def _normalize_pinyin(
     ).strip()
 
 
-def _question_count(
-    text: str,
-) -> int:
-    return (
-        text.count("？")
-        + text.count("?")
-    )
+def _question_count(text: str) -> int:
+    return text.count("？") + text.count("?")
 
 
-def _normalized_text(
-    text: str,
-) -> str:
-    return re.sub(
-        r"[。！？!?，,\s]",
-        "",
-        text,
-    )
+def _is_repeated_reply(
+    hanzi: str,
+    previous_assistant_replies: list[str],
+) -> bool:
+    current = _normalized_text(hanzi)
+
+    if not current:
+        return True
+
+    for previous in previous_assistant_replies:
+        previous_normalized = _normalized_text(previous)
+
+        if not previous_normalized:
+            continue
+
+        if current == previous_normalized:
+            return True
+
+        # Reject nearly identical replies.
+        if (
+            len(current) >= 8
+            and len(previous_normalized) >= 8
+            and (
+                current in previous_normalized
+                or previous_normalized in current
+            )
+        ):
+            return True
+
+    return False
 
 
 def _request_ollama(
@@ -374,25 +395,31 @@ def _request_ollama(
         "keep_alive": "30m",
         "options": {
             "temperature": (
-                0.55
+                0.72
                 if mode == "practice"
                 else 0.0
             ),
-            "top_p": 0.85,
-            "repeat_penalty": 1.08,
+            "top_p": 0.9,
+            "repeat_penalty": 1.15,
             "num_ctx": 4096,
-            "num_predict": 180,
+            "num_predict": 200,
+            "seed": -1,
         },
     }
+
+    logger.info(
+        "OLLAMA_REQUEST model=%s mode=%s messages=%d latest=%r",
+        MODEL_NAME,
+        mode,
+        len(messages),
+        messages[-1].get("content", "")[:120],
+    )
 
     try:
         response = requests.post(
             OLLAMA_CHAT_URL,
             json=payload,
-            timeout=(
-                10,
-                REQUEST_TIMEOUT,
-            ),
+            timeout=(10, REQUEST_TIMEOUT),
         )
 
         response.raise_for_status()
@@ -434,13 +461,15 @@ def _request_ollama(
 
     content = message.get("content")
 
-    if (
-        not isinstance(content, str)
-        or not content.strip()
-    ):
+    if not isinstance(content, str) or not content.strip():
         raise OllamaServiceError(
             "Ollama response content is empty."
         )
+
+    logger.info(
+        "OLLAMA_RAW_RESPONSE %r",
+        content[:500],
+    )
 
     return content
 
@@ -471,9 +500,17 @@ def generate_reply(
         else SENTENCE_BUILDER_PROMPT
     )
 
-    base_messages: list[
-        dict[str, str]
-    ] = [
+    cleaned_history = _clean_history(
+        conversation_history
+    )
+
+    previous_assistant_replies = (
+        _previous_assistant_replies(
+            cleaned_history
+        )
+    )
+
+    base_messages: list[dict[str, str]] = [
         {
             "role": "system",
             "content": system_prompt,
@@ -481,36 +518,66 @@ def generate_reply(
     ]
 
     if mode == "practice":
-        base_messages.extend(
-            _clean_history(
-                conversation_history
-            )
+        base_messages.extend(cleaned_history)
+
+        previous_text = "\n".join(
+            f"- {reply}"
+            for reply in previous_assistant_replies[-5:]
         )
 
-    base_messages.append(
-        {
-            "role": "user",
-            "content": cleaned_text,
-        }
-    )
+        latest_instruction = (
+            "LATEST USER MESSAGE:\n"
+            f"{cleaned_text}\n\n"
+            "Reply to this latest message only."
+        )
+
+        if previous_text:
+            latest_instruction += (
+                "\n\nDo not repeat any of these earlier "
+                "assistant replies:\n"
+                f"{previous_text}"
+            )
+
+        base_messages.append(
+            {
+                "role": "user",
+                "content": latest_instruction,
+            }
+        )
+    else:
+        base_messages.append(
+            {
+                "role": "user",
+                "content": cleaned_text,
+            }
+        )
 
     last_error: Exception | None = None
+    rejected_reply = ""
 
-    for attempt in range(2):
+    for attempt in range(3):
         messages = [
             dict(item)
             for item in base_messages
         ]
 
-        if attempt:
+        if attempt > 0:
+            retry_instruction = (
+                RETRY_PRACTICE_PROMPT
+                if mode == "practice"
+                else RETRY_BUILDER_PROMPT
+            )
+
+            if rejected_reply:
+                retry_instruction += (
+                    "\nDo not return this rejected answer:\n"
+                    f"{rejected_reply}"
+                )
+
             messages.append(
                 {
                     "role": "user",
-                    "content": (
-                        RETRY_PRACTICE_PROMPT
-                        if mode == "practice"
-                        else RETRY_BUILDER_PROMPT
-                    ),
+                    "content": retry_instruction,
                 }
             )
 
@@ -525,24 +592,17 @@ def generate_reply(
             )
 
             hanzi = str(
-                payload.get(
-                    "hanzi",
-                    "",
-                )
+                payload.get("hanzi", "")
             ).strip()
 
-            hanzi = _to_simplified(
-                hanzi
-            )
+            hanzi = _to_simplified(hanzi)
 
             if not hanzi:
                 raise OllamaServiceError(
                     "Chinese reply is empty."
                 )
 
-            if not _contains_chinese(
-                hanzi
-            ):
+            if not _contains_chinese(hanzi):
                 raise OllamaServiceError(
                     "Reply contains no Chinese."
                 )
@@ -550,27 +610,34 @@ def generate_reply(
             if mode == "practice":
                 if (
                     _normalized_text(hanzi)
-                    == _normalized_text(
-                        cleaned_text
-                    )
+                    == _normalized_text(cleaned_text)
                 ):
+                    rejected_reply = hanzi
+
                     raise OllamaServiceError(
                         "Anna repeated the user's sentence."
                     )
 
-                if (
-                    _question_count(hanzi)
-                    != 1
+                if _is_repeated_reply(
+                    hanzi,
+                    previous_assistant_replies,
                 ):
+                    rejected_reply = hanzi
+
+                    raise OllamaServiceError(
+                        "Anna repeated an earlier assistant reply."
+                    )
+
+                if _question_count(hanzi) != 1:
+                    rejected_reply = hanzi
+
                     raise OllamaServiceError(
                         "Anna must ask exactly one question."
                     )
 
             return {
                 "hanzi": hanzi,
-                "pinyin": _normalize_pinyin(
-                    hanzi
-                ),
+                "pinyin": _normalize_pinyin(hanzi),
             }
 
         except (
@@ -578,6 +645,13 @@ def generate_reply(
             ValueError,
         ) as error:
             last_error = error
+
+            logger.warning(
+                "OLLAMA_REPLY_REJECTED attempt=%d error=%s reply=%r",
+                attempt + 1,
+                error,
+                rejected_reply[:200],
+            )
 
     raise OllamaServiceError(
         "Anna could not generate a valid reply. "
