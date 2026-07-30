@@ -1,16 +1,31 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
 import { createClient } from "@/lib/supabase/client";
 
 export default function DashboardPage() {
-  const supabase = useMemo(() => createClient(), []);
+  const supabase = useMemo(
+    () => createClient(),
+    [],
+  );
 
-  const [name, setName] = useState("Anna Learner");
-  const [email, setEmail] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [loggingOut, setLoggingOut] = useState(false);
+  const [name, setName] =
+    useState("Anna Learner");
+
+  const [email, setEmail] =
+    useState("");
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [loggingOut, setLoggingOut] =
+    useState(false);
 
   useEffect(() => {
     let active = true;
@@ -20,39 +35,63 @@ export default function DashboardPage() {
         const {
           data: { user },
           error: userError,
-        } = await supabase.auth.getUser();
+        } =
+          await supabase.auth.getUser();
 
-        if (userError || !user) {
-          window.location.replace("/login?next=/dashboard");
+        if (
+          userError ||
+          !user
+        ) {
+          window.location.replace(
+            "/login?next=/dashboard",
+          );
+
           return;
         }
 
-        const { data: profile } = await supabase
+        const {
+          data: profile,
+          error: profileError,
+        } = await supabase
           .from("profiles")
           .select("name,email")
           .eq("id", user.id)
           .maybeSingle();
+
+        if (profileError) {
+          console.error(
+            "Failed to load profile:",
+            profileError,
+          );
+        }
 
         if (!active) {
           return;
         }
 
         const profileName =
-          typeof profile?.name === "string" &&
-          profile.name.trim().length > 0
+          typeof profile?.name ===
+            "string" &&
+          profile.name.trim().length >
+            0
             ? profile.name.trim()
             : "Anna Learner";
 
         const profileEmail =
-          typeof profile?.email === "string" &&
-          profile.email.trim().length > 0
+          typeof profile?.email ===
+            "string" &&
+          profile.email.trim().length >
+            0
             ? profile.email.trim()
             : user.email ?? "";
 
         setName(profileName);
         setEmail(profileEmail);
       } catch (error) {
-        console.error("Failed to load dashboard user:", error);
+        console.error(
+          "Failed to load dashboard user:",
+          error,
+        );
       } finally {
         if (active) {
           setLoading(false);
@@ -75,10 +114,22 @@ export default function DashboardPage() {
     setLoggingOut(true);
 
     try {
-      await supabase.auth.signOut();
-      window.location.replace("/login");
+      const { error } =
+        await supabase.auth.signOut();
+
+      if (error) {
+        throw error;
+      }
+
+      window.location.replace(
+        "/login",
+      );
     } catch (error) {
-      console.error("Logout failed:", error);
+      console.error(
+        "Logout failed:",
+        error,
+      );
+
       setLoggingOut(false);
     }
   }
@@ -110,11 +161,15 @@ export default function DashboardPage() {
 
           <button
             type="button"
-            onClick={() => void logout()}
+            onClick={() =>
+              void logout()
+            }
             disabled={loggingOut}
             className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-bold transition hover:border-white/20 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {loggingOut ? "Logging out..." : "Logout"}
+            {loggingOut
+              ? "Logging out..."
+              : "Logout"}
           </button>
         </header>
 
@@ -156,8 +211,11 @@ export default function DashboardPage() {
               </div>
 
               <p className="mt-4 max-w-lg leading-7 text-white/55">
-                Practice natural Chinese conversation with Anna using
-                voice, Hanzi, Pinyin and Myanmar translation.
+                Practice natural
+                Chinese conversation
+                with Anna using voice,
+                Hanzi, Pinyin and
+                conversation memory.
               </p>
 
               <div className="mt-6 rounded-2xl border border-white/10 bg-black/20 p-4">
@@ -177,20 +235,33 @@ export default function DashboardPage() {
                   />
 
                   <FeatureItem
-                    icon="🇲🇲"
-                    label="Myanmar"
+                    icon="🔊"
+                    label="Speaker"
                   />
                 </div>
               </div>
 
-              <Link
-                href="/dashboard/ai"
-                className="mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-fuchsia-500 via-purple-500 to-violet-600 px-5 py-3 font-black text-white shadow-lg shadow-purple-950/40 transition hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0"
-              >
-                <span>🎤</span>
-                <span>Start Speaking</span>
-                <span>→</span>
-              </Link>
+              <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                <Link
+                  href="/dashboard/ai"
+                  className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-fuchsia-500 via-purple-500 to-violet-600 px-5 py-3 font-black text-white shadow-lg shadow-purple-950/40 transition hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0"
+                >
+                  <span>🎤</span>
+                  <span>
+                    Start Speaking
+                  </span>
+                </Link>
+
+                <Link
+                  href="/dashboard/ai/pricing"
+                  className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/[0.08] px-5 py-3 font-black text-white transition hover:-translate-y-0.5 hover:bg-white/[0.13] active:translate-y-0"
+                >
+                  <span>💎</span>
+                  <span>
+                    View Plans
+                  </span>
+                </Link>
+              </div>
             </div>
           </article>
 
@@ -208,7 +279,8 @@ export default function DashboardPage() {
                   </p>
 
                   <h2 className="mt-4 text-3xl font-black">
-                    Flashcards + Writing
+                    Flashcards +
+                    Writing
                   </h2>
                 </div>
 
@@ -218,8 +290,11 @@ export default function DashboardPage() {
               </div>
 
               <p className="mt-4 max-w-lg leading-7 text-white/55">
-                HSK 1 is free. Unlock HSK 2–9 individually or buy
-                the full lifetime package.
+                HSK 1 is free.
+                Unlock HSK 2–9
+                individually or buy
+                the full lifetime
+                package.
               </p>
 
               <div className="mt-6 grid gap-3 sm:grid-cols-2">
@@ -256,7 +331,9 @@ function FeatureItem({
 }: FeatureItemProps) {
   return (
     <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-3">
-      <span className="text-xl">{icon}</span>
+      <span className="text-xl">
+        {icon}
+      </span>
 
       <span className="text-sm font-bold text-white/80">
         {label}
