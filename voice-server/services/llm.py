@@ -65,7 +65,7 @@ Strict rules:
 3. Never reuse an earlier assistant reply.
 4. Never repeat or paraphrase the user's sentence as the whole answer.
 5. Give one short reaction, answer, correction, or related comment.
-6. End with exactly one relevant follow-up question.
+6. A relevant follow-up question is optional. Ask at most one question.
 7. Use 1 to 3 short sentences.
 8. Keep vocabulary suitable for HSK 1-4.
 9. Do not provide pinyin.
@@ -153,7 +153,7 @@ Requirements:
 - Do not reuse any previous assistant sentence.
 - Simplified Chinese only.
 - Use 1 to 3 short sentences.
-- End with exactly one relevant question.
+- A relevant follow-up question is optional. Ask at most one question.
 - Return JSON only.
 - Required format: {"hanzi":"新的自然回复"}
 """.strip()
@@ -555,7 +555,7 @@ def generate_reply(
     last_error: Exception | None = None
     rejected_reply = ""
 
-    for attempt in range(3):
+    for attempt in range(4):
         messages = [
             dict(item)
             for item in base_messages
@@ -576,10 +576,30 @@ def generate_reply(
 
             messages.append(
                 {
-                    "role": "user",
+                    "role": "system",
                     "content": retry_instruction,
                 }
             )
+
+            # Keep the latest user message as the final user turn.
+            if mode == "practice":
+                messages.append(
+                    {
+                        "role": "user",
+                        "content": (
+                            "LATEST USER MESSAGE:\\n"
+                            f"{cleaned_text}\\n\\n"
+                            "Reply naturally to this message now."
+                        ),
+                    }
+                )
+            else:
+                messages.append(
+                    {
+                        "role": "user",
+                        "content": cleaned_text,
+                    }
+                )
 
         try:
             raw_content = _request_ollama(
@@ -587,12 +607,24 @@ def generate_reply(
                 mode,
             )
 
-            payload = _extract_json(
-                raw_content
-            )
+            try:
+                payload = _extract_json(raw_content)
+                hanzi = str(
+                    payload.get("hanzi")
+                    or payload.get("reply")
+                    or payload.get("content")
+                    or ""
+                ).strip()
+            except OllamaServiceError:
+                # Small local models sometimes return plain Chinese even
+                # when JSON output is requested. Accept that response.
+                hanzi = raw_content.strip()
 
-            hanzi = str(
-                payload.get("hanzi", "")
+            hanzi = re.sub(
+                r"^```(?:json)?\\s*|\\s*```$",
+                "",
+                hanzi,
+                flags=re.IGNORECASE,
             ).strip()
 
             hanzi = _to_simplified(hanzi)
@@ -628,11 +660,11 @@ def generate_reply(
                         "Anna repeated an earlier assistant reply."
                     )
 
-                if _question_count(hanzi) != 1:
+                if _question_count(hanzi) > 1:
                     rejected_reply = hanzi
 
                     raise OllamaServiceError(
-                        "Anna must ask exactly one question."
+                        "Anna must ask no more than one question."
                     )
 
             return {
