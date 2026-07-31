@@ -12,51 +12,69 @@ type PlaybackSpeed = 1 | 0.75;
 export default function PronunciationPractice({
   sentences,
 }: PronunciationPracticeProps) {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const sampleAudioRef = useRef<HTMLAudioElement | null>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const microphoneStreamRef = useRef<MediaStream | null>(null);
+  const recordedChunksRef = useRef<Blob[]>([]);
+  const recordingStartedAtRef = useRef<number | null>(null);
 
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [playbackSpeed, setPlaybackSpeed] =
-    useState<PlaybackSpeed>(1);
+  const [isPlayingSample, setIsPlayingSample] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState<PlaybackSpeed>(1);
   const [showPinyin, setShowPinyin] = useState(true);
   const [showMeaning, setShowMeaning] = useState(true);
   const [audioError, setAudioError] = useState<string | null>(null);
+
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingError, setRecordingError] = useState<string | null>(null);
+  const [recordedAudioUrl, setRecordedAudioUrl] = useState<string | null>(null);
+  const [recordedAudioBlob, setRecordedAudioBlob] = useState<Blob | null>(null);
+  const [recordingDuration, setRecordingDuration] = useState(0);
 
   const currentSentence = sentences[currentIndex];
 
   useEffect(() => {
     return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
+      stopSampleAudio();
+      stopMicrophoneStream();
+
+      if (recordedAudioUrl) {
+        URL.revokeObjectURL(recordedAudioUrl);
       }
     };
-  }, []);
+  }, [recordedAudioUrl]);
 
   useEffect(() => {
-    stopAudio();
+    stopSampleAudio();
+    resetRecording();
     setAudioError(null);
+    setRecordingError(null);
   }, [currentIndex]);
 
-  function stopAudio() {
-    if (!audioRef.current) {
-      setIsPlaying(false);
+  function stopSampleAudio() {
+    if (!sampleAudioRef.current) {
+      setIsPlayingSample(false);
       return;
     }
 
-    audioRef.current.pause();
-    audioRef.current.currentTime = 0;
-    audioRef.current = null;
-    setIsPlaying(false);
+    sampleAudioRef.current.pause();
+    sampleAudioRef.current.currentTime = 0;
+    sampleAudioRef.current = null;
+    setIsPlayingSample(false);
   }
 
-  function playAudio(speed: PlaybackSpeed = playbackSpeed) {
+  function playSampleAudio(speed: PlaybackSpeed = playbackSpeed) {
     if (!currentSentence?.audioUrl) {
       setAudioError("This sentence does not have a sample audio file.");
       return;
     }
 
-    stopAudio();
+    if (isRecording) {
+      setRecordingError("Please stop recording before playing the sample.");
+      return;
+    }
+
+    stopSampleAudio();
     setAudioError(null);
     setPlaybackSpeed(speed);
 
@@ -65,33 +83,191 @@ export default function PronunciationPractice({
     audio.preload = "auto";
 
     audio.onplay = () => {
-      setIsPlaying(true);
+      setIsPlayingSample(true);
     };
 
     audio.onended = () => {
-      setIsPlaying(false);
-      audioRef.current = null;
+      setIsPlayingSample(false);
+      sampleAudioRef.current = null;
     };
 
     audio.onerror = () => {
-      setIsPlaying(false);
-      audioRef.current = null;
+      setIsPlayingSample(false);
+      sampleAudioRef.current = null;
       setAudioError(
         `Audio file could not be loaded: ${currentSentence.audioUrl}`
       );
     };
 
-    audioRef.current = audio;
+    sampleAudioRef.current = audio;
 
     void audio.play().catch((error: unknown) => {
       console.error("Unable to play pronunciation audio:", error);
 
-      setIsPlaying(false);
-      audioRef.current = null;
-      setAudioError(
-        "The browser could not play this audio. Please check the audio file."
-      );
+      setIsPlayingSample(false);
+      sampleAudioRef.current = null;
+      setAudioError("The browser could not play this sample audio.");
     });
+  }
+
+  function stopMicrophoneStream() {
+    microphoneStreamRef.current?.getTracks().forEach((track) => {
+      track.stop();
+    });
+
+    microphoneStreamRef.current = null;
+  }
+
+  function resetRecording() {
+    if (recorderRef.current?.state === "recording") {
+      recorderRef.current.stop();
+    }
+
+    recorderRef.current = null;
+    recordedChunksRef.current = [];
+    recordingStartedAtRef.current = null;
+
+    stopMicrophoneStream();
+
+    if (recordedAudioUrl) {
+      URL.revokeObjectURL(recordedAudioUrl);
+    }
+
+    setRecordedAudioUrl(null);
+    setRecordedAudioBlob(null);
+    setRecordingDuration(0);
+    setIsRecording(false);
+  }
+
+  async function startRecording() {
+    setRecordingError(null);
+    stopSampleAudio();
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setRecordingError(
+        "Microphone recording is not supported by this browser."
+      );
+      return;
+    }
+
+    if (typeof MediaRecorder === "undefined") {
+      setRecordingError("MediaRecorder is not supported by this browser.");
+      return;
+    }
+
+    try {
+      if (recordedAudioUrl) {
+        URL.revokeObjectURL(recordedAudioUrl);
+      }
+
+      setRecordedAudioUrl(null);
+      setRecordedAudioBlob(null);
+      setRecordingDuration(0);
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
+
+      microphoneStreamRef.current = stream;
+
+      const preferredMimeTypes = [
+        "audio/webm;codecs=opus",
+        "audio/webm",
+        "audio/mp4",
+      ];
+
+      const supportedMimeType = preferredMimeTypes.find((mimeType) =>
+        MediaRecorder.isTypeSupported(mimeType)
+      );
+
+      const recorder = supportedMimeType
+        ? new MediaRecorder(stream, { mimeType: supportedMimeType })
+        : new MediaRecorder(stream);
+
+      recorderRef.current = recorder;
+      recordedChunksRef.current = [];
+      recordingStartedAtRef.current = Date.now();
+
+      recorder.ondataavailable = (event: BlobEvent) => {
+        if (event.data.size > 0) {
+          recordedChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onerror = () => {
+        setRecordingError("Recording failed. Please try again.");
+        setIsRecording(false);
+        stopMicrophoneStream();
+      };
+
+      recorder.onstop = () => {
+        const mimeType =
+          recorder.mimeType || supportedMimeType || "audio/webm";
+
+        const audioBlob = new Blob(recordedChunksRef.current, {
+          type: mimeType,
+        });
+
+        const startedAt = recordingStartedAtRef.current;
+        const duration =
+          startedAt === null ? 0 : (Date.now() - startedAt) / 1000;
+
+        if (audioBlob.size === 0) {
+          setRecordingError(
+            "No audio was recorded. Please allow microphone access and try again."
+          );
+        } else {
+          const audioUrl = URL.createObjectURL(audioBlob);
+
+          setRecordedAudioBlob(audioBlob);
+          setRecordedAudioUrl(audioUrl);
+          setRecordingDuration(Number(duration.toFixed(1)));
+        }
+
+        setIsRecording(false);
+        stopMicrophoneStream();
+      };
+
+      recorder.start(250);
+      setIsRecording(true);
+    } catch (error) {
+      console.error("Unable to start microphone recording:", error);
+
+      if (
+        error instanceof DOMException &&
+        error.name === "NotAllowedError"
+      ) {
+        setRecordingError(
+          "Microphone permission was denied. Please allow microphone access in your browser."
+        );
+      } else if (
+        error instanceof DOMException &&
+        error.name === "NotFoundError"
+      ) {
+        setRecordingError("No microphone was found on this device.");
+      } else {
+        setRecordingError(
+          "Unable to access the microphone. Please try again."
+        );
+      }
+
+      setIsRecording(false);
+      stopMicrophoneStream();
+    }
+  }
+
+  function stopRecording() {
+    const recorder = recorderRef.current;
+
+    if (!recorder || recorder.state !== "recording") {
+      return;
+    }
+
+    recorder.stop();
   }
 
   function goToPreviousSentence() {
@@ -184,21 +360,23 @@ export default function PronunciationPractice({
             <button
               type="button"
               onClick={() => {
-                if (isPlaying) {
-                  stopAudio();
+                if (isPlayingSample) {
+                  stopSampleAudio();
                 } else {
-                  playAudio(playbackSpeed);
+                  playSampleAudio(playbackSpeed);
                 }
               }}
-              className="min-w-36 rounded-2xl bg-white px-5 py-3 font-semibold text-violet-700 shadow-lg transition hover:-translate-y-0.5 hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={isRecording}
+              className="min-w-36 rounded-2xl bg-white px-5 py-3 font-semibold text-violet-700 shadow-lg transition hover:-translate-y-0.5 hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isPlaying ? "■ Stop" : "▶ Listen"}
+              {isPlayingSample ? "■ Stop" : "▶ Listen"}
             </button>
 
             <button
               type="button"
-              onClick={() => playAudio(0.75)}
-              className="rounded-2xl border border-white/15 bg-white/10 px-5 py-3 font-semibold text-white transition hover:bg-white/15"
+              onClick={() => playSampleAudio(0.75)}
+              disabled={isRecording}
+              className="rounded-2xl border border-white/15 bg-white/10 px-5 py-3 font-semibold text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-50"
             >
               🐢 Slow Audio
             </button>
@@ -209,6 +387,81 @@ export default function PronunciationPractice({
               {audioError}
             </div>
           ) : null}
+
+          <div className="mt-8 rounded-3xl border border-white/10 bg-black/10 p-5">
+            <p className="text-sm font-semibold text-white">
+              Your pronunciation
+            </p>
+
+            <p className="mt-1 text-sm text-white/60">
+              Listen first, then record yourself saying the same sentence.
+            </p>
+
+            <div className="mt-5 flex flex-wrap justify-center gap-3">
+              {!isRecording ? (
+                <button
+                  type="button"
+                  onClick={() => void startRecording()}
+                  className="rounded-2xl bg-violet-500 px-6 py-3 font-semibold text-white shadow-lg transition hover:bg-violet-400"
+                >
+                  🎤 Start Recording
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={stopRecording}
+                  className="animate-pulse rounded-2xl bg-red-500 px-6 py-3 font-semibold text-white shadow-lg transition hover:bg-red-400"
+                >
+                  ■ Stop Recording
+                </button>
+              )}
+
+              {recordedAudioUrl && !isRecording ? (
+                <button
+                  type="button"
+                  onClick={resetRecording}
+                  className="rounded-2xl border border-white/15 bg-white/10 px-6 py-3 font-semibold text-white transition hover:bg-white/15"
+                >
+                  ↻ Record Again
+                </button>
+              ) : null}
+            </div>
+
+            {isRecording ? (
+              <div className="mt-5 flex items-center justify-center gap-3 text-sm font-medium text-red-100">
+                <span className="h-3 w-3 animate-pulse rounded-full bg-red-400" />
+                Recording…
+              </div>
+            ) : null}
+
+            {recordingError ? (
+              <div className="mx-auto mt-5 max-w-xl rounded-2xl border border-red-300/20 bg-red-400/10 px-4 py-3 text-sm text-red-100">
+                {recordingError}
+              </div>
+            ) : null}
+
+            {recordedAudioUrl ? (
+              <div className="mx-auto mt-6 max-w-md rounded-2xl border border-white/10 bg-white/5 p-4">
+                <p className="mb-3 text-sm text-white/70">
+                  Recorded duration: {recordingDuration} seconds
+                </p>
+
+                <audio
+                  controls
+                  preload="metadata"
+                  src={recordedAudioUrl}
+                  className="w-full"
+                />
+
+                <p className="mt-3 text-xs text-white/40">
+                  Audio size:{" "}
+                  {recordedAudioBlob
+                    ? `${(recordedAudioBlob.size / 1024).toFixed(1)} KB`
+                    : "0 KB"}
+                </p>
+              </div>
+            ) : null}
+          </div>
 
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <button
@@ -233,7 +486,7 @@ export default function PronunciationPractice({
           <button
             type="button"
             onClick={goToPreviousSentence}
-            disabled={currentIndex === 0}
+            disabled={currentIndex === 0 || isRecording}
             className="rounded-xl border border-white/10 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-30"
           >
             ← Previous
@@ -241,17 +494,19 @@ export default function PronunciationPractice({
 
           <button
             type="button"
-            disabled
-            className="rounded-xl bg-violet-500/30 px-5 py-3 text-sm font-semibold text-white/60"
-            title="Recording will be added in the next step."
+            disabled={!recordedAudioBlob || isRecording}
+            className="rounded-xl bg-violet-500/30 px-5 py-3 text-sm font-semibold text-white/60 disabled:cursor-not-allowed"
+            title="Pronunciation checking will be connected in the next step."
           >
-            🎤 Repeat
+            Check Score
           </button>
 
           <button
             type="button"
             onClick={goToNextSentence}
-            disabled={currentIndex === sentences.length - 1}
+            disabled={
+              currentIndex === sentences.length - 1 || isRecording
+            }
             className="rounded-xl bg-violet-500 px-5 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-violet-400 disabled:cursor-not-allowed disabled:opacity-30"
           >
             Next →
