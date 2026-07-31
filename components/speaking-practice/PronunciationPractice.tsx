@@ -13,6 +13,10 @@ import {
   type PronunciationCheckResponse,
 } from "@/lib/speaking-practice/api";
 
+import {
+  savePronunciationAttempt,
+} from "@/lib/speaking-practice/history";
+
 import PronunciationFeedback from "@/components/speaking-practice/PronunciationFeedback";
 
 import type {
@@ -61,6 +65,12 @@ export default function PronunciationPractice({
 
   const [pronunciationResult, setPronunciationResult] =
     useState<PronunciationCheckResponse | null>(null);
+
+  const [isSavingResult, setIsSavingResult] =
+    useState(false);
+
+  const [saveResultMessage, setSaveResultMessage] =
+    useState<string | null>(null);
 
   const lessons = useMemo(() => {
     return Array.from(
@@ -165,6 +175,8 @@ export default function PronunciationPractice({
     setPronunciationResult(null);
     setScoreError(null);
     setIsCheckingScore(false);
+    setIsSavingResult(false);
+    setSaveResultMessage(null);
   }, [
     clearRecordedAudioUrl,
     stopMicrophoneStream,
@@ -283,6 +295,8 @@ export default function PronunciationPractice({
     setRecordingError(null);
     setScoreError(null);
     setPronunciationResult(null);
+    setIsSavingResult(false);
+    setSaveResultMessage(null);
 
     stopSampleAudio();
     clearRecordedAudioUrl();
@@ -459,6 +473,7 @@ export default function PronunciationPractice({
 
     setIsCheckingScore(true);
     setScoreError(null);
+    setSaveResultMessage(null);
     setPronunciationResult(null);
 
     try {
@@ -471,6 +486,32 @@ export default function PronunciationPractice({
         });
 
       setPronunciationResult(result);
+      setIsSavingResult(true);
+
+      try {
+        await savePronunciationAttempt({
+          sentence: currentSentence,
+          result,
+          recordingDuration,
+        });
+
+        setSaveResultMessage(
+          "Score saved to your speaking history."
+        );
+      } catch (saveError) {
+        console.error(
+          "Unable to save pronunciation result:",
+          saveError
+        );
+
+        setSaveResultMessage(
+          saveError instanceof Error
+            ? saveError.message
+            : "Score could not be saved."
+        );
+      } finally {
+        setIsSavingResult(false);
+      }
     } catch (error) {
       console.error(
         "Pronunciation checking failed:",
@@ -765,7 +806,10 @@ export default function PronunciationPractice({
                       onClick={() =>
                         void startRecording()
                       }
-                      disabled={isCheckingScore}
+                      disabled={
+                        isCheckingScore ||
+                        isSavingResult
+                      }
                       className="rounded-2xl bg-violet-500 px-6 py-3 font-semibold text-white disabled:opacity-50"
                     >
                       🎤 Start Recording
@@ -785,7 +829,10 @@ export default function PronunciationPractice({
                     <button
                       type="button"
                       onClick={resetRecording}
-                      disabled={isCheckingScore}
+                      disabled={
+                        isCheckingScore ||
+                        isSavingResult
+                      }
                       className="rounded-2xl border border-white/15 bg-white/10 px-6 py-3 font-semibold text-white disabled:opacity-50"
                     >
                       ↻ Record Again
@@ -826,68 +873,27 @@ export default function PronunciationPractice({
                 ) : null}
 
                 {pronunciationResult ? (
-                  <div className="mx-auto mt-6 max-w-2xl rounded-3xl border border-white/10 bg-white/5 p-5">
-                    <p className="text-sm text-white/60">
-                      Overall Score
-                    </p>
+                  <PronunciationFeedback
+                    result={pronunciationResult}
+                    onTryAgain={resetRecording}
+                    onListenNormal={() =>
+                      playSampleAudio("normal")
+                    }
+                    onListenSlow={() =>
+                      playSampleAudio("slow")
+                    }
+                  />
+                ) : null}
 
-                    <p className="mt-2 text-6xl font-bold text-white">
-                      {
-                        pronunciationResult
-                          .scores.overall
-                      }
-                    </p>
+                {isSavingResult ? (
+                  <p className="mt-4 text-sm text-violet-200">
+                    Saving score…
+                  </p>
+                ) : null}
 
-                    <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                      <ScoreCard
-                        label="Accuracy"
-                        value={
-                          pronunciationResult
-                            .scores.accuracy
-                        }
-                      />
-
-                      <ScoreCard
-                        label="Complete"
-                        value={
-                          pronunciationResult
-                            .scores
-                            .completeness
-                        }
-                      />
-
-                      <ScoreCard
-                        label="Fluency"
-                        value={
-                          pronunciationResult
-                            .scores.fluency
-                        }
-                      />
-                    </div>
-
-                    <div className="mt-5 rounded-2xl bg-black/15 p-4 text-left">
-                      <p className="text-xs uppercase text-white/40">
-                        Target
-                      </p>
-
-                      <p className="mt-2 text-xl text-white">
-                        {
-                          pronunciationResult
-                            .target_text
-                        }
-                      </p>
-
-                      <p className="mt-5 text-xs uppercase text-white/40">
-                        Anna heard
-                      </p>
-
-                      <p className="mt-2 text-xl text-violet-200">
-                        {
-                          pronunciationResult
-                            .recognized_text
-                        }
-                      </p>
-                    </div>
+                {saveResultMessage ? (
+                  <div className="mx-auto mt-4 max-w-xl rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/70">
+                    {saveResultMessage}
                   </div>
                 ) : null}
               </div>
@@ -935,7 +941,8 @@ export default function PronunciationPractice({
                 disabled={
                   currentIndex === 0 ||
                   isRecording ||
-                  isCheckingScore
+                  isCheckingScore ||
+                  isSavingResult
                 }
                 className="rounded-xl border border-white/10 px-5 py-3 text-sm font-semibold text-white disabled:opacity-30"
               >
@@ -950,13 +957,16 @@ export default function PronunciationPractice({
                 disabled={
                   !recordedAudioBlob ||
                   isRecording ||
-                  isCheckingScore
+                  isCheckingScore ||
+                  isSavingResult
                 }
                 className="rounded-xl bg-violet-500 px-5 py-3 text-sm font-semibold text-white disabled:opacity-40"
               >
                 {isCheckingScore
                   ? "Checking…"
-                  : "Check Score"}
+                  : isSavingResult
+                    ? "Saving…"
+                    : "Check Score"}
               </button>
 
               <button
@@ -966,7 +976,8 @@ export default function PronunciationPractice({
                   currentIndex ===
                     filteredSentences.length - 1 ||
                   isRecording ||
-                  isCheckingScore
+                  isCheckingScore ||
+                  isSavingResult
                 }
                 className="rounded-xl bg-violet-500 px-5 py-3 text-sm font-semibold text-white disabled:opacity-30"
               >
