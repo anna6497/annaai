@@ -13,6 +13,8 @@ import {
   type PronunciationCheckResponse,
 } from "@/lib/speaking-practice/api";
 
+import PronunciationFeedback from "@/components/speaking-practice/PronunciationFeedback";
+
 import type {
   SpeakingPracticeSentence,
 } from "@/lib/speaking-practice/types";
