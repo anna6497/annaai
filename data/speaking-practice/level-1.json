@@ -1,0 +1,157 @@
+[
+  {
+    "id": "hsk1-speaking-001",
+    "level": 1,
+    "category": "greetings",
+    "hanzi": "你好。",
+    "pinyin": "Nǐ hǎo.",
+    "pinyinNumbered": "ni3 hao3",
+    "myanmar": "မင်္ဂလာပါ။",
+    "audioUrl": "/audio/speaking-practice/level-1/001.mp3",
+    "difficulty": "easy",
+    "words": [
+      {
+        "hanzi": "你",
+        "pinyin": "nǐ",
+        "pinyinNumbered": "ni3",
+        "tone": 3
+      },
+      {
+        "hanzi": "好",
+        "pinyin": "hǎo",
+        "pinyinNumbered": "hao3",
+        "tone": 3
+      }
+    ]
+  },
+  {
+    "id": "hsk1-speaking-002",
+    "level": 1,
+    "category": "greetings",
+    "hanzi": "你好吗？",
+    "pinyin": "Nǐ hǎo ma?",
+    "pinyinNumbered": "ni3 hao3 ma5",
+    "myanmar": "နေကောင်းလား။",
+    "audioUrl": "/audio/speaking-practice/level-1/002.mp3",
+    "difficulty": "easy",
+    "words": [
+      {
+        "hanzi": "你",
+        "pinyin": "nǐ",
+        "pinyinNumbered": "ni3",
+        "tone": 3
+      },
+      {
+        "hanzi": "好",
+        "pinyin": "hǎo",
+        "pinyinNumbered": "hao3",
+        "tone": 3
+      },
+      {
+        "hanzi": "吗",
+        "pinyin": "ma",
+        "pinyinNumbered": "ma5",
+        "tone": 0
+      }
+    ]
+  },
+  {
+    "id": "hsk1-speaking-003",
+    "level": 1,
+    "category": "introduction",
+    "hanzi": "我叫安娜。",
+    "pinyin": "Wǒ jiào Ānnà.",
+    "pinyinNumbered": "wo3 jiao4 an1 na4",
+    "myanmar": "ကျွန်မနာမည် အန်နာပါ။",
+    "audioUrl": "/audio/speaking-practice/level-1/003.mp3",
+    "difficulty": "easy",
+    "words": [
+      {
+        "hanzi": "我",
+        "pinyin": "wǒ",
+        "pinyinNumbered": "wo3",
+        "tone": 3
+      },
+      {
+        "hanzi": "叫",
+        "pinyin": "jiào",
+        "pinyinNumbered": "jiao4",
+        "tone": 4
+      },
+      {
+        "hanzi": "安娜",
+        "pinyin": "Ānnà",
+        "pinyinNumbered": "an1 na4",
+        "tone": [1, 4]
+      }
+    ]
+  },
+  {
+    "id": "hsk1-speaking-004",
+    "level": 1,
+    "category": "introduction",
+    "hanzi": "我是缅甸人。",
+    "pinyin": "Wǒ shì Miǎndiàn rén.",
+    "pinyinNumbered": "wo3 shi4 mian3 dian4 ren2",
+    "myanmar": "ကျွန်မက မြန်မာလူမျိုးပါ။",
+    "audioUrl": "/audio/speaking-practice/level-1/004.mp3",
+    "difficulty": "easy",
+    "words": [
+      {
+        "hanzi": "我",
+        "pinyin": "wǒ",
+        "pinyinNumbered": "wo3",
+        "tone": 3
+      },
+      {
+        "hanzi": "是",
+        "pinyin": "shì",
+        "pinyinNumbered": "shi4",
+        "tone": 4
+      },
+      {
+        "hanzi": "缅甸人",
+        "pinyin": "Miǎndiàn rén",
+        "pinyinNumbered": "mian3 dian4 ren2",
+        "tone": [3, 4, 2]
+      }
+    ]
+  },
+  {
+    "id": "hsk1-speaking-005",
+    "level": 1,
+    "category": "daily-life",
+    "hanzi": "我今天很忙。",
+    "pinyin": "Wǒ jīntiān hěn máng.",
+    "pinyinNumbered": "wo3 jin1 tian1 hen3 mang2",
+    "myanmar": "ဒီနေ့ ကျွန်မ အလုပ်များတယ်။",
+    "audioUrl": "/audio/speaking-practice/level-1/005.mp3",
+    "difficulty": "easy",
+    "words": [
+      {
+        "hanzi": "我",
+        "pinyin": "wǒ",
+        "pinyinNumbered": "wo3",
+        "tone": 3
+      },
+      {
+        "hanzi": "今天",
+        "pinyin": "jīntiān",
+        "pinyinNumbered": "jin1 tian1",
+        "tone": [1, 1]
+      },
+      {
+        "hanzi": "很",
+        "pinyin": "hěn",
+        "pinyinNumbered": "hen3",
+        "tone": 3
+      },
+      {
+        "hanzi": "忙",
+        "pinyin": "máng",
+        "pinyinNumbered": "mang2",
+        "tone": 2
+      }
+    ]
+  }
+]
