@@ -44,10 +44,9 @@ export default function SpeakingDashboard() {
   const [
     dashboard,
     setDashboard,
-  ] =
-    useState<SpeakingDashboardData>(
-      EMPTY_DASHBOARD
-    );
+  ] = useState<SpeakingDashboardData>(
+    EMPTY_DASHBOARD
+  );
 
   const [isLoading, setIsLoading] =
     useState(true);
@@ -153,7 +152,8 @@ export default function SpeakingDashboard() {
   if (isLoading) {
     return (
       <DashboardMessage>
-        Loading your speaking progress…
+        Loading your speaking
+        progress…
       </DashboardMessage>
     );
   }
@@ -168,7 +168,7 @@ export default function SpeakingDashboard() {
           onClick={() =>
             void loadDashboard()
           }
-          className="mt-5 rounded-2xl bg-violet-500 px-6 py-3 font-semibold text-white"
+          className="mt-5 rounded-2xl bg-violet-500 px-6 py-3 font-semibold text-white transition hover:bg-violet-400"
         >
           Try Again
         </button>
@@ -180,17 +180,20 @@ export default function SpeakingDashboard() {
     return (
       <DashboardMessage>
         <h1 className="text-2xl font-bold text-white">
-          Sign in to view your progress
+          Sign in to view your
+          progress
         </h1>
 
         <p className="mt-3 text-white/60">
-          Your scores, streak and difficult
-          characters will appear here.
+          Your scores, streak,
+          difficult characters, and
+          practice history will appear
+          here.
         </p>
 
         <Link
           href="/login"
-          className="mt-6 inline-flex rounded-2xl bg-violet-500 px-6 py-3 font-semibold text-white"
+          className="mt-6 inline-flex rounded-2xl bg-violet-500 px-6 py-3 font-semibold text-white transition hover:bg-violet-400"
         >
           Sign In
         </Link>
@@ -215,17 +218,27 @@ export default function SpeakingDashboard() {
           </h1>
 
           <p className="mt-2 text-white/55">
-            Practice every day and improve
-            your Chinese pronunciation.
+            Practice every day and
+            improve your Chinese
+            pronunciation.
           </p>
         </div>
 
-        <Link
-          href="/dashboard/ai/pronunciation"
-          className="rounded-2xl bg-violet-500 px-6 py-3 font-semibold text-white shadow-lg transition hover:bg-violet-400"
-        >
-          Continue Practice →
-        </Link>
+        <div className="flex flex-wrap gap-3">
+          <Link
+            href="/dashboard/ai/pronunciation/review"
+            className="rounded-2xl border border-amber-300/20 bg-amber-400/10 px-6 py-3 font-semibold text-amber-100 transition hover:bg-amber-400/15"
+          >
+            Smart Review
+          </Link>
+
+          <Link
+            href="/dashboard/ai/pronunciation"
+            className="rounded-2xl bg-violet-500 px-6 py-3 font-semibold text-white shadow-lg transition hover:bg-violet-400"
+          >
+            Continue Practice →
+          </Link>
+        </div>
       </div>
 
       <div className="mt-8 grid gap-5 lg:grid-cols-[1.5fr_1fr]">
@@ -237,13 +250,13 @@ export default function SpeakingDashboard() {
               </p>
 
               <p className="mt-2 text-4xl font-bold text-white">
-                {dashboard.todayCompleted} /{" "}
-                {dashboard.todayGoal}
+                {dashboard.todayCompleted}{" "}
+                / {dashboard.todayGoal}
               </p>
 
               <p className="mt-2 text-sm text-white/55">
-                Different sentences practiced
-                today
+                Different sentences
+                practiced today
               </p>
             </div>
 
@@ -289,8 +302,8 @@ export default function SpeakingDashboard() {
 
             <p className="mt-1 text-xs text-white/45">
               Choose how many different
-              sentences you want to practice
-              each day.
+              sentences you want to
+              practice each day.
             </p>
 
             <div className="mt-4 flex flex-wrap gap-3">
@@ -309,14 +322,17 @@ export default function SpeakingDashboard() {
                           dailyGoal
                         )
                       }
-                      disabled={isSavingGoal}
+                      disabled={
+                        isSavingGoal
+                      }
                       className={`rounded-2xl px-5 py-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
                         isSelected
                           ? "bg-violet-500 text-white shadow-lg"
                           : "border border-white/10 bg-white/5 text-white/70 hover:bg-white/10"
                       }`}
                     >
-                      {dailyGoal} sentences
+                      {dailyGoal}{" "}
+                      sentences
                     </button>
                   );
                 }
@@ -370,25 +386,51 @@ export default function SpeakingDashboard() {
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <div className="rounded-[2rem] border border-white/10 bg-white/10 p-6 shadow-xl backdrop-blur-xl">
-          <p className="text-sm font-semibold text-violet-200">
-            Smart Review
-          </p>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-sm font-semibold text-violet-200">
+                Smart Review
+              </p>
 
-          <h2 className="mt-1 text-xl font-bold text-white">
-            Weak Characters
-          </h2>
+              <h2 className="mt-1 text-xl font-bold text-white">
+                Weak Characters
+              </h2>
 
-          {dashboard.weakCharacters.length ===
-          0 ? (
+              <p className="mt-2 text-sm text-white/45">
+                Review characters you
+                missed or pronounced
+                incorrectly.
+              </p>
+            </div>
+
+            <Link
+              href="/dashboard/ai/pronunciation/review"
+              className="rounded-xl border border-amber-300/20 bg-amber-400/10 px-4 py-2 text-sm font-semibold text-amber-100 transition hover:bg-amber-400/15"
+            >
+              Start Smart Review →
+            </Link>
+          </div>
+
+          {dashboard.weakCharacters
+            .length === 0 ? (
             <div className="mt-6 rounded-2xl bg-black/15 p-6 text-center">
               <p className="font-semibold text-white">
-                No difficult characters yet
+                No difficult
+                characters yet
               </p>
 
               <p className="mt-2 text-sm text-white/50">
-                Complete pronunciation checks
-                to build your review list.
+                Complete pronunciation
+                checks to build your
+                review list.
               </p>
+
+              <Link
+                href="/dashboard/ai/pronunciation"
+                className="mt-4 inline-flex text-sm font-semibold text-violet-200"
+              >
+                Start practicing →
+              </Link>
             </div>
           ) : (
             <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -399,15 +441,19 @@ export default function SpeakingDashboard() {
                     href={`/dashboard/ai/pronunciation?q=${encodeURIComponent(
                       item.character
                     )}`}
-                    className="rounded-2xl border border-amber-300/15 bg-amber-400/10 p-4 text-center transition hover:bg-amber-400/15"
+                    className="rounded-2xl border border-amber-300/15 bg-amber-400/10 p-4 text-center transition hover:-translate-y-0.5 hover:bg-amber-400/15"
                   >
                     <p className="text-4xl font-semibold text-amber-50">
                       {item.character}
                     </p>
 
                     <p className="mt-2 text-xs text-amber-100/60">
-                      {item.mistakeCount} mistake
-                      {item.mistakeCount === 1
+                      {
+                        item.mistakeCount
+                      }{" "}
+                      mistake
+                      {item.mistakeCount ===
+                      1
                         ? ""
                         : "s"}
                     </p>
@@ -419,36 +465,79 @@ export default function SpeakingDashboard() {
         </div>
 
         <div className="rounded-[2rem] border border-white/10 bg-white/10 p-6 shadow-xl backdrop-blur-xl">
-          <p className="text-sm font-semibold text-violet-200">
-            History
-          </p>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-sm font-semibold text-violet-200">
+                History
+              </p>
 
-          <h2 className="mt-1 text-xl font-bold text-white">
-            Recent Practice
-          </h2>
+              <h2 className="mt-1 text-xl font-bold text-white">
+                Recent Practice
+              </h2>
+            </div>
 
-          {dashboard.recentAttempts.length ===
-          0 ? (
+            <button
+              type="button"
+              onClick={() =>
+                void loadDashboard()
+              }
+              className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white/70 transition hover:bg-white/10"
+            >
+              Refresh
+            </button>
+          </div>
+
+          {dashboard.recentAttempts
+            .length === 0 ? (
             <div className="mt-6 rounded-2xl bg-black/15 p-6 text-center">
               <p className="font-semibold text-white">
-                No practice history yet
+                No practice history
+                yet
               </p>
+
+              <p className="mt-2 text-sm text-white/50">
+                Your recent scores
+                will appear here.
+              </p>
+
+              <Link
+                href="/dashboard/ai/pronunciation"
+                className="mt-4 inline-flex text-sm font-semibold text-violet-200"
+              >
+                Start practicing →
+              </Link>
             </div>
           ) : (
             <div className="mt-5 space-y-3">
               {dashboard.recentAttempts.map(
                 (attempt) => (
-                  <div
+                  <Link
                     key={attempt.id}
-                    className="flex items-center justify-between gap-4 rounded-2xl bg-black/15 px-4 py-3"
+                    href={`/dashboard/ai/pronunciation?q=${encodeURIComponent(
+                      attempt.targetText
+                    )}`}
+                    className="flex items-center justify-between gap-4 rounded-2xl bg-black/15 px-4 py-3 transition hover:bg-black/25"
                   >
                     <div className="min-w-0">
                       <p className="truncate text-lg font-semibold text-white">
-                        {attempt.targetText}
+                        {
+                          attempt.targetText
+                        }
+                      </p>
+
+                      <p className="mt-1 truncate text-sm text-violet-200/70">
+                        Anna heard:{" "}
+                        {
+                          attempt.recognizedText
+                        }
                       </p>
 
                       <p className="mt-1 text-xs text-white/40">
-                        Lesson {attempt.lesson} ·{" "}
+                        Lesson{" "}
+                        {
+                          attempt.lesson
+                        }{" "}
+                        ·{" "}
                         {formatCategory(
                           attempt.category
                         )}{" "}
@@ -464,14 +553,32 @@ export default function SpeakingDashboard() {
                         attempt.overallScore
                       )}`}
                     >
-                      {attempt.overallScore}
+                      {
+                        attempt.overallScore
+                      }
                     </div>
-                  </div>
+                  </Link>
                 )
               )}
             </div>
           )}
         </div>
+      </div>
+
+      <div className="mt-6 flex flex-wrap justify-center gap-3">
+        <Link
+          href="/dashboard/ai/pronunciation/review"
+          className="rounded-2xl border border-amber-300/20 bg-amber-400/10 px-6 py-3 font-semibold text-amber-100 transition hover:bg-amber-400/15"
+        >
+          Practice Weak Sentences
+        </Link>
+
+        <Link
+          href="/dashboard/ai/pronunciation"
+          className="rounded-2xl bg-violet-500 px-6 py-3 font-semibold text-white transition hover:bg-violet-400"
+        >
+          Continue Daily Practice
+        </Link>
       </div>
     </section>
   );
@@ -502,7 +609,9 @@ function MetricCard({
 }) {
   return (
     <div className="rounded-3xl border border-white/10 bg-white/10 p-5 shadow-lg backdrop-blur-xl">
-      <p className="text-2xl">{icon}</p>
+      <p className="text-2xl">
+        {icon}
+      </p>
 
       <p className="mt-3 text-xs font-medium uppercase tracking-wide text-white/40">
         {label}
@@ -520,12 +629,16 @@ function formatCategory(
 ): string {
   return category
     .replaceAll("-", " ")
-    .replace(/\b\w/g, (character) =>
-      character.toUpperCase()
+    .replace(
+      /\b\w/g,
+      (character) =>
+        character.toUpperCase()
     );
 }
 
-function formatDate(value: string): string {
+function formatDate(
+  value: string
+): string {
   return new Intl.DateTimeFormat(
     undefined,
     {
