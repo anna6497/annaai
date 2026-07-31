@@ -1,5 +1,9 @@
 import { createClient } from "@/lib/supabase/client";
 
+import type {
+  SpeakingDailyGoal,
+} from "@/lib/speaking-practice/preferences";
+
 export type WeakCharacter = {
   character: string;
   mistakeCount: number;
@@ -19,7 +23,7 @@ export type RecentSpeakingAttempt = {
 export type SpeakingDashboardData = {
   isAuthenticated: boolean;
 
-  todayGoal: number;
+  todayGoal: SpeakingDailyGoal;
   todayCompleted: number;
   todayProgressPercentage: number;
 
@@ -45,18 +49,40 @@ type PronunciationAttemptRow = {
   created_at: string;
 };
 
-const DEFAULT_DAILY_GOAL = 10;
+type PreferenceRow = {
+  daily_goal: number;
+};
 
-function getLocalDateKey(dateValue: string | Date): string {
+const DEFAULT_DAILY_GOAL: SpeakingDailyGoal = 10;
+
+function normalizeDailyGoal(
+  value: number | null | undefined
+): SpeakingDailyGoal {
+  if (
+    value === 5 ||
+    value === 10 ||
+    value === 20
+  ) {
+    return value;
+  }
+
+  return DEFAULT_DAILY_GOAL;
+}
+
+function getLocalDateKey(
+  dateValue: string | Date
+): string {
   const date =
     dateValue instanceof Date
       ? dateValue
       : new Date(dateValue);
 
   const year = date.getFullYear();
+
   const month = String(
     date.getMonth() + 1
   ).padStart(2, "0");
+
   const day = String(
     date.getDate()
   ).padStart(2, "0");
@@ -90,6 +116,7 @@ function calculateCurrentStreak(
   today.setHours(0, 0, 0, 0);
 
   const yesterday = new Date(today);
+
   yesterday.setDate(
     yesterday.getDate() - 1
   );
@@ -120,6 +147,7 @@ function calculateCurrentStreak(
     streak += 1;
 
     cursor = new Date(cursor);
+
     cursor.setDate(
       cursor.getDate() - 1
     );
@@ -154,8 +182,7 @@ function parseIncorrectCharacters(
 
     const recognized =
       "recognized" in item &&
-      typeof item.recognized ===
-        "string"
+      typeof item.recognized === "string"
         ? item.recognized.trim()
         : "";
 
@@ -240,9 +267,7 @@ export async function getSpeakingDashboardData(): Promise<SpeakingDashboardData>
   } = await supabase.auth.getUser();
 
   if (userError) {
-    throw new Error(
-      userError.message
-    );
+    throw new Error(userError.message);
   }
 
   if (!user) {
@@ -266,8 +291,11 @@ export async function getSpeakingDashboardData(): Promise<SpeakingDashboardData>
   const ninetyDaysAgo =
     getDateDaysAgo(90);
 
-  const { data, error } =
-    await supabase
+  const [
+    attemptsResult,
+    preferenceResult,
+  ] = await Promise.all([
+    supabase
       .from(
         "ai_speaking_pronunciation_attempts"
       )
@@ -293,15 +321,43 @@ export async function getSpeakingDashboardData(): Promise<SpeakingDashboardData>
       .order("created_at", {
         ascending: false,
       })
-      .limit(1000);
+      .limit(1000),
 
-  if (error) {
-    throw new Error(error.message);
+    supabase
+      .from("ai_speaking_preferences")
+      .select("daily_goal")
+      .eq("user_id", user.id)
+      .maybeSingle(),
+  ]);
+
+  if (attemptsResult.error) {
+    throw new Error(
+      attemptsResult.error.message
+    );
+  }
+
+  if (preferenceResult.error) {
+    throw new Error(
+      preferenceResult.error.message
+    );
   }
 
   const attempts =
-    (data as PronunciationAttemptRow[] | null) ??
-    [];
+    (
+      attemptsResult.data as
+        | PronunciationAttemptRow[]
+        | null
+    ) ?? [];
+
+  const preference =
+    preferenceResult.data as
+      | PreferenceRow
+      | null;
+
+  const todayGoal =
+    normalizeDailyGoal(
+      preference?.daily_goal
+    );
 
   const todayKey =
     getLocalDateKey(new Date());
@@ -354,7 +410,7 @@ export async function getSpeakingDashboardData(): Promise<SpeakingDashboardData>
       100,
       Math.round(
         (todayCompleted /
-          DEFAULT_DAILY_GOAL) *
+          todayGoal) *
           100
       )
     );
@@ -362,7 +418,7 @@ export async function getSpeakingDashboardData(): Promise<SpeakingDashboardData>
   return {
     isAuthenticated: true,
 
-    todayGoal: DEFAULT_DAILY_GOAL,
+    todayGoal,
     todayCompleted,
     todayProgressPercentage,
 
@@ -372,6 +428,7 @@ export async function getSpeakingDashboardData(): Promise<SpeakingDashboardData>
       ),
 
     averageScore,
+
     totalAttempts:
       attempts.length,
 
@@ -388,18 +445,25 @@ export async function getSpeakingDashboardData(): Promise<SpeakingDashboardData>
         .slice(0, 10)
         .map((attempt) => ({
           id: attempt.id,
+
           sentenceId:
             attempt.sentence_id,
+
           targetText:
             attempt.target_text,
+
           recognizedText:
             attempt.recognized_text,
+
           overallScore:
             attempt.overall_score,
+
           category:
             attempt.category,
+
           lesson:
             attempt.lesson,
+
           createdAt:
             attempt.created_at,
         })),

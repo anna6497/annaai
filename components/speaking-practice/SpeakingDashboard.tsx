@@ -13,6 +13,11 @@ import {
   type SpeakingDashboardData,
 } from "@/lib/speaking-practice/dashboard";
 
+import {
+  saveSpeakingDailyGoal,
+  type SpeakingDailyGoal,
+} from "@/lib/speaking-practice/preferences";
+
 const EMPTY_DASHBOARD: SpeakingDashboardData = {
   isAuthenticated: false,
 
@@ -29,6 +34,12 @@ const EMPTY_DASHBOARD: SpeakingDashboardData = {
   recentAttempts: [],
 };
 
+const DAILY_GOALS: SpeakingDailyGoal[] = [
+  5,
+  10,
+  20,
+];
+
 export default function SpeakingDashboard() {
   const [
     dashboard,
@@ -43,6 +54,16 @@ export default function SpeakingDashboard() {
 
   const [error, setError] =
     useState<string | null>(null);
+
+  const [
+    isSavingGoal,
+    setIsSavingGoal,
+  ] = useState(false);
+
+  const [
+    goalMessage,
+    setGoalMessage,
+  ] = useState<string | null>(null);
 
   const loadDashboard =
     useCallback(async () => {
@@ -74,11 +95,65 @@ export default function SpeakingDashboard() {
     void loadDashboard();
   }, [loadDashboard]);
 
+  async function handleGoalChange(
+    dailyGoal: SpeakingDailyGoal
+  ) {
+    if (
+      dailyGoal ===
+      dashboard.todayGoal
+    ) {
+      return;
+    }
+
+    setIsSavingGoal(true);
+    setGoalMessage(null);
+
+    try {
+      await saveSpeakingDailyGoal(
+        dailyGoal
+      );
+
+      const todayProgressPercentage =
+        Math.min(
+          100,
+          Math.round(
+            (dashboard.todayCompleted /
+              dailyGoal) *
+              100
+          )
+        );
+
+      setDashboard(
+        (previousDashboard) => ({
+          ...previousDashboard,
+          todayGoal: dailyGoal,
+          todayProgressPercentage,
+        })
+      );
+
+      setGoalMessage(
+        `Daily goal changed to ${dailyGoal} sentences.`
+      );
+    } catch (saveError) {
+      console.error(
+        "Unable to save daily goal:",
+        saveError
+      );
+
+      setGoalMessage(
+        saveError instanceof Error
+          ? saveError.message
+          : "Daily goal could not be saved."
+      );
+    } finally {
+      setIsSavingGoal(false);
+    }
+  }
+
   if (isLoading) {
     return (
       <DashboardMessage>
-        Loading your speaking
-        progress…
+        Loading your speaking progress…
       </DashboardMessage>
     );
   }
@@ -105,14 +180,12 @@ export default function SpeakingDashboard() {
     return (
       <DashboardMessage>
         <h1 className="text-2xl font-bold text-white">
-          Sign in to view your
-          progress
+          Sign in to view your progress
         </h1>
 
         <p className="mt-3 text-white/60">
-          Your scores, streak and
-          difficult characters will
-          appear here.
+          Your scores, streak and difficult
+          characters will appear here.
         </p>
 
         <Link
@@ -142,9 +215,8 @@ export default function SpeakingDashboard() {
           </h1>
 
           <p className="mt-2 text-white/55">
-            Practice every day and
-            improve your Chinese
-            pronunciation.
+            Practice every day and improve
+            your Chinese pronunciation.
           </p>
         </div>
 
@@ -158,22 +230,20 @@ export default function SpeakingDashboard() {
 
       <div className="mt-8 grid gap-5 lg:grid-cols-[1.5fr_1fr]">
         <div className="rounded-[2rem] border border-white/10 bg-white/10 p-6 shadow-xl backdrop-blur-xl">
-          <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap items-start justify-between gap-5">
             <div>
               <p className="text-sm font-semibold text-violet-200">
                 Today&apos;s Goal
               </p>
 
               <p className="mt-2 text-4xl font-bold text-white">
-                {
-                  dashboard.todayCompleted
-                }{" "}
-                / {dashboard.todayGoal}
+                {dashboard.todayCompleted} /{" "}
+                {dashboard.todayGoal}
               </p>
 
               <p className="mt-2 text-sm text-white/55">
-                Different sentences
-                practiced today
+                Different sentences practiced
+                today
               </p>
             </div>
 
@@ -211,6 +281,60 @@ export default function SpeakingDashboard() {
                     : "s"
                 } to complete today’s goal.`}
           </div>
+
+          <div className="mt-6 border-t border-white/10 pt-5">
+            <p className="text-sm font-semibold text-white">
+              Set daily goal
+            </p>
+
+            <p className="mt-1 text-xs text-white/45">
+              Choose how many different
+              sentences you want to practice
+              each day.
+            </p>
+
+            <div className="mt-4 flex flex-wrap gap-3">
+              {DAILY_GOALS.map(
+                (dailyGoal) => {
+                  const isSelected =
+                    dashboard.todayGoal ===
+                    dailyGoal;
+
+                  return (
+                    <button
+                      key={dailyGoal}
+                      type="button"
+                      onClick={() =>
+                        void handleGoalChange(
+                          dailyGoal
+                        )
+                      }
+                      disabled={isSavingGoal}
+                      className={`rounded-2xl px-5 py-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                        isSelected
+                          ? "bg-violet-500 text-white shadow-lg"
+                          : "border border-white/10 bg-white/5 text-white/70 hover:bg-white/10"
+                      }`}
+                    >
+                      {dailyGoal} sentences
+                    </button>
+                  );
+                }
+              )}
+            </div>
+
+            {isSavingGoal ? (
+              <p className="mt-3 text-sm text-violet-200">
+                Saving daily goal…
+              </p>
+            ) : null}
+
+            {goalMessage ? (
+              <p className="mt-3 text-sm text-white/60">
+                {goalMessage}
+              </p>
+            ) : null}
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -246,59 +370,48 @@ export default function SpeakingDashboard() {
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <div className="rounded-[2rem] border border-white/10 bg-white/10 p-6 shadow-xl backdrop-blur-xl">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-sm font-semibold text-violet-200">
-                Smart Review
-              </p>
+          <p className="text-sm font-semibold text-violet-200">
+            Smart Review
+          </p>
 
-              <h2 className="mt-1 text-xl font-bold text-white">
-                Weak Characters
-              </h2>
-            </div>
+          <h2 className="mt-1 text-xl font-bold text-white">
+            Weak Characters
+          </h2>
 
-            <span className="rounded-full bg-white/10 px-3 py-1 text-xs text-white/55">
-              Last 90 days
-            </span>
-          </div>
-
-          {dashboard.weakCharacters
-            .length === 0 ? (
+          {dashboard.weakCharacters.length ===
+          0 ? (
             <div className="mt-6 rounded-2xl bg-black/15 p-6 text-center">
               <p className="font-semibold text-white">
-                No difficult characters
-                yet
+                No difficult characters yet
               </p>
 
               <p className="mt-2 text-sm text-white/50">
-                Complete pronunciation
-                checks to build your
-                review list.
+                Complete pronunciation checks
+                to build your review list.
               </p>
             </div>
           ) : (
             <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
               {dashboard.weakCharacters.map(
                 (item) => (
-                  <div
+                  <Link
                     key={item.character}
-                    className="rounded-2xl border border-amber-300/15 bg-amber-400/10 p-4 text-center"
+                    href={`/dashboard/ai/pronunciation?q=${encodeURIComponent(
+                      item.character
+                    )}`}
+                    className="rounded-2xl border border-amber-300/15 bg-amber-400/10 p-4 text-center transition hover:bg-amber-400/15"
                   >
                     <p className="text-4xl font-semibold text-amber-50">
                       {item.character}
                     </p>
 
                     <p className="mt-2 text-xs text-amber-100/60">
-                      {
-                        item.mistakeCount
-                      }{" "}
-                      mistake
-                      {item.mistakeCount ===
-                      1
+                      {item.mistakeCount} mistake
+                      {item.mistakeCount === 1
                         ? ""
                         : "s"}
                     </p>
-                  </div>
+                  </Link>
                 )
               )}
             </div>
@@ -306,29 +419,20 @@ export default function SpeakingDashboard() {
         </div>
 
         <div className="rounded-[2rem] border border-white/10 bg-white/10 p-6 shadow-xl backdrop-blur-xl">
-          <div>
-            <p className="text-sm font-semibold text-violet-200">
-              History
-            </p>
+          <p className="text-sm font-semibold text-violet-200">
+            History
+          </p>
 
-            <h2 className="mt-1 text-xl font-bold text-white">
-              Recent Practice
-            </h2>
-          </div>
+          <h2 className="mt-1 text-xl font-bold text-white">
+            Recent Practice
+          </h2>
 
-          {dashboard.recentAttempts
-            .length === 0 ? (
+          {dashboard.recentAttempts.length ===
+          0 ? (
             <div className="mt-6 rounded-2xl bg-black/15 p-6 text-center">
               <p className="font-semibold text-white">
                 No practice history yet
               </p>
-
-              <Link
-                href="/dashboard/ai/pronunciation"
-                className="mt-4 inline-flex text-sm font-semibold text-violet-200"
-              >
-                Start practicing →
-              </Link>
             </div>
           ) : (
             <div className="mt-5 space-y-3">
@@ -340,14 +444,11 @@ export default function SpeakingDashboard() {
                   >
                     <div className="min-w-0">
                       <p className="truncate text-lg font-semibold text-white">
-                        {
-                          attempt.targetText
-                        }
+                        {attempt.targetText}
                       </p>
 
                       <p className="mt-1 text-xs text-white/40">
-                        Lesson{" "}
-                        {attempt.lesson} ·{" "}
+                        Lesson {attempt.lesson} ·{" "}
                         {formatCategory(
                           attempt.category
                         )}{" "}
@@ -363,9 +464,7 @@ export default function SpeakingDashboard() {
                         attempt.overallScore
                       )}`}
                     >
-                      {
-                        attempt.overallScore
-                      }
+                      {attempt.overallScore}
                     </div>
                   </div>
                 )
@@ -403,9 +502,7 @@ function MetricCard({
 }) {
   return (
     <div className="rounded-3xl border border-white/10 bg-white/10 p-5 shadow-lg backdrop-blur-xl">
-      <p className="text-2xl">
-        {icon}
-      </p>
+      <p className="text-2xl">{icon}</p>
 
       <p className="mt-3 text-xs font-medium uppercase tracking-wide text-white/40">
         {label}
@@ -423,16 +520,12 @@ function formatCategory(
 ): string {
   return category
     .replaceAll("-", " ")
-    .replace(
-      /\b\w/g,
-      (character) =>
-        character.toUpperCase()
+    .replace(/\b\w/g, (character) =>
+      character.toUpperCase()
     );
 }
 
-function formatDate(
-  value: string
-): string {
+function formatDate(value: string): string {
   return new Intl.DateTimeFormat(
     undefined,
     {
