@@ -1,5 +1,3 @@
-import { LANGUAGE } from "./constants";
-
 export type SpeakChineseOptions = {
   rate?: number;
   pitch?: number;
@@ -30,7 +28,7 @@ export function speakChinese(
   const utterance =
     new SpeechSynthesisUtterance(text);
 
-  utterance.lang = LANGUAGE;
+  utterance.lang = "zh-CN";
   utterance.rate = options.rate ?? 0.9;
   utterance.pitch = options.pitch ?? 1;
   utterance.volume = options.volume ?? 1;

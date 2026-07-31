@@ -7,41 +7,45 @@ import type {
   VoiceServerHealth,
 } from "@/types/ai";
 
-import { VOICE_SERVER } from "./constants";
+import {
+  getVoiceServerUrl,
+} from "@/lib/ai/constants";
 
 interface ServerError {
   detail?: string;
+  error?: string;
 }
 
 const VOICE_TIMEOUT_MS = 190_000;
 const TEXT_TIMEOUT_MS = 130_000;
-const HEALTH_TIMEOUT_MS = 5_000;
+const HEALTH_TIMEOUT_MS = 10_000;
 
 async function fetchWithTimeout(
   input: RequestInfo | URL,
   init: RequestInit,
-  timeoutMs: number
+  timeoutMs: number,
 ): Promise<Response> {
   const controller =
     new AbortController();
 
-  const timer = window.setTimeout(
+  const timer = globalThis.setTimeout(
     () => controller.abort(),
-    timeoutMs
+    timeoutMs,
   );
 
   try {
     return await fetch(input, {
       ...init,
       signal: controller.signal,
+      cache: "no-store",
     });
   } finally {
-    window.clearTimeout(timer);
+    globalThis.clearTimeout(timer);
   }
 }
 
 async function readJson<T>(
-  response: Response
+  response: Response,
 ): Promise<T | null> {
   try {
     return (await response.json()) as T;
@@ -51,7 +55,7 @@ async function readJson<T>(
 }
 
 function isAnnaReply(
-  value: unknown
+  value: unknown,
 ): value is AnnaReply {
   if (
     !value ||
@@ -73,13 +77,27 @@ function isAnnaReply(
 
 function getErrorMessage(
   data: ServerError | null,
-  fallback: string
+  fallback: string,
 ): string {
-  return data?.detail?.trim() || fallback;
+  if (
+    typeof data?.detail === "string" &&
+    data.detail.trim()
+  ) {
+    return data.detail.trim();
+  }
+
+  if (
+    typeof data?.error === "string" &&
+    data.error.trim()
+  ) {
+    return data.error.trim();
+  }
+
+  return fallback;
 }
 
 function getFilename(
-  mimeType: string
+  mimeType: string,
 ): string {
   if (mimeType.includes("ogg")) {
     return "recording.ogg";
@@ -96,48 +114,55 @@ function getFilename(
   return "recording.webm";
 }
 
+function isTimeoutError(
+  error: unknown,
+): boolean {
+  return (
+    error instanceof DOMException &&
+    error.name === "AbortError"
+  );
+}
+
 export async function sendAudio(
   audio: Blob,
-  history: ConversationHistoryMessage[]
+  history: ConversationHistoryMessage[],
 ): Promise<VoiceChatResponse> {
   const formData = new FormData();
 
   formData.append(
     "audio",
     audio,
-    getFilename(audio.type)
+    getFilename(audio.type),
   );
 
   formData.append(
     "mode",
-    "practice"
+    "practice",
   );
 
   formData.append(
     "history",
-    JSON.stringify(history)
+    JSON.stringify(history),
   );
 
   let response: Response;
 
   try {
     response = await fetchWithTimeout(
-      `${VOICE_SERVER}/voice-chat`,
+      getVoiceServerUrl(
+        "/voice-chat",
+      ),
       {
         method: "POST",
         body: formData,
       },
-      VOICE_TIMEOUT_MS
+      VOICE_TIMEOUT_MS,
     );
   } catch (error) {
-    const isTimeout =
-      error instanceof DOMException &&
-      error.name === "AbortError";
-
     throw new Error(
-      isTimeout
-        ? "Voice processing အချိန်ကြာလွန်းပါတယ်။ ပြန်စမ်းပါ။"
-        : "Voice server ကို ချိတ်ဆက်လို့မရပါ။ Backend server run နေတာ စစ်ပါ။"
+      isTimeoutError(error)
+        ? "Voice processing အချိန်ကြာလွန်းပါတယ်။ စာကြောင်းတိုတိုနဲ့ ပြန်စမ်းပါ။"
+        : "Anna AI Voice Server ကို ချိတ်ဆက်၍မရပါ။ ခဏနေရင် ပြန်စမ်းပါ။",
     );
   }
 
@@ -149,8 +174,8 @@ export async function sendAudio(
     throw new Error(
       getErrorMessage(
         data as ServerError | null,
-        `Voice processing failed (${response.status}).`
-      )
+        `Voice processing failed (${response.status}).`,
+      ),
     );
   }
 
@@ -164,7 +189,7 @@ export async function sendAudio(
     !isAnnaReply(data.reply)
   ) {
     throw new Error(
-      "Voice server returned an invalid response."
+      "Voice server returned an invalid response.",
     );
   }
 
@@ -174,7 +199,7 @@ export async function sendAudio(
 export async function sendTextMessage(
   message: string,
   mode: AiPracticeMode,
-  history: ConversationHistoryMessage[] = []
+  history: ConversationHistoryMessage[] = [],
 ): Promise<TextChatResponse> {
   const cleaned = message.trim();
 
@@ -182,7 +207,7 @@ export async function sendTextMessage(
     throw new Error(
       mode === "sentence_builder"
         ? "မြန်မာစာကြောင်းကို အရင်ရေးပါ။"
-        : "Message cannot be empty."
+        : "Message cannot be empty.",
     );
   }
 
@@ -190,7 +215,9 @@ export async function sendTextMessage(
 
   try {
     response = await fetchWithTimeout(
-      `${VOICE_SERVER}/text-chat`,
+      getVoiceServerUrl(
+        "/text-chat",
+      ),
       {
         method: "POST",
         headers: {
@@ -203,17 +230,13 @@ export async function sendTextMessage(
           history,
         }),
       },
-      TEXT_TIMEOUT_MS
+      TEXT_TIMEOUT_MS,
     );
   } catch (error) {
-    const isTimeout =
-      error instanceof DOMException &&
-      error.name === "AbortError";
-
     throw new Error(
-      isTimeout
+      isTimeoutError(error)
         ? "Anna reply အချိန်ကြာလွန်းပါတယ်။ ပြန်စမ်းပါ။"
-        : "Voice server ကို ချိတ်ဆက်လို့မရပါ။"
+        : "Anna AI Voice Server ကို ချိတ်ဆက်၍မရပါ။",
     );
   }
 
@@ -225,8 +248,8 @@ export async function sendTextMessage(
     throw new Error(
       getErrorMessage(
         data as ServerError | null,
-        `Text chat failed (${response.status}).`
-      )
+        `Text chat failed (${response.status}).`,
+      ),
     );
   }
 
@@ -237,7 +260,7 @@ export async function sendTextMessage(
     !isAnnaReply(data.reply)
   ) {
     throw new Error(
-      "Text chat server returned an invalid response."
+      "Text chat server returned an invalid response.",
     );
   }
 
@@ -248,12 +271,17 @@ export async function checkVoiceServer(): Promise<boolean> {
   try {
     const response =
       await fetchWithTimeout(
-        `${VOICE_SERVER}/health`,
+        getVoiceServerUrl(
+          "/health",
+        ),
         {
           method: "GET",
-          cache: "no-store",
+          headers: {
+            Accept:
+              "application/json",
+          },
         },
-        HEALTH_TIMEOUT_MS
+        HEALTH_TIMEOUT_MS,
       );
 
     if (!response.ok) {
@@ -262,14 +290,24 @@ export async function checkVoiceServer(): Promise<boolean> {
 
     const data =
       await readJson<VoiceServerHealth>(
-        response
+        response,
       );
 
+    /*
+     * Server ကိုဆက်သွယ်နိုင်ရင် Connected ပြမယ်။
+     * Ollama က ခဏ cold start ဖြစ်နေလည်း
+     * Offline မပြတော့ပါ။
+     */
     return (
-      data?.status === "ok" &&
-      data.ollama_running === true
+      data?.status === "ok" ||
+      data?.status === "degraded"
     );
-  } catch {
+  } catch (error) {
+    console.error(
+      "Voice health check failed:",
+      error,
+    );
+
     return false;
   }
 }
