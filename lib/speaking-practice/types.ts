@@ -1,21 +1,32 @@
-export type SpeakingPracticeWord = {
-  hanzi: string;
-  pinyin: string;
-  pinyinNumbered: string;
-  tone: number | number[];
+export type SpeakingAudioFiles = {
+  normal: string;
+  slow: string;
 };
 
 export type SpeakingPracticeSentence = {
   id: string;
   level: number;
+  lesson: number;
   category: string;
+
   hanzi: string;
   pinyin: string;
   pinyinNumbered: string;
   myanmar: string;
-  audioUrl: string;
-  difficulty: "easy" | "medium" | "hard";
-  words: SpeakingPracticeWord[];
+  english: string;
+
+  difficulty: number;
+  keywords: string[];
+  grammar: string[];
+  tones: number[];
+
+  targetDuration: number;
+  audio: SpeakingAudioFiles;
+};
+
+export type IncorrectCharacter = {
+  expected: string;
+  recognized: string;
 };
 
 export type PronunciationScore = {
@@ -27,8 +38,5 @@ export type PronunciationScore = {
   recognizedText: string;
   missingCharacters: string[];
   extraCharacters: string[];
-  incorrectCharacters: Array<{
-    expected: string;
-    recognized: string;
-  }>;
+  incorrectCharacters: IncorrectCharacter[];
 };

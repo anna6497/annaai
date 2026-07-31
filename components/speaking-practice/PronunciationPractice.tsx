@@ -1,231 +1,425 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import type { SpeakingPracticeSentence } from "@/lib/speaking-practice/types";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+
+import {
+  checkPronunciation,
+  type PronunciationCheckResponse,
+} from "@/lib/speaking-practice/api";
+
+import type {
+  SpeakingPracticeSentence,
+} from "@/lib/speaking-practice/types";
 
 type PronunciationPracticeProps = {
   sentences: SpeakingPracticeSentence[];
 };
 
-type PlaybackSpeed = 1 | 0.75;
+type AudioMode = "normal" | "slow";
 
 export default function PronunciationPractice({
   sentences,
 }: PronunciationPracticeProps) {
-  const sampleAudioRef = useRef<HTMLAudioElement | null>(null);
-  const recorderRef = useRef<MediaRecorder | null>(null);
-  const microphoneStreamRef = useRef<MediaStream | null>(null);
-  const recordedChunksRef = useRef<Blob[]>([]);
-  const recordingStartedAtRef = useRef<number | null>(null);
+  const sampleAudioRef =
+    useRef<HTMLAudioElement | null>(null);
 
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isPlayingSample, setIsPlayingSample] = useState(false);
-  const [playbackSpeed, setPlaybackSpeed] = useState<PlaybackSpeed>(1);
-  const [showPinyin, setShowPinyin] = useState(true);
-  const [showMeaning, setShowMeaning] = useState(true);
-  const [audioError, setAudioError] = useState<string | null>(null);
+  const recorderRef =
+    useRef<MediaRecorder | null>(null);
 
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingError, setRecordingError] = useState<string | null>(null);
-  const [recordedAudioUrl, setRecordedAudioUrl] = useState<string | null>(null);
-  const [recordedAudioBlob, setRecordedAudioBlob] = useState<Blob | null>(null);
-  const [recordingDuration, setRecordingDuration] = useState(0);
+  const microphoneStreamRef =
+    useRef<MediaStream | null>(null);
 
-  const currentSentence = sentences[currentIndex];
+  const recordedChunksRef =
+    useRef<Blob[]>([]);
+
+  const recordingStartedAtRef =
+    useRef<number | null>(null);
+
+  const recordedAudioUrlRef =
+    useRef<string | null>(null);
+
+  const [currentIndex, setCurrentIndex] =
+    useState(0);
+
+  const [isPlayingSample, setIsPlayingSample] =
+    useState(false);
+
+  const [playingMode, setPlayingMode] =
+    useState<AudioMode | null>(null);
+
+  const [showPinyin, setShowPinyin] =
+    useState(true);
+
+  const [showMeaning, setShowMeaning] =
+    useState(true);
+
+  const [showEnglish, setShowEnglish] =
+    useState(false);
+
+  const [audioError, setAudioError] =
+    useState<string | null>(null);
+
+  const [isRecording, setIsRecording] =
+    useState(false);
+
+  const [recordingError, setRecordingError] =
+    useState<string | null>(null);
+
+  const [
+    recordedAudioUrl,
+    setRecordedAudioUrl,
+  ] = useState<string | null>(null);
+
+  const [
+    recordedAudioBlob,
+    setRecordedAudioBlob,
+  ] = useState<Blob | null>(null);
+
+  const [
+    recordingDuration,
+    setRecordingDuration,
+  ] = useState(0);
+
+  const [
+    isCheckingScore,
+    setIsCheckingScore,
+  ] = useState(false);
+
+  const [scoreError, setScoreError] =
+    useState<string | null>(null);
+
+  const [
+    pronunciationResult,
+    setPronunciationResult,
+  ] =
+    useState<PronunciationCheckResponse | null>(
+      null
+    );
+
+  const currentSentence =
+    sentences[currentIndex];
+
+  const stopSampleAudio =
+    useCallback(() => {
+      if (sampleAudioRef.current) {
+        sampleAudioRef.current.pause();
+        sampleAudioRef.current.currentTime =
+          0;
+        sampleAudioRef.current = null;
+      }
+
+      setIsPlayingSample(false);
+      setPlayingMode(null);
+    }, []);
+
+  const stopMicrophoneStream =
+    useCallback(() => {
+      microphoneStreamRef.current
+        ?.getTracks()
+        .forEach((track) => {
+          track.stop();
+        });
+
+      microphoneStreamRef.current = null;
+    }, []);
+
+  const clearRecordedAudioUrl =
+    useCallback(() => {
+      if (recordedAudioUrlRef.current) {
+        URL.revokeObjectURL(
+          recordedAudioUrlRef.current
+        );
+
+        recordedAudioUrlRef.current = null;
+      }
+
+      setRecordedAudioUrl(null);
+    }, []);
+
+  const resetRecording =
+    useCallback(() => {
+      const recorder =
+        recorderRef.current;
+
+      if (
+        recorder &&
+        recorder.state === "recording"
+      ) {
+        recorder.onstop = null;
+        recorder.stop();
+      }
+
+      recorderRef.current = null;
+      recordedChunksRef.current = [];
+      recordingStartedAtRef.current =
+        null;
+
+      stopMicrophoneStream();
+      clearRecordedAudioUrl();
+
+      setRecordedAudioBlob(null);
+      setRecordingDuration(0);
+      setIsRecording(false);
+      setRecordingError(null);
+
+      setPronunciationResult(null);
+      setScoreError(null);
+      setIsCheckingScore(false);
+    }, [
+      clearRecordedAudioUrl,
+      stopMicrophoneStream,
+    ]);
 
   useEffect(() => {
     return () => {
       stopSampleAudio();
       stopMicrophoneStream();
-
-      if (recordedAudioUrl) {
-        URL.revokeObjectURL(recordedAudioUrl);
-      }
+      clearRecordedAudioUrl();
     };
-  }, [recordedAudioUrl]);
+  }, [
+    clearRecordedAudioUrl,
+    stopMicrophoneStream,
+    stopSampleAudio,
+  ]);
 
   useEffect(() => {
     stopSampleAudio();
     resetRecording();
+
     setAudioError(null);
-    setRecordingError(null);
-  }, [currentIndex]);
+    setScoreError(null);
+    setPronunciationResult(null);
+  }, [
+    currentIndex,
+    resetRecording,
+    stopSampleAudio,
+  ]);
 
-  function stopSampleAudio() {
-    if (!sampleAudioRef.current) {
-      setIsPlayingSample(false);
-      return;
-    }
-
-    sampleAudioRef.current.pause();
-    sampleAudioRef.current.currentTime = 0;
-    sampleAudioRef.current = null;
-    setIsPlayingSample(false);
-  }
-
-  function playSampleAudio(speed: PlaybackSpeed = playbackSpeed) {
-    if (!currentSentence?.audioUrl) {
-      setAudioError("This sentence does not have a sample audio file.");
+  function playSampleAudio(
+    mode: AudioMode
+  ) {
+    if (!currentSentence) {
       return;
     }
 
     if (isRecording) {
-      setRecordingError("Please stop recording before playing the sample.");
+      setRecordingError(
+        "Please stop recording before playing the sample."
+      );
+      return;
+    }
+
+    const audioUrl =
+      mode === "slow"
+        ? currentSentence.audio.slow
+        : currentSentence.audio.normal;
+
+    if (!audioUrl) {
+      setAudioError(
+        `${mode} audio is not configured for this sentence.`
+      );
+      return;
+    }
+
+    if (
+      isPlayingSample &&
+      playingMode === mode
+    ) {
+      stopSampleAudio();
       return;
     }
 
     stopSampleAudio();
     setAudioError(null);
-    setPlaybackSpeed(speed);
 
-    const audio = new Audio(currentSentence.audioUrl);
-    audio.playbackRate = speed;
+    const audio = new Audio(audioUrl);
+
     audio.preload = "auto";
 
     audio.onplay = () => {
       setIsPlayingSample(true);
+      setPlayingMode(mode);
     };
 
     audio.onended = () => {
-      setIsPlayingSample(false);
       sampleAudioRef.current = null;
+      setIsPlayingSample(false);
+      setPlayingMode(null);
     };
 
     audio.onerror = () => {
-      setIsPlayingSample(false);
       sampleAudioRef.current = null;
+      setIsPlayingSample(false);
+      setPlayingMode(null);
+
       setAudioError(
-        `Audio file could not be loaded: ${currentSentence.audioUrl}`
+        `Audio could not be loaded: ${audioUrl}`
       );
     };
 
     sampleAudioRef.current = audio;
 
-    void audio.play().catch((error: unknown) => {
-      console.error("Unable to play pronunciation audio:", error);
+    void audio.play().catch(
+      (error: unknown) => {
+        console.error(
+          "Unable to play sample audio:",
+          error
+        );
 
-      setIsPlayingSample(false);
-      sampleAudioRef.current = null;
-      setAudioError("The browser could not play this sample audio.");
-    });
-  }
+        sampleAudioRef.current = null;
+        setIsPlayingSample(false);
+        setPlayingMode(null);
 
-  function stopMicrophoneStream() {
-    microphoneStreamRef.current?.getTracks().forEach((track) => {
-      track.stop();
-    });
-
-    microphoneStreamRef.current = null;
-  }
-
-  function resetRecording() {
-    if (recorderRef.current?.state === "recording") {
-      recorderRef.current.stop();
-    }
-
-    recorderRef.current = null;
-    recordedChunksRef.current = [];
-    recordingStartedAtRef.current = null;
-
-    stopMicrophoneStream();
-
-    if (recordedAudioUrl) {
-      URL.revokeObjectURL(recordedAudioUrl);
-    }
-
-    setRecordedAudioUrl(null);
-    setRecordedAudioBlob(null);
-    setRecordingDuration(0);
-    setIsRecording(false);
+        setAudioError(
+          "The browser could not play this audio."
+        );
+      }
+    );
   }
 
   async function startRecording() {
     setRecordingError(null);
-    stopSampleAudio();
+    setScoreError(null);
+    setPronunciationResult(null);
 
-    if (!navigator.mediaDevices?.getUserMedia) {
+    stopSampleAudio();
+    clearRecordedAudioUrl();
+
+    setRecordedAudioBlob(null);
+    setRecordingDuration(0);
+
+    if (
+      !navigator.mediaDevices
+        ?.getUserMedia
+    ) {
       setRecordingError(
         "Microphone recording is not supported by this browser."
       );
       return;
     }
 
-    if (typeof MediaRecorder === "undefined") {
-      setRecordingError("MediaRecorder is not supported by this browser.");
+    if (
+      typeof MediaRecorder ===
+      "undefined"
+    ) {
+      setRecordingError(
+        "MediaRecorder is not supported by this browser."
+      );
       return;
     }
 
     try {
-      if (recordedAudioUrl) {
-        URL.revokeObjectURL(recordedAudioUrl);
-      }
+      const stream =
+        await navigator.mediaDevices.getUserMedia(
+          {
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true,
+            },
+          }
+        );
 
-      setRecordedAudioUrl(null);
-      setRecordedAudioBlob(null);
-      setRecordingDuration(0);
-
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
-      });
-
-      microphoneStreamRef.current = stream;
+      microphoneStreamRef.current =
+        stream;
 
       const preferredMimeTypes = [
         "audio/webm;codecs=opus",
         "audio/webm",
         "audio/mp4",
+        "audio/ogg;codecs=opus",
+        "audio/ogg",
       ];
 
-      const supportedMimeType = preferredMimeTypes.find((mimeType) =>
-        MediaRecorder.isTypeSupported(mimeType)
-      );
+      const supportedMimeType =
+        preferredMimeTypes.find(
+          (mimeType) =>
+            MediaRecorder.isTypeSupported(
+              mimeType
+            )
+        );
 
-      const recorder = supportedMimeType
-        ? new MediaRecorder(stream, { mimeType: supportedMimeType })
-        : new MediaRecorder(stream);
+      const recorder =
+        supportedMimeType
+          ? new MediaRecorder(stream, {
+              mimeType:
+                supportedMimeType,
+            })
+          : new MediaRecorder(stream);
 
       recorderRef.current = recorder;
       recordedChunksRef.current = [];
-      recordingStartedAtRef.current = Date.now();
+      recordingStartedAtRef.current =
+        Date.now();
 
-      recorder.ondataavailable = (event: BlobEvent) => {
+      recorder.ondataavailable = (
+        event: BlobEvent
+      ) => {
         if (event.data.size > 0) {
-          recordedChunksRef.current.push(event.data);
+          recordedChunksRef.current.push(
+            event.data
+          );
         }
       };
 
       recorder.onerror = () => {
-        setRecordingError("Recording failed. Please try again.");
+        setRecordingError(
+          "Recording failed. Please try again."
+        );
+
         setIsRecording(false);
         stopMicrophoneStream();
       };
 
       recorder.onstop = () => {
         const mimeType =
-          recorder.mimeType || supportedMimeType || "audio/webm";
+          recorder.mimeType ||
+          supportedMimeType ||
+          "audio/webm";
 
-        const audioBlob = new Blob(recordedChunksRef.current, {
-          type: mimeType,
-        });
+        const audioBlob = new Blob(
+          recordedChunksRef.current,
+          {
+            type: mimeType,
+          }
+        );
 
-        const startedAt = recordingStartedAtRef.current;
+        const startedAt =
+          recordingStartedAtRef.current;
+
         const duration =
-          startedAt === null ? 0 : (Date.now() - startedAt) / 1000;
+          startedAt === null
+            ? 0
+            : (Date.now() - startedAt) /
+              1000;
 
         if (audioBlob.size === 0) {
           setRecordingError(
-            "No audio was recorded. Please allow microphone access and try again."
+            "No audio was recorded. Please try again."
           );
         } else {
-          const audioUrl = URL.createObjectURL(audioBlob);
+          const audioUrl =
+            URL.createObjectURL(
+              audioBlob
+            );
 
-          setRecordedAudioBlob(audioBlob);
+          recordedAudioUrlRef.current =
+            audioUrl;
+
+          setRecordedAudioBlob(
+            audioBlob
+          );
+
           setRecordedAudioUrl(audioUrl);
-          setRecordingDuration(Number(duration.toFixed(1)));
+
+          setRecordingDuration(
+            Number(duration.toFixed(1))
+          );
         }
 
         setIsRecording(false);
@@ -235,23 +429,30 @@ export default function PronunciationPractice({
       recorder.start(250);
       setIsRecording(true);
     } catch (error) {
-      console.error("Unable to start microphone recording:", error);
+      console.error(
+        "Unable to access microphone:",
+        error
+      );
 
       if (
         error instanceof DOMException &&
-        error.name === "NotAllowedError"
+        error.name ===
+          "NotAllowedError"
       ) {
         setRecordingError(
-          "Microphone permission was denied. Please allow microphone access in your browser."
+          "Microphone permission was denied."
         );
       } else if (
         error instanceof DOMException &&
-        error.name === "NotFoundError"
+        error.name ===
+          "NotFoundError"
       ) {
-        setRecordingError("No microphone was found on this device.");
+        setRecordingError(
+          "No microphone was found."
+        );
       } else {
         setRecordingError(
-          "Unable to access the microphone. Please try again."
+          "Unable to access the microphone."
         );
       }
 
@@ -261,50 +462,113 @@ export default function PronunciationPractice({
   }
 
   function stopRecording() {
-    const recorder = recorderRef.current;
+    const recorder =
+      recorderRef.current;
 
-    if (!recorder || recorder.state !== "recording") {
+    if (
+      recorder?.state === "recording"
+    ) {
+      recorder.stop();
+    }
+  }
+
+  async function handleCheckScore() {
+    if (!recordedAudioBlob) {
+      setScoreError(
+        "Please record your voice first."
+      );
       return;
     }
 
-    recorder.stop();
+    if (!currentSentence) {
+      setScoreError(
+        "The current sentence was not found."
+      );
+      return;
+    }
+
+    setIsCheckingScore(true);
+    setScoreError(null);
+    setPronunciationResult(null);
+
+    try {
+      const result =
+        await checkPronunciation({
+          audioBlob:
+            recordedAudioBlob,
+          sentenceId:
+            currentSentence.id,
+          targetText:
+            currentSentence.hanzi,
+          durationSeconds:
+            recordingDuration,
+        });
+
+      setPronunciationResult(result);
+    } catch (error) {
+      console.error(
+        "Pronunciation checking failed:",
+        error
+      );
+
+      setScoreError(
+        error instanceof Error
+          ? error.message
+          : "Pronunciation checking failed."
+      );
+    } finally {
+      setIsCheckingScore(false);
+    }
   }
 
   function goToPreviousSentence() {
-    setCurrentIndex((previousIndex) =>
-      Math.max(0, previousIndex - 1)
+    setCurrentIndex(
+      (previousIndex) =>
+        Math.max(
+          0,
+          previousIndex - 1
+        )
     );
   }
 
   function goToNextSentence() {
-    setCurrentIndex((previousIndex) =>
-      Math.min(sentences.length - 1, previousIndex + 1)
+    setCurrentIndex(
+      (previousIndex) =>
+        Math.min(
+          sentences.length - 1,
+          previousIndex + 1
+        )
     );
   }
 
   if (!currentSentence) {
     return (
-      <section className="mx-auto w-full max-w-3xl rounded-3xl border border-white/10 bg-white/5 p-8 text-center shadow-xl backdrop-blur">
+      <section className="mx-auto w-full max-w-3xl rounded-3xl border border-white/10 bg-white/5 p-8 text-center">
         <h1 className="text-2xl font-semibold text-white">
           Pronunciation Practice
         </h1>
 
-        <p className="mt-3 text-sm text-white/70">
-          No speaking-practice sentences were found.
+        <p className="mt-3 text-white/60">
+          No sentences were found.
         </p>
       </section>
     );
   }
 
   const progressPercentage =
-    ((currentIndex + 1) / sentences.length) * 100;
+    ((currentIndex + 1) /
+      sentences.length) *
+    100;
 
   return (
     <section className="mx-auto w-full max-w-3xl">
       <div className="mb-5 flex items-center justify-between gap-4">
         <div>
           <p className="text-sm font-medium text-violet-200">
-            HSK {currentSentence.level}
+            HSK{" "}
+            {currentSentence.level} ·
+            Lesson{" "}
+            {currentSentence.lesson}
           </p>
 
           <h1 className="mt-1 text-2xl font-bold text-white sm:text-3xl">
@@ -313,7 +577,8 @@ export default function PronunciationPractice({
         </div>
 
         <div className="rounded-full border border-white/10 bg-white/10 px-4 py-2 text-sm text-white/80">
-          {currentIndex + 1} / {sentences.length}
+          {currentIndex + 1} /{" "}
+          {sentences.length}
         </div>
       </div>
 
@@ -328,12 +593,16 @@ export default function PronunciationPractice({
 
       <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/10 shadow-2xl backdrop-blur-xl">
         <div className="border-b border-white/10 px-6 py-4 sm:px-8">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center justify-between gap-3">
             <span className="rounded-full bg-violet-400/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-violet-200">
-              {currentSentence.category.replaceAll("-", " ")}
+              {currentSentence.category.replaceAll(
+                "-",
+                " "
+              )}
             </span>
 
-            <span className="text-xs capitalize text-white/50">
+            <span className="text-xs text-white/50">
+              Difficulty{" "}
               {currentSentence.difficulty}
             </span>
           </div>
@@ -345,40 +614,52 @@ export default function PronunciationPractice({
           </p>
 
           {showPinyin ? (
-            <p className="mt-5 text-xl leading-relaxed text-violet-200 sm:text-2xl">
+            <p className="mt-5 text-xl text-violet-200 sm:text-2xl">
               {currentSentence.pinyin}
             </p>
           ) : null}
 
           {showMeaning ? (
-            <p className="mt-4 text-base leading-relaxed text-white/70 sm:text-lg">
+            <p className="mt-4 text-base text-white/70 sm:text-lg">
               {currentSentence.myanmar}
+            </p>
+          ) : null}
+
+          {showEnglish ? (
+            <p className="mt-2 text-sm text-white/45">
+              {currentSentence.english}
             </p>
           ) : null}
 
           <div className="mt-9 flex flex-wrap justify-center gap-3">
             <button
               type="button"
-              onClick={() => {
-                if (isPlayingSample) {
-                  stopSampleAudio();
-                } else {
-                  playSampleAudio(playbackSpeed);
-                }
-              }}
+              onClick={() =>
+                playSampleAudio(
+                  "normal"
+                )
+              }
               disabled={isRecording}
-              className="min-w-36 rounded-2xl bg-white px-5 py-3 font-semibold text-violet-700 shadow-lg transition hover:-translate-y-0.5 hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="min-w-36 rounded-2xl bg-white px-5 py-3 font-semibold text-violet-700 shadow-lg transition hover:bg-violet-50 disabled:opacity-50"
             >
-              {isPlayingSample ? "■ Stop" : "▶ Listen"}
+              {isPlayingSample &&
+              playingMode === "normal"
+                ? "■ Stop"
+                : "▶ Normal"}
             </button>
 
             <button
               type="button"
-              onClick={() => playSampleAudio(0.75)}
+              onClick={() =>
+                playSampleAudio("slow")
+              }
               disabled={isRecording}
-              className="rounded-2xl border border-white/15 bg-white/10 px-5 py-3 font-semibold text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-50"
+              className="min-w-36 rounded-2xl border border-white/15 bg-white/10 px-5 py-3 font-semibold text-white transition hover:bg-white/15 disabled:opacity-50"
             >
-              🐢 Slow Audio
+              {isPlayingSample &&
+              playingMode === "slow"
+                ? "■ Stop"
+                : "🐢 Slow"}
             </button>
           </div>
 
@@ -394,15 +675,21 @@ export default function PronunciationPractice({
             </p>
 
             <p className="mt-1 text-sm text-white/60">
-              Listen first, then record yourself saying the same sentence.
+              Listen and repeat the
+              sentence.
             </p>
 
             <div className="mt-5 flex flex-wrap justify-center gap-3">
               {!isRecording ? (
                 <button
                   type="button"
-                  onClick={() => void startRecording()}
-                  className="rounded-2xl bg-violet-500 px-6 py-3 font-semibold text-white shadow-lg transition hover:bg-violet-400"
+                  onClick={() =>
+                    void startRecording()
+                  }
+                  disabled={
+                    isCheckingScore
+                  }
+                  className="rounded-2xl bg-violet-500 px-6 py-3 font-semibold text-white disabled:opacity-50"
                 >
                   🎤 Start Recording
                 </button>
@@ -410,29 +697,26 @@ export default function PronunciationPractice({
                 <button
                   type="button"
                   onClick={stopRecording}
-                  className="animate-pulse rounded-2xl bg-red-500 px-6 py-3 font-semibold text-white shadow-lg transition hover:bg-red-400"
+                  className="animate-pulse rounded-2xl bg-red-500 px-6 py-3 font-semibold text-white"
                 >
                   ■ Stop Recording
                 </button>
               )}
 
-              {recordedAudioUrl && !isRecording ? (
+              {recordedAudioUrl &&
+              !isRecording ? (
                 <button
                   type="button"
                   onClick={resetRecording}
-                  className="rounded-2xl border border-white/15 bg-white/10 px-6 py-3 font-semibold text-white transition hover:bg-white/15"
+                  disabled={
+                    isCheckingScore
+                  }
+                  className="rounded-2xl border border-white/15 bg-white/10 px-6 py-3 font-semibold text-white disabled:opacity-50"
                 >
                   ↻ Record Again
                 </button>
               ) : null}
             </div>
-
-            {isRecording ? (
-              <div className="mt-5 flex items-center justify-center gap-3 text-sm font-medium text-red-100">
-                <span className="h-3 w-3 animate-pulse rounded-full bg-red-400" />
-                Recording…
-              </div>
-            ) : null}
 
             {recordingError ? (
               <div className="mx-auto mt-5 max-w-xl rounded-2xl border border-red-300/20 bg-red-400/10 px-4 py-3 text-sm text-red-100">
@@ -443,76 +727,215 @@ export default function PronunciationPractice({
             {recordedAudioUrl ? (
               <div className="mx-auto mt-6 max-w-md rounded-2xl border border-white/10 bg-white/5 p-4">
                 <p className="mb-3 text-sm text-white/70">
-                  Recorded duration: {recordingDuration} seconds
+                  Duration:{" "}
+                  {recordingDuration}s
                 </p>
 
                 <audio
                   controls
-                  preload="metadata"
                   src={recordedAudioUrl}
                   className="w-full"
                 />
+              </div>
+            ) : null}
 
-                <p className="mt-3 text-xs text-white/40">
-                  Audio size:{" "}
-                  {recordedAudioBlob
-                    ? `${(recordedAudioBlob.size / 1024).toFixed(1)} KB`
-                    : "0 KB"}
+            {scoreError ? (
+              <div className="mx-auto mt-5 max-w-xl rounded-2xl border border-red-300/20 bg-red-400/10 px-4 py-3 text-sm text-red-100">
+                {scoreError}
+              </div>
+            ) : null}
+
+            {pronunciationResult ? (
+              <div className="mx-auto mt-6 max-w-2xl rounded-3xl border border-white/10 bg-white/5 p-5">
+                <p className="text-sm text-white/60">
+                  Overall Score
                 </p>
+
+                <p className="mt-2 text-6xl font-bold text-white">
+                  {
+                    pronunciationResult
+                      .scores.overall
+                  }
+                </p>
+
+                <div className="mt-6 grid grid-cols-3 gap-3">
+                  <ScoreCard
+                    label="Accuracy"
+                    value={
+                      pronunciationResult
+                        .scores.accuracy
+                    }
+                  />
+
+                  <ScoreCard
+                    label="Complete"
+                    value={
+                      pronunciationResult
+                        .scores
+                        .completeness
+                    }
+                  />
+
+                  <ScoreCard
+                    label="Fluency"
+                    value={
+                      pronunciationResult
+                        .scores.fluency
+                    }
+                  />
+                </div>
+
+                <div className="mt-5 rounded-2xl bg-black/15 p-4 text-left">
+                  <p className="text-xs uppercase text-white/40">
+                    Target
+                  </p>
+
+                  <p className="mt-2 text-xl text-white">
+                    {
+                      pronunciationResult
+                        .target_text
+                    }
+                  </p>
+
+                  <p className="mt-5 text-xs uppercase text-white/40">
+                    Anna heard
+                  </p>
+
+                  <p className="mt-2 text-xl text-violet-200">
+                    {
+                      pronunciationResult
+                        .recognized_text
+                    }
+                  </p>
+                </div>
               </div>
             ) : null}
           </div>
 
           <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <button
-              type="button"
-              onClick={() => setShowPinyin((visible) => !visible)}
-              className="rounded-xl border border-white/10 bg-black/10 px-4 py-2 text-sm font-medium text-white/80 transition hover:bg-white/10"
-            >
-              {showPinyin ? "Hide Pinyin" : "Show Pinyin"}
-            </button>
+            <ToggleButton
+              active={showPinyin}
+              onClick={() =>
+                setShowPinyin(
+                  (value) => !value
+                )
+              }
+              showLabel="Show Pinyin"
+              hideLabel="Hide Pinyin"
+            />
 
-            <button
-              type="button"
-              onClick={() => setShowMeaning((visible) => !visible)}
-              className="rounded-xl border border-white/10 bg-black/10 px-4 py-2 text-sm font-medium text-white/80 transition hover:bg-white/10"
-            >
-              {showMeaning ? "Hide Meaning" : "Show Meaning"}
-            </button>
+            <ToggleButton
+              active={showMeaning}
+              onClick={() =>
+                setShowMeaning(
+                  (value) => !value
+                )
+              }
+              showLabel="Show Myanmar"
+              hideLabel="Hide Myanmar"
+            />
+
+            <ToggleButton
+              active={showEnglish}
+              onClick={() =>
+                setShowEnglish(
+                  (value) => !value
+                )
+              }
+              showLabel="Show English"
+              hideLabel="Hide English"
+            />
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-4 border-t border-white/10 bg-black/10 px-6 py-5 sm:px-8">
+        <div className="flex items-center justify-between gap-3 border-t border-white/10 bg-black/10 px-5 py-5">
           <button
             type="button"
             onClick={goToPreviousSentence}
-            disabled={currentIndex === 0 || isRecording}
-            className="rounded-xl border border-white/10 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-30"
+            disabled={
+              currentIndex === 0 ||
+              isRecording ||
+              isCheckingScore
+            }
+            className="rounded-xl border border-white/10 px-5 py-3 text-sm font-semibold text-white disabled:opacity-30"
           >
             ← Previous
           </button>
 
           <button
             type="button"
-            disabled={!recordedAudioBlob || isRecording}
-            className="rounded-xl bg-violet-500/30 px-5 py-3 text-sm font-semibold text-white/60 disabled:cursor-not-allowed"
-            title="Pronunciation checking will be connected in the next step."
+            onClick={() =>
+              void handleCheckScore()
+            }
+            disabled={
+              !recordedAudioBlob ||
+              isRecording ||
+              isCheckingScore
+            }
+            className="rounded-xl bg-violet-500 px-5 py-3 text-sm font-semibold text-white disabled:opacity-40"
           >
-            Check Score
+            {isCheckingScore
+              ? "Checking…"
+              : "Check Score"}
           </button>
 
           <button
             type="button"
             onClick={goToNextSentence}
             disabled={
-              currentIndex === sentences.length - 1 || isRecording
+              currentIndex ===
+                sentences.length - 1 ||
+              isRecording ||
+              isCheckingScore
             }
-            className="rounded-xl bg-violet-500 px-5 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-violet-400 disabled:cursor-not-allowed disabled:opacity-30"
+            className="rounded-xl bg-violet-500 px-5 py-3 text-sm font-semibold text-white disabled:opacity-30"
           >
             Next →
           </button>
         </div>
       </div>
     </section>
+  );
+}
+
+function ScoreCard({
+  label,
+  value,
+}: {
+  label: string;
+  value: number;
+}) {
+  return (
+    <div className="rounded-2xl bg-black/15 p-4 text-center">
+      <p className="text-xs text-white/50">
+        {label}
+      </p>
+
+      <p className="mt-1 text-2xl font-semibold text-white">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function ToggleButton({
+  active,
+  onClick,
+  showLabel,
+  hideLabel,
+}: {
+  active: boolean;
+  onClick: () => void;
+  showLabel: string;
+  hideLabel: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="rounded-xl border border-white/10 bg-black/10 px-4 py-2 text-sm font-medium text-white/80"
+    >
+      {active ? hideLabel : showLabel}
+    </button>
   );
 }

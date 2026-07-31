@@ -1,0 +1,2002 @@
+[
+  {
+    "id": "SPK-HSK1-000001",
+    "level": 1,
+    "lesson": 1,
+    "category": "greetings",
+    "hanzi": "你好。",
+    "pinyin": "Nǐ hǎo.",
+    "pinyinNumbered": "ni3 hao3",
+    "myanmar": "မင်္ဂလာပါ။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 1.35,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000001.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000001_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000002",
+    "level": 1,
+    "lesson": 1,
+    "category": "greetings",
+    "hanzi": "你好吗？",
+    "pinyin": "Nǐ hǎo ma?",
+    "pinyinNumbered": "ni3 hao3 ma5",
+    "myanmar": "နေကောင်းလား။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 1.8,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000002.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000002_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000003",
+    "level": 1,
+    "lesson": 1,
+    "category": "greetings",
+    "hanzi": "我很好。",
+    "pinyin": "Wǒ hěn hǎo.",
+    "pinyinNumbered": "wo3 hen3 hao3",
+    "myanmar": "ကျွန်မ နေကောင်းပါတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 1.8,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000003.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000003_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000004",
+    "level": 1,
+    "lesson": 1,
+    "category": "greetings",
+    "hanzi": "早上好。",
+    "pinyin": "Zǎoshang hǎo.",
+    "pinyinNumbered": "zao3 shang5 hao3",
+    "myanmar": "မင်္ဂလာနံနက်ခင်းပါ။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 1.8,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000004.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000004_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000005",
+    "level": 1,
+    "lesson": 1,
+    "category": "greetings",
+    "hanzi": "下午好。",
+    "pinyin": "Xiàwǔ hǎo.",
+    "pinyinNumbered": "xia4 wu3 hao3",
+    "myanmar": "မင်္ဂလာနေ့လယ်ခင်းပါ။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 1.8,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000005.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000005_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000006",
+    "level": 1,
+    "lesson": 1,
+    "category": "greetings",
+    "hanzi": "晚上好。",
+    "pinyin": "Wǎnshang hǎo.",
+    "pinyinNumbered": "wan3 shang5 hao3",
+    "myanmar": "မင်္ဂလာညချမ်းပါ။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 1.8,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000006.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000006_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000007",
+    "level": 1,
+    "lesson": 1,
+    "category": "greetings",
+    "hanzi": "谢谢你。",
+    "pinyin": "Xièxie nǐ.",
+    "pinyinNumbered": "xie4 xie5 ni3",
+    "myanmar": "ကျေးဇူးတင်ပါတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 1.8,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000007.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000007_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000008",
+    "level": 1,
+    "lesson": 1,
+    "category": "greetings",
+    "hanzi": "不客气。",
+    "pinyin": "Bú kèqi.",
+    "pinyinNumbered": "bu2 ke4 qi5",
+    "myanmar": "ရပါတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 1.8,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000008.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000008_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000009",
+    "level": 1,
+    "lesson": 1,
+    "category": "greetings",
+    "hanzi": "对不起。",
+    "pinyin": "Duìbuqǐ.",
+    "pinyinNumbered": "dui4 bu5 qi3",
+    "myanmar": "တောင်းပန်ပါတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 1.8,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000009.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000009_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000010",
+    "level": 1,
+    "lesson": 1,
+    "category": "greetings",
+    "hanzi": "没关系。",
+    "pinyin": "Méi guānxi.",
+    "pinyinNumbered": "mei2 guan1 xi5",
+    "myanmar": "ကိစ္စမရှိပါဘူး။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 1.8,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000010.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000010_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000011",
+    "level": 1,
+    "lesson": 1,
+    "category": "introduction",
+    "hanzi": "我叫安娜。",
+    "pinyin": "Wǒ jiào Ānnà.",
+    "pinyinNumbered": "wo3 jiao4 an1 na4",
+    "myanmar": "ကျွန်မနာမည် အန်နာပါ။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 2.25,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000011.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000011_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000012",
+    "level": 1,
+    "lesson": 1,
+    "category": "introduction",
+    "hanzi": "你叫什么名字？",
+    "pinyin": "Nǐ jiào shénme míngzi?",
+    "pinyinNumbered": "ni3 jiao4 shen2 me5 ming2 zi5",
+    "myanmar": "မင်းနာမည် ဘာလဲ။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 3.15,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000012.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000012_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000013",
+    "level": 1,
+    "lesson": 1,
+    "category": "introduction",
+    "hanzi": "我是缅甸人。",
+    "pinyin": "Wǒ shì Miǎndiàn rén.",
+    "pinyinNumbered": "wo3 shi4 mian3 dian4 ren2",
+    "myanmar": "ကျွန်မက မြန်မာလူမျိုးပါ။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 2.7,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000013.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000013_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000014",
+    "level": 1,
+    "lesson": 1,
+    "category": "introduction",
+    "hanzi": "我住在泰国。",
+    "pinyin": "Wǒ zhù zài Tàiguó.",
+    "pinyinNumbered": "wo3 zhu4 zai4 tai4 guo2",
+    "myanmar": "ကျွန်မ ထိုင်းနိုင်ငံမှာ နေပါတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 2.7,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000014.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000014_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000015",
+    "level": 1,
+    "lesson": 1,
+    "category": "introduction",
+    "hanzi": "我今年二十九岁。",
+    "pinyin": "Wǒ jīnnián èrshíjiǔ suì.",
+    "pinyinNumbered": "wo3 jin1 nian2 er4 shi2 jiu3 sui4",
+    "myanmar": "ဒီနှစ် ကျွန်မ အသက် ၂၉ နှစ်ပါ။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 3.6,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000015.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000015_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000016",
+    "level": 1,
+    "lesson": 1,
+    "category": "introduction",
+    "hanzi": "我是会计。",
+    "pinyin": "Wǒ shì kuàijì.",
+    "pinyinNumbered": "wo3 shi4 kuai4 ji4",
+    "myanmar": "ကျွန်မက စာရင်းကိုင်ပါ။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 2.25,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000016.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000016_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000017",
+    "level": 1,
+    "lesson": 1,
+    "category": "introduction",
+    "hanzi": "我学习中文。",
+    "pinyin": "Wǒ xuéxí Zhōngwén.",
+    "pinyinNumbered": "wo3 xue2 xi2 zhong1 wen2",
+    "myanmar": "ကျွန်မ တရုတ်စာ လေ့လာနေပါတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 2.7,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000017.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000017_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000018",
+    "level": 1,
+    "lesson": 1,
+    "category": "introduction",
+    "hanzi": "我会说一点中文。",
+    "pinyin": "Wǒ huì shuō yìdiǎn Zhōngwén.",
+    "pinyinNumbered": "wo3 hui4 shuo1 yi4 dian3 zhong1 wen2",
+    "myanmar": "ကျွန်မ တရုတ်လို နည်းနည်းပြောတတ်ပါတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 3.6,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000018.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000018_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000019",
+    "level": 1,
+    "lesson": 1,
+    "category": "introduction",
+    "hanzi": "很高兴认识你。",
+    "pinyin": "Hěn gāoxìng rènshi nǐ.",
+    "pinyinNumbered": "hen3 gao1 xing4 ren4 shi5 ni3",
+    "myanmar": "မင်းနဲ့သိခွင့်ရတာ ဝမ်းသာပါတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 3.15,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000019.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000019_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000020",
+    "level": 1,
+    "lesson": 1,
+    "category": "introduction",
+    "hanzi": "请多关照。",
+    "pinyin": "Qǐng duō guānzhào.",
+    "pinyinNumbered": "qing3 duo1 guan1 zhao4",
+    "myanmar": "ကူညီစောင့်ရှောက်ပေးပါ။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 2.25,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000020.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000020_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000021",
+    "level": 1,
+    "lesson": 2,
+    "category": "family",
+    "hanzi": "我家有四口人。",
+    "pinyin": "Wǒ jiā yǒu sì kǒu rén.",
+    "pinyinNumbered": "wo3 jia1 you3 si4 kou3 ren2",
+    "myanmar": "ကျွန်မအိမ်မှာ လူလေးယောက်ရှိပါတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 3.15,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000021.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000021_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000022",
+    "level": 1,
+    "lesson": 2,
+    "category": "family",
+    "hanzi": "这是我妈妈。",
+    "pinyin": "Zhè shì wǒ māma.",
+    "pinyinNumbered": "zhe4 shi4 wo3 ma1 ma5",
+    "myanmar": "ဒါက ကျွန်မအမေပါ။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 2.7,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000022.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000022_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000023",
+    "level": 1,
+    "lesson": 2,
+    "category": "family",
+    "hanzi": "这是我爸爸。",
+    "pinyin": "Zhè shì wǒ bàba.",
+    "pinyinNumbered": "zhe4 shi4 wo3 ba4 ba5",
+    "myanmar": "ဒါက ကျွန်မအဖေပါ။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 2.7,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000023.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000023_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000024",
+    "level": 1,
+    "lesson": 2,
+    "category": "family",
+    "hanzi": "我有一个妹妹。",
+    "pinyin": "Wǒ yǒu yí ge mèimei.",
+    "pinyinNumbered": "wo3 you3 yi2 ge5 mei4 mei5",
+    "myanmar": "ကျွန်မမှာ ညီမတစ်ယောက်ရှိပါတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 3.15,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000024.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000024_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000025",
+    "level": 1,
+    "lesson": 2,
+    "category": "family",
+    "hanzi": "你有兄弟姐妹吗？",
+    "pinyin": "Nǐ yǒu xiōngdì jiěmèi ma?",
+    "pinyinNumbered": "ni3 you3 xiong1 di4 jie3 mei4 ma5",
+    "myanmar": "မင်းမှာ မောင်နှမရှိလား။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 3.6,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000025.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000025_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000026",
+    "level": 1,
+    "lesson": 2,
+    "category": "family",
+    "hanzi": "我妈妈是老师。",
+    "pinyin": "Wǒ māma shì lǎoshī.",
+    "pinyinNumbered": "wo3 ma1 ma5 shi4 lao3 shi1",
+    "myanmar": "ကျွန်မအမေက ဆရာမပါ။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 3.15,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000026.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000026_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000027",
+    "level": 1,
+    "lesson": 2,
+    "category": "family",
+    "hanzi": "我爸爸在工作。",
+    "pinyin": "Wǒ bàba zài gōngzuò.",
+    "pinyinNumbered": "wo3 ba4 ba5 zai4 gong1 zuo4",
+    "myanmar": "ကျွန်မအဖေ အလုပ်လုပ်နေပါတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 3.15,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000027.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000027_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000028",
+    "level": 1,
+    "lesson": 2,
+    "category": "family",
+    "hanzi": "我很爱我的家人。",
+    "pinyin": "Wǒ hěn ài wǒ de jiārén.",
+    "pinyinNumbered": "wo3 hen3 ai4 wo3 de5 jia1 ren2",
+    "myanmar": "ကျွန်မ မိသားစုကို အရမ်းချစ်ပါတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 3.6,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000028.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000028_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000029",
+    "level": 1,
+    "lesson": 2,
+    "category": "family",
+    "hanzi": "我们一起吃饭。",
+    "pinyin": "Wǒmen yìqǐ chīfàn.",
+    "pinyinNumbered": "wo3 men5 yi4 qi3 chi1 fan4",
+    "myanmar": "ကျွန်မတို့ အတူတူ ထမင်းစားကြပါတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 3.15,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000029.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000029_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000030",
+    "level": 1,
+    "lesson": 2,
+    "category": "family",
+    "hanzi": "周末我回家。",
+    "pinyin": "Zhōumò wǒ huí jiā.",
+    "pinyinNumbered": "zhou1 mo4 wo3 hui2 jia1",
+    "myanmar": "စနေတနင်္ဂနွေမှာ ကျွန်မ အိမ်ပြန်ပါတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 2.7,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000030.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000030_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000031",
+    "level": 1,
+    "lesson": 2,
+    "category": "daily-routine",
+    "hanzi": "我每天六点起床。",
+    "pinyin": "Wǒ měitiān liù diǎn qǐchuáng.",
+    "pinyinNumbered": "wo3 mei3 tian1 liu4 dian3 qi3 chuang2",
+    "myanmar": "ကျွန်မ နေ့တိုင်း ခြောက်နာရီမှာ အိပ်ရာထပါတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 3.6,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000031.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000031_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000032",
+    "level": 1,
+    "lesson": 2,
+    "category": "daily-routine",
+    "hanzi": "我先洗脸。",
+    "pinyin": "Wǒ xiān xǐliǎn.",
+    "pinyinNumbered": "wo3 xian1 xi3 lian3",
+    "myanmar": "ကျွန်မ အရင်မျက်နှာသစ်ပါတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 2.25,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000032.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000032_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000033",
+    "level": 1,
+    "lesson": 2,
+    "category": "daily-routine",
+    "hanzi": "我七点吃早饭。",
+    "pinyin": "Wǒ qī diǎn chī zǎofàn.",
+    "pinyinNumbered": "wo3 qi1 dian3 chi1 zao3 fan4",
+    "myanmar": "ကျွန်မ ခုနစ်နာရီမှာ မနက်စာစားပါတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 3.15,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000033.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000033_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000034",
+    "level": 1,
+    "lesson": 2,
+    "category": "daily-routine",
+    "hanzi": "我八点去上班。",
+    "pinyin": "Wǒ bā diǎn qù shàngbān.",
+    "pinyinNumbered": "wo3 ba1 dian3 qu4 shang4 ban1",
+    "myanmar": "ကျွန်မ ရှစ်နာရီမှာ အလုပ်သွားပါတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 3.15,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000034.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000034_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000035",
+    "level": 1,
+    "lesson": 2,
+    "category": "daily-routine",
+    "hanzi": "我坐地铁上班。",
+    "pinyin": "Wǒ zuò dìtiě shàngbān.",
+    "pinyinNumbered": "wo3 zuo4 di4 tie3 shang4 ban1",
+    "myanmar": "ကျွန်မ မြေအောက်ရထားစီးပြီး အလုပ်သွားပါတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 3.15,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000035.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000035_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000036",
+    "level": 1,
+    "lesson": 2,
+    "category": "daily-routine",
+    "hanzi": "中午我吃午饭。",
+    "pinyin": "Zhōngwǔ wǒ chī wǔfàn.",
+    "pinyinNumbered": "zhong1 wu3 wo3 chi1 wu3 fan4",
+    "myanmar": "နေ့လယ်မှာ ကျွန်မ နေ့လယ်စာစားပါတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 3.15,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000036.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000036_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000037",
+    "level": 1,
+    "lesson": 2,
+    "category": "daily-routine",
+    "hanzi": "下午我很忙。",
+    "pinyin": "Xiàwǔ wǒ hěn máng.",
+    "pinyinNumbered": "xia4 wu3 wo3 hen3 mang2",
+    "myanmar": "နေ့လယ်ပိုင်းမှာ ကျွန်မ အလုပ်များပါတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 2.7,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000037.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000037_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000038",
+    "level": 1,
+    "lesson": 2,
+    "category": "daily-routine",
+    "hanzi": "我六点下班。",
+    "pinyin": "Wǒ liù diǎn xiàbān.",
+    "pinyinNumbered": "wo3 liu4 dian3 xia4 ban1",
+    "myanmar": "ကျွန်မ ခြောက်နာရီမှာ အလုပ်ဆင်းပါတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 2.7,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000038.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000038_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000039",
+    "level": 1,
+    "lesson": 2,
+    "category": "daily-routine",
+    "hanzi": "晚上我学习中文。",
+    "pinyin": "Wǎnshang wǒ xuéxí Zhōngwén.",
+    "pinyinNumbered": "wan3 shang5 wo3 xue2 xi2 zhong1 wen2",
+    "myanmar": "ညဘက်မှာ ကျွန်မ တရုတ်စာလေ့လာပါတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 3.6,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000039.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000039_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000040",
+    "level": 1,
+    "lesson": 2,
+    "category": "daily-routine",
+    "hanzi": "我十一点睡觉。",
+    "pinyin": "Wǒ shíyī diǎn shuìjiào.",
+    "pinyinNumbered": "wo3 shi2 yi1 dian3 shui4 jiao4",
+    "myanmar": "ကျွန်မ ဆယ့်တစ်နာရီမှာ အိပ်ပါတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 3.15,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000040.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000040_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000041",
+    "level": 1,
+    "lesson": 3,
+    "category": "food",
+    "hanzi": "我喜欢吃米饭。",
+    "pinyin": "Wǒ xǐhuan chī mǐfàn.",
+    "pinyinNumbered": "wo3 xi3 huan5 chi1 mi3 fan4",
+    "myanmar": "ကျွန်မ ထမင်းစားရတာ ကြိုက်ပါတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 3.15,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000041.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000041_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000042",
+    "level": 1,
+    "lesson": 3,
+    "category": "food",
+    "hanzi": "你想吃什么？",
+    "pinyin": "Nǐ xiǎng chī shénme?",
+    "pinyinNumbered": "ni3 xiang3 chi1 shen2 me5",
+    "myanmar": "မင်း ဘာစားချင်လဲ။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 2.7,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000042.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000042_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000043",
+    "level": 1,
+    "lesson": 3,
+    "category": "food",
+    "hanzi": "我想吃面条。",
+    "pinyin": "Wǒ xiǎng chī miàntiáo.",
+    "pinyinNumbered": "wo3 xiang3 chi1 mian4 tiao2",
+    "myanmar": "ကျွန်မ ခေါက်ဆွဲစားချင်ပါတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 2.7,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000043.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000043_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000044",
+    "level": 1,
+    "lesson": 3,
+    "category": "food",
+    "hanzi": "这个菜很好吃。",
+    "pinyin": "Zhège cài hěn hǎochī.",
+    "pinyinNumbered": "zhe4 ge5 cai4 hen3 hao3 chi1",
+    "myanmar": "ဒီဟင်းက အရမ်းစားကောင်းပါတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 3.15,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000044.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000044_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000045",
+    "level": 1,
+    "lesson": 3,
+    "category": "food",
+    "hanzi": "我不吃辣。",
+    "pinyin": "Wǒ bù chī là.",
+    "pinyinNumbered": "wo3 bu4 chi1 la4",
+    "myanmar": "ကျွန်မ အစပ်မစားပါဘူး။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 2.25,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000045.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000045_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000046",
+    "level": 1,
+    "lesson": 3,
+    "category": "food",
+    "hanzi": "请给我一杯水。",
+    "pinyin": "Qǐng gěi wǒ yì bēi shuǐ.",
+    "pinyinNumbered": "qing3 gei3 wo3 yi4 bei1 shui3",
+    "myanmar": "ရေတစ်ခွက်ပေးပါ။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 3.15,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000046.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000046_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000047",
+    "level": 1,
+    "lesson": 3,
+    "category": "food",
+    "hanzi": "我喜欢喝咖啡。",
+    "pinyin": "Wǒ xǐhuan hē kāfēi.",
+    "pinyinNumbered": "wo3 xi3 huan5 he1 ka1 fei1",
+    "myanmar": "ကျွန်မ ကော်ဖီသောက်ရတာ ကြိုက်ပါတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 3.15,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000047.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000047_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000048",
+    "level": 1,
+    "lesson": 3,
+    "category": "food",
+    "hanzi": "我不喝茶。",
+    "pinyin": "Wǒ bù hē chá.",
+    "pinyinNumbered": "wo3 bu4 he1 cha2",
+    "myanmar": "ကျွန်မ လက်ဖက်ရည်မသောက်ပါဘူး။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 2.25,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000048.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000048_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000049",
+    "level": 1,
+    "lesson": 3,
+    "category": "food",
+    "hanzi": "我们去吃饭吧。",
+    "pinyin": "Wǒmen qù chīfàn ba.",
+    "pinyinNumbered": "wo3 men5 qu4 chi1 fan4 ba5",
+    "myanmar": "ကျွန်မတို့ ထမင်းသွားစားကြရအောင်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 3.15,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000049.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000049_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000050",
+    "level": 1,
+    "lesson": 3,
+    "category": "food",
+    "hanzi": "请慢慢吃。",
+    "pinyin": "Qǐng mànmàn chī.",
+    "pinyinNumbered": "qing3 man4 man4 chi1",
+    "myanmar": "အေးအေးဆေးဆေး စားပါ။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 2.25,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000050.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000050_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000051",
+    "level": 1,
+    "lesson": 3,
+    "category": "shopping",
+    "hanzi": "这个多少钱？",
+    "pinyin": "Zhège duōshao qián?",
+    "pinyinNumbered": "zhe4 ge5 duo1 shao5 qian2",
+    "myanmar": "ဒါ ဘယ်လောက်လဲ။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 2.7,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000051.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000051_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000052",
+    "level": 1,
+    "lesson": 3,
+    "category": "shopping",
+    "hanzi": "这个太贵了。",
+    "pinyin": "Zhège tài guì le.",
+    "pinyinNumbered": "zhe4 ge5 tai4 gui4 le5",
+    "myanmar": "ဒါ အရမ်းဈေးကြီးတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 2.7,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000052.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000052_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000053",
+    "level": 1,
+    "lesson": 3,
+    "category": "shopping",
+    "hanzi": "可以便宜一点吗？",
+    "pinyin": "Kěyǐ piányi yìdiǎn ma?",
+    "pinyinNumbered": "ke3 yi3 pian2 yi5 yi4 dian3 ma5",
+    "myanmar": "နည်းနည်းလျှော့ပေးလို့ရမလား။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 3.6,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000053.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000053_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000054",
+    "level": 1,
+    "lesson": 3,
+    "category": "shopping",
+    "hanzi": "我要买这个。",
+    "pinyin": "Wǒ yào mǎi zhège.",
+    "pinyinNumbered": "wo3 yao4 mai3 zhe4 ge5",
+    "myanmar": "ကျွန်မ ဒါကိုဝယ်မယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 2.7,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000054.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000054_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000055",
+    "level": 1,
+    "lesson": 3,
+    "category": "shopping",
+    "hanzi": "我只是看看。",
+    "pinyin": "Wǒ zhǐshì kànkan.",
+    "pinyinNumbered": "wo3 zhi3 shi4 kan4 kan5",
+    "myanmar": "ကျွန်မ ကြည့်ရုံပါ။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 2.7,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000055.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000055_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000056",
+    "level": 1,
+    "lesson": 3,
+    "category": "shopping",
+    "hanzi": "有别的颜色吗？",
+    "pinyin": "Yǒu bié de yánsè ma?",
+    "pinyinNumbered": "you3 bie2 de5 yan2 se4 ma5",
+    "myanmar": "တခြားအရောင်ရှိလား။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 3.15,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000056.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000056_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000057",
+    "level": 1,
+    "lesson": 3,
+    "category": "shopping",
+    "hanzi": "我喜欢红色。",
+    "pinyin": "Wǒ xǐhuan hóngsè.",
+    "pinyinNumbered": "wo3 xi3 huan5 hong2 se4",
+    "myanmar": "ကျွန်မ အနီရောင်ကြိုက်ပါတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 2.7,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000057.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000057_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000058",
+    "level": 1,
+    "lesson": 3,
+    "category": "shopping",
+    "hanzi": "这个有点小。",
+    "pinyin": "Zhège yǒudiǎn xiǎo.",
+    "pinyinNumbered": "zhe4 ge5 you3 dian3 xiao3",
+    "myanmar": "ဒါ နည်းနည်းသေးတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 2.7,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000058.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000058_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000059",
+    "level": 1,
+    "lesson": 3,
+    "category": "shopping",
+    "hanzi": "我可以试一下吗？",
+    "pinyin": "Wǒ kěyǐ shì yíxià ma?",
+    "pinyinNumbered": "wo3 ke3 yi3 shi4 yi2 xia4 ma5",
+    "myanmar": "စမ်းကြည့်လို့ရမလား။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 3.6,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000059.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000059_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000060",
+    "level": 1,
+    "lesson": 3,
+    "category": "shopping",
+    "hanzi": "我用手机付款。",
+    "pinyin": "Wǒ yòng shǒujī fùkuǎn.",
+    "pinyinNumbered": "wo3 yong4 shou3 ji1 fu4 kuan3",
+    "myanmar": "ကျွန်မ ဖုန်းနဲ့ငွေရှင်းမယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 3.15,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000060.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000060_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000061",
+    "level": 1,
+    "lesson": 4,
+    "category": "time",
+    "hanzi": "现在几点？",
+    "pinyin": "Xiànzài jǐ diǎn?",
+    "pinyinNumbered": "xian4 zai4 ji3 dian3",
+    "myanmar": "အခု ဘယ်နှနာရီလဲ။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 2.25,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000061.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000061_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000062",
+    "level": 1,
+    "lesson": 4,
+    "category": "time",
+    "hanzi": "现在九点。",
+    "pinyin": "Xiànzài jiǔ diǎn.",
+    "pinyinNumbered": "xian4 zai4 jiu3 dian3",
+    "myanmar": "အခု ကိုးနာရီပါ။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 2.25,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000062.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000062_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000063",
+    "level": 1,
+    "lesson": 4,
+    "category": "time",
+    "hanzi": "今天星期几？",
+    "pinyin": "Jīntiān xīngqī jǐ?",
+    "pinyinNumbered": "jin1 tian1 xing1 qi1 ji3",
+    "myanmar": "ဒီနေ့ ဘာနေ့လဲ။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 2.7,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000063.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000063_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000064",
+    "level": 1,
+    "lesson": 4,
+    "category": "time",
+    "hanzi": "今天星期一。",
+    "pinyin": "Jīntiān xīngqīyī.",
+    "pinyinNumbered": "jin1 tian1 xing1 qi1 yi1",
+    "myanmar": "ဒီနေ့ တနင်္လာနေ့ပါ။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 2.7,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000064.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000064_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000065",
+    "level": 1,
+    "lesson": 4,
+    "category": "time",
+    "hanzi": "明天是星期二。",
+    "pinyin": "Míngtiān shì xīngqī'èr.",
+    "pinyinNumbered": "ming2 tian1 shi4 xing1 qi1 er4",
+    "myanmar": "မနက်ဖြန် အင်္ဂါနေ့ပါ။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 3.15,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000065.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000065_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000066",
+    "level": 1,
+    "lesson": 4,
+    "category": "time",
+    "hanzi": "今天是七月三十一号。",
+    "pinyin": "Jīntiān shì qīyuè sānshíyī hào.",
+    "pinyinNumbered": "jin1 tian1 shi4 qi1 yue4 san1 shi2 yi1 hao4",
+    "myanmar": "ဒီနေ့ ဇူလိုင် ၃၁ ရက်ပါ။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 4.5,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000066.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000066_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000067",
+    "level": 1,
+    "lesson": 4,
+    "category": "time",
+    "hanzi": "我的生日是四月六号。",
+    "pinyin": "Wǒ de shēngrì shì sìyuè liù hào.",
+    "pinyinNumbered": "wo3 de5 sheng1 ri4 shi4 si4 yue4 liu4 hao4",
+    "myanmar": "ကျွန်မမွေးနေ့က ဧပြီ ၆ ရက်ပါ။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 4.5,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000067.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000067_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000068",
+    "level": 1,
+    "lesson": 4,
+    "category": "time",
+    "hanzi": "会议十点开始。",
+    "pinyin": "Huìyì shí diǎn kāishǐ.",
+    "pinyinNumbered": "hui4 yi4 shi2 dian3 kai1 shi3",
+    "myanmar": "အစည်းအဝေး ဆယ်နာရီမှာ စပါတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 3.15,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000068.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000068_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000069",
+    "level": 1,
+    "lesson": 4,
+    "category": "time",
+    "hanzi": "请等我五分钟。",
+    "pinyin": "Qǐng děng wǒ wǔ fēnzhōng.",
+    "pinyinNumbered": "qing3 deng3 wo3 wu3 fen1 zhong1",
+    "myanmar": "ကျွန်မကို ငါးမိနစ်စောင့်ပေးပါ။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 3.15,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000069.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000069_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000070",
+    "level": 1,
+    "lesson": 4,
+    "category": "time",
+    "hanzi": "我没有时间。",
+    "pinyin": "Wǒ méiyǒu shíjiān.",
+    "pinyinNumbered": "wo3 mei2 you3 shi2 jian1",
+    "myanmar": "ကျွန်မမှာ အချိန်မရှိပါဘူး။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 2.7,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000070.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000070_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000071",
+    "level": 1,
+    "lesson": 4,
+    "category": "weather",
+    "hanzi": "今天天气很好。",
+    "pinyin": "Jīntiān tiānqì hěn hǎo.",
+    "pinyinNumbered": "jin1 tian1 tian1 qi4 hen3 hao3",
+    "myanmar": "ဒီနေ့ ရာသီဥတုကောင်းပါတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 3.15,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000071.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000071_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000072",
+    "level": 1,
+    "lesson": 4,
+    "category": "weather",
+    "hanzi": "今天很热。",
+    "pinyin": "Jīntiān hěn rè.",
+    "pinyinNumbered": "jin1 tian1 hen3 re4",
+    "myanmar": "ဒီနေ့ အရမ်းပူတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 2.25,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000072.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000072_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000073",
+    "level": 1,
+    "lesson": 4,
+    "category": "weather",
+    "hanzi": "今天有点冷。",
+    "pinyin": "Jīntiān yǒudiǎn lěng.",
+    "pinyinNumbered": "jin1 tian1 you3 dian3 leng3",
+    "myanmar": "ဒီနေ့ နည်းနည်းအေးတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 2.7,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000073.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000073_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000074",
+    "level": 1,
+    "lesson": 4,
+    "category": "weather",
+    "hanzi": "外面下雨了。",
+    "pinyin": "Wàimiàn xiàyǔ le.",
+    "pinyinNumbered": "wai4 mian4 xia4 yu3 le5",
+    "myanmar": "အပြင်မှာ မိုးရွာနေပြီ။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 2.7,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000074.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000074_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000075",
+    "level": 1,
+    "lesson": 4,
+    "category": "weather",
+    "hanzi": "你带伞了吗？",
+    "pinyin": "Nǐ dài sǎn le ma?",
+    "pinyinNumbered": "ni3 dai4 san3 le5 ma5",
+    "myanmar": "မင်း ထီးယူလာလား။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 2.7,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000075.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000075_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000076",
+    "level": 1,
+    "lesson": 4,
+    "category": "weather",
+    "hanzi": "今天风很大。",
+    "pinyin": "Jīntiān fēng hěn dà.",
+    "pinyinNumbered": "jin1 tian1 feng1 hen3 da4",
+    "myanmar": "ဒီနေ့ လေပြင်းတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 2.7,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000076.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000076_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000077",
+    "level": 1,
+    "lesson": 4,
+    "category": "weather",
+    "hanzi": "明天会下雨吗？",
+    "pinyin": "Míngtiān huì xiàyǔ ma?",
+    "pinyinNumbered": "ming2 tian1 hui4 xia4 yu3 ma5",
+    "myanmar": "မနက်ဖြန် မိုးရွာမလား။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 3.15,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000077.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000077_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000078",
+    "level": 1,
+    "lesson": 4,
+    "category": "weather",
+    "hanzi": "我喜欢凉快的天气。",
+    "pinyin": "Wǒ xǐhuan liángkuai de tiānqì.",
+    "pinyinNumbered": "wo3 xi3 huan5 liang2 kuai5 de5 tian1 qi4",
+    "myanmar": "ကျွန်မ အေးမြတဲ့ရာသီဥတုကို ကြိုက်ပါတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 4.05,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000078.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000078_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000079",
+    "level": 1,
+    "lesson": 4,
+    "category": "weather",
+    "hanzi": "太阳出来了。",
+    "pinyin": "Tàiyáng chūlái le.",
+    "pinyinNumbered": "tai4 yang2 chu1 lai2 le5",
+    "myanmar": "နေထွက်လာပြီ။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 2.7,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000079.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000079_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000080",
+    "level": 1,
+    "lesson": 4,
+    "category": "weather",
+    "hanzi": "今天没有下雨。",
+    "pinyin": "Jīntiān méiyǒu xiàyǔ.",
+    "pinyinNumbered": "jin1 tian1 mei2 you3 xia4 yu3",
+    "myanmar": "ဒီနေ့ မိုးမရွာဘူး။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 3.15,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000080.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000080_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000081",
+    "level": 1,
+    "lesson": 5,
+    "category": "chinese-learning",
+    "hanzi": "我是学生。",
+    "pinyin": "Wǒ shì xuésheng.",
+    "pinyinNumbered": "wo3 shi4 xue2 sheng5",
+    "myanmar": "ကျွန်မက ကျောင်းသူပါ။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 2.25,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000081.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000081_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000082",
+    "level": 1,
+    "lesson": 5,
+    "category": "chinese-learning",
+    "hanzi": "我在学习中文。",
+    "pinyin": "Wǒ zài xuéxí Zhōngwén.",
+    "pinyinNumbered": "wo3 zai4 xue2 xi2 zhong1 wen2",
+    "myanmar": "ကျွန်မ တရုတ်စာလေ့လာနေပါတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 3.15,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000082.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000082_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000083",
+    "level": 1,
+    "lesson": 5,
+    "category": "chinese-learning",
+    "hanzi": "这个字怎么读？",
+    "pinyin": "Zhège zì zěnme dú?",
+    "pinyinNumbered": "zhe4 ge5 zi4 zen3 me5 du2",
+    "myanmar": "ဒီစာလုံးကို ဘယ်လိုဖတ်လဲ။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 3.15,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000083.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000083_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000084",
+    "level": 1,
+    "lesson": 5,
+    "category": "chinese-learning",
+    "hanzi": "这句话是什么意思？",
+    "pinyin": "Zhè jù huà shì shénme yìsi?",
+    "pinyinNumbered": "zhe4 ju4 hua4 shi4 shen2 me5 yi4 si5",
+    "myanmar": "ဒီဝါကျက ဘာအဓိပ္ပါယ်လဲ။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 4.05,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000084.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000084_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000085",
+    "level": 1,
+    "lesson": 5,
+    "category": "chinese-learning",
+    "hanzi": "请再说一次。",
+    "pinyin": "Qǐng zài shuō yí cì.",
+    "pinyinNumbered": "qing3 zai4 shuo1 yi2 ci4",
+    "myanmar": "တစ်ခါထပ်ပြောပေးပါ။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 2.7,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000085.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000085_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000086",
+    "level": 1,
+    "lesson": 5,
+    "category": "chinese-learning",
+    "hanzi": "请说慢一点。",
+    "pinyin": "Qǐng shuō màn yìdiǎn.",
+    "pinyinNumbered": "qing3 shuo1 man4 yi4 dian3",
+    "myanmar": "နည်းနည်းဖြည်းဖြည်းပြောပေးပါ။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 2.7,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000086.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000086_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000087",
+    "level": 1,
+    "lesson": 5,
+    "category": "chinese-learning",
+    "hanzi": "我听不懂。",
+    "pinyin": "Wǒ tīngbudǒng.",
+    "pinyinNumbered": "wo3 ting1 bu5 dong3",
+    "myanmar": "ကျွန်မ နားမလည်ဘူး။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 2.25,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000087.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000087_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000088",
+    "level": 1,
+    "lesson": 5,
+    "category": "chinese-learning",
+    "hanzi": "我会写汉字。",
+    "pinyin": "Wǒ huì xiě Hànzì.",
+    "pinyinNumbered": "wo3 hui4 xie3 han4 zi4",
+    "myanmar": "ကျွန်မ တရုတ်စာလုံးရေးတတ်ပါတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 2.7,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000088.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000088_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000089",
+    "level": 1,
+    "lesson": 5,
+    "category": "chinese-learning",
+    "hanzi": "我的发音不太好。",
+    "pinyin": "Wǒ de fāyīn bú tài hǎo.",
+    "pinyinNumbered": "wo3 de5 fa1 yin1 bu2 tai4 hao3",
+    "myanmar": "ကျွန်မ အသံထွက် သိပ်မကောင်းဘူး။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 3.6,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000089.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000089_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000090",
+    "level": 1,
+    "lesson": 5,
+    "category": "chinese-learning",
+    "hanzi": "我要多练习。",
+    "pinyin": "Wǒ yào duō liànxí.",
+    "pinyinNumbered": "wo3 yao4 duo1 lian4 xi2",
+    "myanmar": "ကျွန်မ ပိုလေ့ကျင့်ရမယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 2.7,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000090.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000090_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000091",
+    "level": 1,
+    "lesson": 5,
+    "category": "work",
+    "hanzi": "我今天要上班。",
+    "pinyin": "Wǒ jīntiān yào shàngbān.",
+    "pinyinNumbered": "wo3 jin1 tian1 yao4 shang4 ban1",
+    "myanmar": "ဒီနေ့ ကျွန်မ အလုပ်သွားရမယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 3.15,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000091.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000091_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000092",
+    "level": 1,
+    "lesson": 5,
+    "category": "work",
+    "hanzi": "我在办公室。",
+    "pinyin": "Wǒ zài bàngōngshì.",
+    "pinyinNumbered": "wo3 zai4 ban4 gong1 shi4",
+    "myanmar": "ကျွန်မ ရုံးမှာရှိပါတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 2.7,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000092.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000092_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000093",
+    "level": 1,
+    "lesson": 5,
+    "category": "work",
+    "hanzi": "今天工作很多。",
+    "pinyin": "Jīntiān gōngzuò hěn duō.",
+    "pinyinNumbered": "jin1 tian1 gong1 zuo4 hen3 duo1",
+    "myanmar": "ဒီနေ့ အလုပ်အရမ်းများတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 3.15,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000093.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000093_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000094",
+    "level": 1,
+    "lesson": 5,
+    "category": "work",
+    "hanzi": "我正在写报告。",
+    "pinyin": "Wǒ zhèngzài xiě bàogào.",
+    "pinyinNumbered": "wo3 zheng4 zai4 xie3 bao4 gao4",
+    "myanmar": "ကျွန်မ အစီရင်ခံစာရေးနေပါတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 3.15,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000094.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000094_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000095",
+    "level": 1,
+    "lesson": 5,
+    "category": "work",
+    "hanzi": "请发邮件给我。",
+    "pinyin": "Qǐng fā yóujiàn gěi wǒ.",
+    "pinyinNumbered": "qing3 fa1 you2 jian4 gei3 wo3",
+    "myanmar": "ကျွန်မဆီ အီးမေးလ်ပို့ပေးပါ။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 3.15,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000095.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000095_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000096",
+    "level": 1,
+    "lesson": 5,
+    "category": "work",
+    "hanzi": "我们下午开会。",
+    "pinyin": "Wǒmen xiàwǔ kāihuì.",
+    "pinyinNumbered": "wo3 men5 xia4 wu3 kai1 hui4",
+    "myanmar": "ကျွန်မတို့ နေ့လယ်ပိုင်း အစည်းအဝေးလုပ်မယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 3.15,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000096.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000096_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000097",
+    "level": 1,
+    "lesson": 5,
+    "category": "work",
+    "hanzi": "这个文件很重要。",
+    "pinyin": "Zhège wénjiàn hěn zhòngyào.",
+    "pinyinNumbered": "zhe4 ge5 wen2 jian4 hen3 zhong4 yao4",
+    "myanmar": "ဒီစာရွက်စာတမ်းက အရေးကြီးတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 3.6,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000097.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000097_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000098",
+    "level": 1,
+    "lesson": 5,
+    "category": "work",
+    "hanzi": "我已经完成了。",
+    "pinyin": "Wǒ yǐjīng wánchéng le.",
+    "pinyinNumbered": "wo3 yi3 jing1 wan2 cheng2 le5",
+    "myanmar": "ကျွန်မ ပြီးသွားပါပြီ။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 3.15,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000098.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000098_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000099",
+    "level": 1,
+    "lesson": 5,
+    "category": "work",
+    "hanzi": "请检查一下。",
+    "pinyin": "Qǐng jiǎnchá yíxià.",
+    "pinyinNumbered": "qing3 jian3 cha2 yi2 xia4",
+    "myanmar": "တစ်ချက်စစ်ပေးပါ။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 2.7,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000099.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000099_slow.mp3"
+    }
+  },
+  {
+    "id": "SPK-HSK1-000100",
+    "level": 1,
+    "lesson": 5,
+    "category": "work",
+    "hanzi": "我六点下班。",
+    "pinyin": "Wǒ liù diǎn xiàbān.",
+    "pinyinNumbered": "wo3 liu4 dian3 xia4 ban1",
+    "myanmar": "ကျွန်မ ခြောက်နာရီမှာ အလုပ်ဆင်းပါတယ်။",
+    "english": "",
+    "difficulty": 1,
+    "keywords": [],
+    "grammar": [],
+    "tones": [],
+    "targetDuration": 2.7,
+    "audio": {
+      "normal": "/audio/speaking-practice/hsk1/000100.mp3",
+      "slow": "/audio/speaking-practice/hsk1/000100_slow.mp3"
+    }
+  }
+]

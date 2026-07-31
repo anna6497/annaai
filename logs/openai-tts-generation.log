@@ -1,0 +1,466 @@
+2026-08-01 00:05:16,036 INFO [1/2] Generate SPK-HSK1-000001 normal: 你好。
+2026-08-01 00:05:20,400 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:05:20,962 INFO [2/2] Generate SPK-HSK1-000001 slow: 你好。
+2026-08-01 00:05:22,438 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:09:09,118 INFO [1/2] Generate SPK-HSK1-000001 normal: 你好。
+2026-08-01 00:09:12,526 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:09:13,101 INFO [2/2] Generate SPK-HSK1-000001 slow: 你好。
+2026-08-01 00:09:14,295 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:10:16,863 INFO [1/20] Skip public\audio\speaking-practice\hsk1\000001.mp3
+2026-08-01 00:10:16,864 INFO [2/20] Skip public\audio\speaking-practice\hsk1\000001_slow.mp3
+2026-08-01 00:10:16,867 INFO [3/20] Generate SPK-HSK1-000002 normal: 你好吗？
+2026-08-01 00:10:19,573 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:10:19,923 INFO [4/20] Generate SPK-HSK1-000002 slow: 你好吗？
+2026-08-01 00:10:21,505 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:10:21,820 INFO [5/20] Generate SPK-HSK1-000003 normal: 我很好。
+2026-08-01 00:10:23,074 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:10:23,355 INFO [6/20] Generate SPK-HSK1-000003 slow: 我很好。
+2026-08-01 00:10:26,020 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:10:26,422 INFO [7/20] Generate SPK-HSK1-000004 normal: 早上好。
+2026-08-01 00:10:27,578 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:10:27,759 INFO [8/20] Generate SPK-HSK1-000004 slow: 早上好。
+2026-08-01 00:10:28,884 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:10:29,016 INFO [9/20] Generate SPK-HSK1-000005 normal: 下午好。
+2026-08-01 00:10:30,615 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:10:30,843 INFO [10/20] Generate SPK-HSK1-000005 slow: 下午好。
+2026-08-01 00:10:31,771 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:10:32,117 INFO [11/20] Generate SPK-HSK1-000006 normal: 晚上好。
+2026-08-01 00:10:33,370 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:10:33,613 INFO [12/20] Generate SPK-HSK1-000006 slow: 晚上好。
+2026-08-01 00:10:34,349 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:10:34,972 INFO [13/20] Generate SPK-HSK1-000007 normal: 谢谢你。
+2026-08-01 00:10:36,195 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:10:36,268 INFO [14/20] Generate SPK-HSK1-000007 slow: 谢谢你。
+2026-08-01 00:10:37,351 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:10:37,596 INFO [15/20] Generate SPK-HSK1-000008 normal: 不客气。
+2026-08-01 00:10:38,399 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:10:39,233 INFO [16/20] Generate SPK-HSK1-000008 slow: 不客气。
+2026-08-01 00:10:39,871 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:10:40,561 INFO [17/20] Generate SPK-HSK1-000009 normal: 对不起。
+2026-08-01 00:10:41,388 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:10:42,055 INFO [18/20] Generate SPK-HSK1-000009 slow: 对不起。
+2026-08-01 00:10:43,994 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:10:44,177 INFO [19/20] Generate SPK-HSK1-000010 normal: 没关系。
+2026-08-01 00:10:45,053 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:10:45,331 INFO [20/20] Generate SPK-HSK1-000010 slow: 没关系。
+2026-08-01 00:10:46,487 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:11:59,325 INFO [1/20] Generate SPK-HSK1-000001 normal: 你好。
+2026-08-01 00:12:01,785 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:12:02,007 INFO [2/20] Generate SPK-HSK1-000001 slow: 你好。
+2026-08-01 00:12:03,072 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:12:03,390 INFO [3/20] Generate SPK-HSK1-000002 normal: 你好吗？
+2026-08-01 00:12:04,509 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:12:04,520 INFO [4/20] Generate SPK-HSK1-000002 slow: 你好吗？
+2026-08-01 00:12:05,788 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:12:05,806 INFO [5/20] Generate SPK-HSK1-000003 normal: 我很好。
+2026-08-01 00:12:06,765 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:12:06,986 INFO [6/20] Generate SPK-HSK1-000003 slow: 我很好。
+2026-08-01 00:12:07,721 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:12:08,173 INFO [7/20] Generate SPK-HSK1-000004 normal: 早上好。
+2026-08-01 00:12:09,069 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:12:09,622 INFO [8/20] Generate SPK-HSK1-000004 slow: 早上好。
+2026-08-01 00:12:10,811 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:12:10,819 INFO [9/20] Generate SPK-HSK1-000005 normal: 下午好。
+2026-08-01 00:12:11,574 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:12:12,083 INFO [10/20] Generate SPK-HSK1-000005 slow: 下午好。
+2026-08-01 00:12:12,711 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:12:13,431 INFO [11/20] Generate SPK-HSK1-000006 normal: 晚上好。
+2026-08-01 00:12:14,295 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:12:14,603 INFO [12/20] Generate SPK-HSK1-000006 slow: 晚上好。
+2026-08-01 00:12:16,427 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:12:16,874 INFO [13/20] Generate SPK-HSK1-000007 normal: 谢谢你。
+2026-08-01 00:12:17,728 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:12:17,921 INFO [14/20] Generate SPK-HSK1-000007 slow: 谢谢你。
+2026-08-01 00:12:18,643 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:12:19,346 INFO [15/20] Generate SPK-HSK1-000008 normal: 不客气。
+2026-08-01 00:12:20,509 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:12:20,903 INFO [16/20] Generate SPK-HSK1-000008 slow: 不客气。
+2026-08-01 00:12:21,786 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:12:21,978 INFO [17/20] Generate SPK-HSK1-000009 normal: 对不起。
+2026-08-01 00:12:23,279 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:12:23,516 INFO [18/20] Generate SPK-HSK1-000009 slow: 对不起。
+2026-08-01 00:12:24,673 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:12:24,895 INFO [19/20] Generate SPK-HSK1-000010 normal: 没关系。
+2026-08-01 00:12:25,827 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:12:26,031 INFO [20/20] Generate SPK-HSK1-000010 slow: 没关系。
+2026-08-01 00:12:27,032 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:18:33,831 INFO [1/200] Skip public\audio\speaking-practice\hsk1\000001.mp3
+2026-08-01 00:18:33,833 INFO [2/200] Skip public\audio\speaking-practice\hsk1\000001_slow.mp3
+2026-08-01 00:18:33,833 INFO [3/200] Skip public\audio\speaking-practice\hsk1\000002.mp3
+2026-08-01 00:18:33,834 INFO [4/200] Skip public\audio\speaking-practice\hsk1\000002_slow.mp3
+2026-08-01 00:18:33,834 INFO [5/200] Skip public\audio\speaking-practice\hsk1\000003.mp3
+2026-08-01 00:18:33,835 INFO [6/200] Skip public\audio\speaking-practice\hsk1\000003_slow.mp3
+2026-08-01 00:18:33,835 INFO [7/200] Skip public\audio\speaking-practice\hsk1\000004.mp3
+2026-08-01 00:18:33,837 INFO [8/200] Skip public\audio\speaking-practice\hsk1\000004_slow.mp3
+2026-08-01 00:18:33,837 INFO [9/200] Skip public\audio\speaking-practice\hsk1\000005.mp3
+2026-08-01 00:18:33,837 INFO [10/200] Skip public\audio\speaking-practice\hsk1\000005_slow.mp3
+2026-08-01 00:18:33,837 INFO [11/200] Skip public\audio\speaking-practice\hsk1\000006.mp3
+2026-08-01 00:18:33,838 INFO [12/200] Skip public\audio\speaking-practice\hsk1\000006_slow.mp3
+2026-08-01 00:18:33,838 INFO [13/200] Skip public\audio\speaking-practice\hsk1\000007.mp3
+2026-08-01 00:18:33,838 INFO [14/200] Skip public\audio\speaking-practice\hsk1\000007_slow.mp3
+2026-08-01 00:18:33,839 INFO [15/200] Skip public\audio\speaking-practice\hsk1\000008.mp3
+2026-08-01 00:18:33,839 INFO [16/200] Skip public\audio\speaking-practice\hsk1\000008_slow.mp3
+2026-08-01 00:18:33,839 INFO [17/200] Skip public\audio\speaking-practice\hsk1\000009.mp3
+2026-08-01 00:18:33,839 INFO [18/200] Skip public\audio\speaking-practice\hsk1\000009_slow.mp3
+2026-08-01 00:18:33,839 INFO [19/200] Skip public\audio\speaking-practice\hsk1\000010.mp3
+2026-08-01 00:18:33,840 INFO [20/200] Skip public\audio\speaking-practice\hsk1\000010_slow.mp3
+2026-08-01 00:18:33,840 INFO [21/200] Generate SPK-HSK1-000011 normal: 我叫安娜。
+2026-08-01 00:18:36,059 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:18:36,537 INFO [22/200] Generate SPK-HSK1-000011 slow: 我叫安娜。
+2026-08-01 00:18:37,268 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:18:37,951 INFO [23/200] Generate SPK-HSK1-000012 normal: 你叫什么名字？
+2026-08-01 00:18:38,866 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:18:39,173 INFO [24/200] Generate SPK-HSK1-000012 slow: 你叫什么名字？
+2026-08-01 00:18:40,150 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:18:40,574 INFO [25/200] Generate SPK-HSK1-000013 normal: 我是缅甸人。
+2026-08-01 00:18:41,336 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:18:42,079 INFO [26/200] Generate SPK-HSK1-000013 slow: 我是缅甸人。
+2026-08-01 00:18:42,752 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:18:43,340 INFO [27/200] Generate SPK-HSK1-000014 normal: 我住在泰国。
+2026-08-01 00:18:44,380 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:18:44,799 INFO [28/200] Generate SPK-HSK1-000014 slow: 我住在泰国。
+2026-08-01 00:18:45,481 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:18:46,291 INFO [29/200] Generate SPK-HSK1-000015 normal: 我今年二十九岁。
+2026-08-01 00:18:47,202 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:18:47,913 INFO [30/200] Generate SPK-HSK1-000015 slow: 我今年二十九岁。
+2026-08-01 00:18:48,910 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:18:49,718 INFO [31/200] Generate SPK-HSK1-000016 normal: 我是会计。
+2026-08-01 00:18:50,764 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:18:51,235 INFO [32/200] Generate SPK-HSK1-000016 slow: 我是会计。
+2026-08-01 00:18:52,188 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:18:52,615 INFO [33/200] Generate SPK-HSK1-000017 normal: 我学习中文。
+2026-08-01 00:18:53,727 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:18:54,095 INFO [34/200] Generate SPK-HSK1-000017 slow: 我学习中文。
+2026-08-01 00:18:54,863 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:18:55,299 INFO [35/200] Generate SPK-HSK1-000018 normal: 我会说一点中文。
+2026-08-01 00:18:56,473 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:18:56,763 INFO [36/200] Generate SPK-HSK1-000018 slow: 我会说一点中文。
+2026-08-01 00:18:58,025 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:18:58,383 INFO [37/200] Generate SPK-HSK1-000019 normal: 很高兴认识你。
+2026-08-01 00:19:01,273 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:19:16,939 INFO [38/200] Generate SPK-HSK1-000019 slow: 很高兴认识你。
+2026-08-01 00:19:17,777 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:19:18,349 INFO [39/200] Generate SPK-HSK1-000020 normal: 请多关照。
+2026-08-01 00:19:19,490 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:19:19,685 INFO [40/200] Generate SPK-HSK1-000020 slow: 请多关照。
+2026-08-01 00:19:20,838 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:19:20,842 INFO [41/200] Generate SPK-HSK1-000021 normal: 我家有四口人。
+2026-08-01 00:19:21,584 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:19:22,368 INFO [42/200] Generate SPK-HSK1-000021 slow: 我家有四口人。
+2026-08-01 00:19:23,323 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:19:24,001 INFO [43/200] Generate SPK-HSK1-000022 normal: 这是我妈妈。
+2026-08-01 00:19:24,960 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:19:25,389 INFO [44/200] Generate SPK-HSK1-000022 slow: 这是我妈妈。
+2026-08-01 00:19:26,549 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:19:26,750 INFO [45/200] Generate SPK-HSK1-000023 normal: 这是我爸爸。
+2026-08-01 00:19:27,843 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:19:28,231 INFO [46/200] Generate SPK-HSK1-000023 slow: 这是我爸爸。
+2026-08-01 00:19:28,939 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:19:29,724 INFO [47/200] Generate SPK-HSK1-000024 normal: 我有一个妹妹。
+2026-08-01 00:19:30,963 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:19:31,174 INFO [48/200] Generate SPK-HSK1-000024 slow: 我有一个妹妹。
+2026-08-01 00:19:32,096 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:19:32,482 INFO [49/200] Generate SPK-HSK1-000025 normal: 你有兄弟姐妹吗？
+2026-08-01 00:19:33,587 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:19:34,063 INFO [50/200] Generate SPK-HSK1-000025 slow: 你有兄弟姐妹吗？
+2026-08-01 00:19:35,187 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:19:35,619 INFO [51/200] Generate SPK-HSK1-000026 normal: 我妈妈是老师。
+2026-08-01 00:19:36,448 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:19:37,094 INFO [52/200] Generate SPK-HSK1-000026 slow: 我妈妈是老师。
+2026-08-01 00:19:37,918 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:19:38,639 INFO [53/200] Generate SPK-HSK1-000027 normal: 我爸爸在工作。
+2026-08-01 00:19:39,713 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:19:39,907 INFO [54/200] Generate SPK-HSK1-000027 slow: 我爸爸在工作。
+2026-08-01 00:19:41,071 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:19:41,512 INFO [55/200] Generate SPK-HSK1-000028 normal: 我很爱我的家人。
+2026-08-01 00:19:42,550 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:19:43,188 INFO [56/200] Generate SPK-HSK1-000028 slow: 我很爱我的家人。
+2026-08-01 00:19:44,366 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:19:44,758 INFO [57/200] Generate SPK-HSK1-000029 normal: 我们一起吃饭。
+2026-08-01 00:19:45,745 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:19:46,095 INFO [58/200] Generate SPK-HSK1-000029 slow: 我们一起吃饭。
+2026-08-01 00:19:47,025 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:19:47,517 INFO [59/200] Generate SPK-HSK1-000030 normal: 周末我回家。
+2026-08-01 00:19:48,325 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:19:49,073 INFO [60/200] Generate SPK-HSK1-000030 slow: 周末我回家。
+2026-08-01 00:19:49,909 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:19:50,472 INFO [61/200] Generate SPK-HSK1-000031 normal: 我每天六点起床。
+2026-08-01 00:19:51,189 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:19:51,872 INFO [62/200] Generate SPK-HSK1-000031 slow: 我每天六点起床。
+2026-08-01 00:19:52,802 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:19:53,523 INFO [63/200] Generate SPK-HSK1-000032 normal: 我先洗脸。
+2026-08-01 00:19:54,278 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:19:54,757 INFO [64/200] Generate SPK-HSK1-000032 slow: 我先洗脸。
+2026-08-01 00:19:55,746 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:19:56,248 INFO [65/200] Generate SPK-HSK1-000033 normal: 我七点吃早饭。
+2026-08-01 00:19:57,156 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:19:57,923 INFO [66/200] Generate SPK-HSK1-000033 slow: 我七点吃早饭。
+2026-08-01 00:19:58,746 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:20:00,139 INFO [67/200] Generate SPK-HSK1-000034 normal: 我八点去上班。
+2026-08-01 00:20:01,054 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:20:01,537 INFO [68/200] Generate SPK-HSK1-000034 slow: 我八点去上班。
+2026-08-01 00:20:02,779 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:20:03,206 INFO [69/200] Generate SPK-HSK1-000035 normal: 我坐地铁上班。
+2026-08-01 00:20:04,008 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:20:04,637 INFO [70/200] Generate SPK-HSK1-000035 slow: 我坐地铁上班。
+2026-08-01 00:20:05,436 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:20:06,239 INFO [71/200] Generate SPK-HSK1-000036 normal: 中午我吃午饭。
+2026-08-01 00:20:09,575 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:20:19,449 INFO [72/200] Generate SPK-HSK1-000036 slow: 中午我吃午饭。
+2026-08-01 00:20:20,409 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:20:20,840 INFO [73/200] Generate SPK-HSK1-000037 normal: 下午我很忙。
+2026-08-01 00:20:21,587 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:20:22,496 INFO [74/200] Generate SPK-HSK1-000037 slow: 下午我很忙。
+2026-08-01 00:20:23,459 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:20:23,763 INFO [75/200] Generate SPK-HSK1-000038 normal: 我六点下班。
+2026-08-01 00:20:24,647 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:20:25,183 INFO [76/200] Generate SPK-HSK1-000038 slow: 我六点下班。
+2026-08-01 00:20:26,387 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:20:29,383 INFO [77/200] Generate SPK-HSK1-000039 normal: 晚上我学习中文。
+2026-08-01 00:20:30,577 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:20:30,958 INFO [78/200] Generate SPK-HSK1-000039 slow: 晚上我学习中文。
+2026-08-01 00:20:31,713 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:20:32,336 INFO [79/200] Generate SPK-HSK1-000040 normal: 我十一点睡觉。
+2026-08-01 00:20:33,108 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:20:33,877 INFO [80/200] Generate SPK-HSK1-000040 slow: 我十一点睡觉。
+2026-08-01 00:20:35,029 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:20:35,417 INFO [81/200] Generate SPK-HSK1-000041 normal: 我喜欢吃米饭。
+2026-08-01 00:20:36,342 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:20:36,960 INFO [82/200] Generate SPK-HSK1-000041 slow: 我喜欢吃米饭。
+2026-08-01 00:20:37,868 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:20:38,212 INFO [83/200] Generate SPK-HSK1-000042 normal: 你想吃什么？
+2026-08-01 00:20:39,189 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:20:39,710 INFO [84/200] Generate SPK-HSK1-000042 slow: 你想吃什么？
+2026-08-01 00:20:41,107 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:20:41,281 INFO [85/200] Generate SPK-HSK1-000043 normal: 我想吃面条。
+2026-08-01 00:20:42,071 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:20:42,757 INFO [86/200] Generate SPK-HSK1-000043 slow: 我想吃面条。
+2026-08-01 00:20:43,702 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:20:44,090 INFO [87/200] Generate SPK-HSK1-000044 normal: 这个菜很好吃。
+2026-08-01 00:20:45,330 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:20:45,781 INFO [88/200] Generate SPK-HSK1-000044 slow: 这个菜很好吃。
+2026-08-01 00:20:46,756 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:20:47,194 INFO [89/200] Generate SPK-HSK1-000045 normal: 我不吃辣。
+2026-08-01 00:20:48,311 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:20:48,512 INFO [90/200] Generate SPK-HSK1-000045 slow: 我不吃辣。
+2026-08-01 00:20:49,294 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:20:50,024 INFO [91/200] Generate SPK-HSK1-000046 normal: 请给我一杯水。
+2026-08-01 00:20:50,713 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:20:51,469 INFO [92/200] Generate SPK-HSK1-000046 slow: 请给我一杯水。
+2026-08-01 00:20:52,358 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:20:52,728 INFO [93/200] Generate SPK-HSK1-000047 normal: 我喜欢喝咖啡。
+2026-08-01 00:20:53,525 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:20:54,168 INFO [94/200] Generate SPK-HSK1-000047 slow: 我喜欢喝咖啡。
+2026-08-01 00:20:55,147 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:20:55,572 INFO [95/200] Generate SPK-HSK1-000048 normal: 我不喝茶。
+2026-08-01 00:20:56,263 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:20:56,745 INFO [96/200] Generate SPK-HSK1-000048 slow: 我不喝茶。
+2026-08-01 00:20:57,742 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:20:57,996 INFO [97/200] Generate SPK-HSK1-000049 normal: 我们去吃饭吧。
+2026-08-01 00:20:59,195 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:20:59,567 INFO [98/200] Generate SPK-HSK1-000049 slow: 我们去吃饭吧。
+2026-08-01 00:21:00,621 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:21:02,126 INFO [99/200] Generate SPK-HSK1-000050 normal: 请慢慢吃。
+2026-08-01 00:21:02,865 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:21:03,282 INFO [100/200] Generate SPK-HSK1-000050 slow: 请慢慢吃。
+2026-08-01 00:21:04,426 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:21:04,783 INFO [101/200] Generate SPK-HSK1-000051 normal: 这个多少钱？
+2026-08-01 00:21:05,787 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:21:06,557 INFO [102/200] Generate SPK-HSK1-000051 slow: 这个多少钱？
+2026-08-01 00:21:07,316 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:21:07,856 INFO [103/200] Generate SPK-HSK1-000052 normal: 这个太贵了。
+2026-08-01 00:21:09,656 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:21:10,047 INFO [104/200] Generate SPK-HSK1-000052 slow: 这个太贵了。
+2026-08-01 00:21:10,873 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:21:11,308 INFO [105/200] Generate SPK-HSK1-000053 normal: 可以便宜一点吗？
+2026-08-01 00:21:12,192 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:21:12,695 INFO [106/200] Generate SPK-HSK1-000053 slow: 可以便宜一点吗？
+2026-08-01 00:21:13,434 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:21:14,183 INFO [107/200] Generate SPK-HSK1-000054 normal: 我要买这个。
+2026-08-01 00:21:15,505 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:21:16,236 INFO [108/200] Generate SPK-HSK1-000054 slow: 我要买这个。
+2026-08-01 00:21:16,948 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:21:17,432 INFO [109/200] Generate SPK-HSK1-000055 normal: 我只是看看。
+2026-08-01 00:21:18,781 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:21:19,307 INFO [110/200] Generate SPK-HSK1-000055 slow: 我只是看看。
+2026-08-01 00:21:20,273 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:21:20,703 INFO [111/200] Generate SPK-HSK1-000056 normal: 有别的颜色吗？
+2026-08-01 00:21:22,063 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:21:22,206 INFO [112/200] Generate SPK-HSK1-000056 slow: 有别的颜色吗？
+2026-08-01 00:21:23,032 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:21:23,700 INFO [113/200] Generate SPK-HSK1-000057 normal: 我喜欢红色。
+2026-08-01 00:21:24,621 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:21:25,002 INFO [114/200] Generate SPK-HSK1-000057 slow: 我喜欢红色。
+2026-08-01 00:21:25,911 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:21:26,432 INFO [115/200] Generate SPK-HSK1-000058 normal: 这个有点小。
+2026-08-01 00:21:27,093 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:21:27,546 INFO [116/200] Generate SPK-HSK1-000058 slow: 这个有点小。
+2026-08-01 00:21:28,359 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:21:29,076 INFO [117/200] Generate SPK-HSK1-000059 normal: 我可以试一下吗？
+2026-08-01 00:21:29,863 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:21:30,540 INFO [118/200] Generate SPK-HSK1-000059 slow: 我可以试一下吗？
+2026-08-01 00:21:31,313 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:21:31,813 INFO [119/200] Generate SPK-HSK1-000060 normal: 我用手机付款。
+2026-08-01 00:21:32,540 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:21:33,303 INFO [120/200] Generate SPK-HSK1-000060 slow: 我用手机付款。
+2026-08-01 00:21:34,024 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:21:34,540 INFO [121/200] Generate SPK-HSK1-000061 normal: 现在几点？
+2026-08-01 00:21:35,634 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:21:35,865 INFO [122/200] Generate SPK-HSK1-000061 slow: 现在几点？
+2026-08-01 00:21:36,589 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:21:37,312 INFO [123/200] Generate SPK-HSK1-000062 normal: 现在九点。
+2026-08-01 00:21:37,953 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:21:38,390 INFO [124/200] Generate SPK-HSK1-000062 slow: 现在九点。
+2026-08-01 00:21:39,221 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:21:39,671 INFO [125/200] Generate SPK-HSK1-000063 normal: 今天星期几？
+2026-08-01 00:21:40,448 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:21:41,062 INFO [126/200] Generate SPK-HSK1-000063 slow: 今天星期几？
+2026-08-01 00:21:42,104 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:21:42,529 INFO [127/200] Generate SPK-HSK1-000064 normal: 今天星期一。
+2026-08-01 00:21:43,649 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:21:44,066 INFO [128/200] Generate SPK-HSK1-000064 slow: 今天星期一。
+2026-08-01 00:21:44,746 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:21:45,423 INFO [129/200] Generate SPK-HSK1-000065 normal: 明天是星期二。
+2026-08-01 00:21:46,356 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:21:46,780 INFO [130/200] Generate SPK-HSK1-000065 slow: 明天是星期二。
+2026-08-01 00:21:49,721 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:21:49,903 INFO [131/200] Generate SPK-HSK1-000066 normal: 今天是七月三十一号。
+2026-08-01 00:21:51,135 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:21:55,320 INFO [132/200] Generate SPK-HSK1-000066 slow: 今天是七月三十一号。
+2026-08-01 00:21:56,057 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:21:56,833 INFO [133/200] Generate SPK-HSK1-000067 normal: 我的生日是四月六号。
+2026-08-01 00:21:57,703 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:21:58,360 INFO [134/200] Generate SPK-HSK1-000067 slow: 我的生日是四月六号。
+2026-08-01 00:21:59,271 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:21:59,799 INFO [135/200] Generate SPK-HSK1-000068 normal: 会议十点开始。
+2026-08-01 00:22:00,770 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:22:01,217 INFO [136/200] Generate SPK-HSK1-000068 slow: 会议十点开始。
+2026-08-01 00:22:02,072 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:22:02,738 INFO [137/200] Generate SPK-HSK1-000069 normal: 请等我五分钟。
+2026-08-01 00:22:03,431 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:22:04,169 INFO [138/200] Generate SPK-HSK1-000069 slow: 请等我五分钟。
+2026-08-01 00:22:05,026 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:22:05,761 INFO [139/200] Generate SPK-HSK1-000070 normal: 我没有时间。
+2026-08-01 00:22:06,877 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:22:07,142 INFO [140/200] Generate SPK-HSK1-000070 slow: 我没有时间。
+2026-08-01 00:22:08,163 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:22:08,674 INFO [141/200] Generate SPK-HSK1-000071 normal: 今天天气很好。
+2026-08-01 00:22:09,846 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:22:10,295 INFO [142/200] Generate SPK-HSK1-000071 slow: 今天天气很好。
+2026-08-01 00:22:11,345 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:22:11,861 INFO [143/200] Generate SPK-HSK1-000072 normal: 今天很热。
+2026-08-01 00:22:12,629 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:22:13,094 INFO [144/200] Generate SPK-HSK1-000072 slow: 今天很热。
+2026-08-01 00:22:13,931 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:22:14,644 INFO [145/200] Generate SPK-HSK1-000073 normal: 今天有点冷。
+2026-08-01 00:22:15,533 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:22:15,943 INFO [146/200] Generate SPK-HSK1-000073 slow: 今天有点冷。
+2026-08-01 00:22:16,664 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:22:17,411 INFO [147/200] Generate SPK-HSK1-000074 normal: 外面下雨了。
+2026-08-01 00:22:18,700 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:22:18,898 INFO [148/200] Generate SPK-HSK1-000074 slow: 外面下雨了。
+2026-08-01 00:22:19,791 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:22:20,544 INFO [149/200] Generate SPK-HSK1-000075 normal: 你带伞了吗？
+2026-08-01 00:22:21,455 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:22:21,911 INFO [150/200] Generate SPK-HSK1-000075 slow: 你带伞了吗？
+2026-08-01 00:22:22,609 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:22:23,327 INFO [151/200] Generate SPK-HSK1-000076 normal: 今天风很大。
+2026-08-01 00:22:24,156 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:22:24,802 INFO [152/200] Generate SPK-HSK1-000076 slow: 今天风很大。
+2026-08-01 00:22:25,646 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:22:26,101 INFO [153/200] Generate SPK-HSK1-000077 normal: 明天会下雨吗？
+2026-08-01 00:22:26,970 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:22:27,778 INFO [154/200] Generate SPK-HSK1-000077 slow: 明天会下雨吗？
+2026-08-01 00:22:28,894 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:22:29,288 INFO [155/200] Generate SPK-HSK1-000078 normal: 我喜欢凉快的天气。
+2026-08-01 00:22:30,288 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:22:30,793 INFO [156/200] Generate SPK-HSK1-000078 slow: 我喜欢凉快的天气。
+2026-08-01 00:22:31,591 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:22:32,747 INFO [157/200] Generate SPK-HSK1-000079 normal: 太阳出来了。
+2026-08-01 00:22:33,744 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:22:34,256 INFO [158/200] Generate SPK-HSK1-000079 slow: 太阳出来了。
+2026-08-01 00:22:35,468 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:22:35,844 INFO [159/200] Generate SPK-HSK1-000080 normal: 今天没有下雨。
+2026-08-01 00:22:36,676 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:22:37,193 INFO [160/200] Generate SPK-HSK1-000080 slow: 今天没有下雨。
+2026-08-01 00:22:38,204 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:22:38,939 INFO [161/200] Generate SPK-HSK1-000081 normal: 我是学生。
+2026-08-01 00:22:39,732 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:22:40,327 INFO [162/200] Generate SPK-HSK1-000081 slow: 我是学生。
+2026-08-01 00:22:41,125 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:22:41,744 INFO [163/200] Generate SPK-HSK1-000082 normal: 我在学习中文。
+2026-08-01 00:22:42,821 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:22:43,115 INFO [164/200] Generate SPK-HSK1-000082 slow: 我在学习中文。
+2026-08-01 00:22:44,319 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:22:44,758 INFO [165/200] Generate SPK-HSK1-000083 normal: 这个字怎么读？
+2026-08-01 00:22:45,554 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:22:46,264 INFO [166/200] Generate SPK-HSK1-000083 slow: 这个字怎么读？
+2026-08-01 00:22:47,262 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:22:47,661 INFO [167/200] Generate SPK-HSK1-000084 normal: 这句话是什么意思？
+2026-08-01 00:22:48,339 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:22:49,081 INFO [168/200] Generate SPK-HSK1-000084 slow: 这句话是什么意思？
+2026-08-01 00:22:50,129 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:22:50,707 INFO [169/200] Generate SPK-HSK1-000085 normal: 请再说一次。
+2026-08-01 00:22:51,833 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:22:52,217 INFO [170/200] Generate SPK-HSK1-000085 slow: 请再说一次。
+2026-08-01 00:22:53,402 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:22:53,782 INFO [171/200] Generate SPK-HSK1-000086 normal: 请说慢一点。
+2026-08-01 00:22:54,921 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:22:55,199 INFO [172/200] Generate SPK-HSK1-000086 slow: 请说慢一点。
+2026-08-01 00:22:57,850 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:22:59,231 INFO [173/200] Generate SPK-HSK1-000087 normal: 我听不懂。
+2026-08-01 00:23:00,043 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:23:00,662 INFO [174/200] Generate SPK-HSK1-000087 slow: 我听不懂。
+2026-08-01 00:23:01,410 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:23:01,853 INFO [175/200] Generate SPK-HSK1-000088 normal: 我会写汉字。
+2026-08-01 00:23:02,737 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:23:03,183 INFO [176/200] Generate SPK-HSK1-000088 slow: 我会写汉字。
+2026-08-01 00:23:04,161 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:23:04,676 INFO [177/200] Generate SPK-HSK1-000089 normal: 我的发音不太好。
+2026-08-01 00:23:05,423 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:23:06,092 INFO [178/200] Generate SPK-HSK1-000089 slow: 我的发音不太好。
+2026-08-01 00:23:07,375 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:23:07,884 INFO [179/200] Generate SPK-HSK1-000090 normal: 我要多练习。
+2026-08-01 00:23:08,789 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:23:09,072 INFO [180/200] Generate SPK-HSK1-000090 slow: 我要多练习。
+2026-08-01 00:23:10,408 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:23:10,606 INFO [181/200] Generate SPK-HSK1-000091 normal: 我今天要上班。
+2026-08-01 00:23:11,893 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:23:12,339 INFO [182/200] Generate SPK-HSK1-000091 slow: 我今天要上班。
+2026-08-01 00:23:13,103 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:23:13,806 INFO [183/200] Generate SPK-HSK1-000092 normal: 我在办公室。
+2026-08-01 00:23:14,531 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:23:15,310 INFO [184/200] Generate SPK-HSK1-000092 slow: 我在办公室。
+2026-08-01 00:23:16,175 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:23:16,779 INFO [185/200] Generate SPK-HSK1-000093 normal: 今天工作很多。
+2026-08-01 00:23:17,766 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:23:18,246 INFO [186/200] Generate SPK-HSK1-000093 slow: 今天工作很多。
+2026-08-01 00:23:19,196 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:23:19,793 INFO [187/200] Generate SPK-HSK1-000094 normal: 我正在写报告。
+2026-08-01 00:23:20,929 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:23:21,429 INFO [188/200] Generate SPK-HSK1-000094 slow: 我正在写报告。
+2026-08-01 00:23:22,372 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:23:22,768 INFO [189/200] Generate SPK-HSK1-000095 normal: 请发邮件给我。
+2026-08-01 00:23:23,668 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:23:24,400 INFO [190/200] Generate SPK-HSK1-000095 slow: 请发邮件给我。
+2026-08-01 00:23:25,172 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:23:25,892 INFO [191/200] Generate SPK-HSK1-000096 normal: 我们下午开会。
+2026-08-01 00:23:26,685 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:23:27,159 INFO [192/200] Generate SPK-HSK1-000096 slow: 我们下午开会。
+2026-08-01 00:23:28,145 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:23:28,561 INFO [193/200] Generate SPK-HSK1-000097 normal: 这个文件很重要。
+2026-08-01 00:23:29,426 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:23:30,136 INFO [194/200] Generate SPK-HSK1-000097 slow: 这个文件很重要。
+2026-08-01 00:23:31,301 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:23:31,819 INFO [195/200] Generate SPK-HSK1-000098 normal: 我已经完成了。
+2026-08-01 00:23:32,903 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:23:33,235 INFO [196/200] Generate SPK-HSK1-000098 slow: 我已经完成了。
+2026-08-01 00:23:34,337 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:23:34,767 INFO [197/200] Generate SPK-HSK1-000099 normal: 请检查一下。
+2026-08-01 00:23:35,608 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:23:36,466 INFO [198/200] Generate SPK-HSK1-000099 slow: 请检查一下。
+2026-08-01 00:23:37,884 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:23:38,205 INFO [199/200] Generate SPK-HSK1-000100 normal: 我六点下班。
+2026-08-01 00:23:39,791 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2026-08-01 00:23:40,049 INFO [200/200] Generate SPK-HSK1-000100 slow: 我六点下班。
+2026-08-01 00:23:40,769 INFO HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
