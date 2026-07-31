@@ -6,6 +6,7 @@ type PronunciationPracticePageProps = {
     q?: string | string[];
     lesson?: string | string[];
     category?: string | string[];
+    review?: string | string[];
   }>;
 };
 
@@ -15,7 +16,7 @@ export const metadata = {
     "Listen, repeat, and check your Chinese pronunciation.",
 };
 
-function getSingleSearchParameter(
+function getSingleParameter(
   value: string | string[] | undefined
 ): string {
   if (Array.isArray(value)) {
@@ -44,23 +45,47 @@ function parseInitialLesson(
   return lesson;
 }
 
+function parseReviewSentenceIds(
+  value: string
+): string[] {
+  if (!value) {
+    return [];
+  }
+
+  return Array.from(
+    new Set(
+      value
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean)
+    )
+  ).slice(0, 20);
+}
+
 export default async function PronunciationPracticePage({
   searchParams,
 }: PronunciationPracticePageProps) {
   const params = await searchParams;
 
   const initialSearchQuery =
-    getSingleSearchParameter(params.q);
+    getSingleParameter(params.q);
 
   const initialCategory =
-    getSingleSearchParameter(
+    getSingleParameter(
       params.category
     ) || "all";
 
   const initialLesson =
     parseInitialLesson(
-      getSingleSearchParameter(
+      getSingleParameter(
         params.lesson
+      )
+    );
+
+  const initialReviewSentenceIds =
+    parseReviewSentenceIds(
+      getSingleParameter(
+        params.review
       )
     );
 
@@ -77,6 +102,9 @@ export default async function PronunciationPracticePage({
         initialLesson={initialLesson}
         initialCategory={
           initialCategory
+        }
+        initialReviewSentenceIds={
+          initialReviewSentenceIds
         }
       />
     </main>

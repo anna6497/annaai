@@ -30,6 +30,7 @@ type PronunciationPracticeProps = {
   initialSearchQuery?: string;
   initialLesson?: number | "all";
   initialCategory?: string;
+  initialReviewSentenceIds?: string[];
 };
 
 type AudioMode = "normal" | "slow";
@@ -39,6 +40,7 @@ export default function PronunciationPractice({
   initialSearchQuery = "",
   initialLesson = "all",
   initialCategory = "all",
+  initialReviewSentenceIds = [],
 }: PronunciationPracticeProps) {
   const router = useRouter();
 
@@ -65,6 +67,11 @@ const [
 ] = useState<string>(
   initialCategory
 );
+
+  const [reviewSentenceIds, setReviewSentenceIds] =
+    useState<string[]>(
+      initialReviewSentenceIds
+    );
 
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -108,9 +115,18 @@ const [
   }, [sentences]);
 
   const filteredSentences = useMemo(() => {
-    const normalizedQuery = searchQuery.trim().toLowerCase();
+    const normalizedQuery =
+      searchQuery.trim().toLowerCase();
+
+    const reviewIdSet = new Set(
+      reviewSentenceIds
+    );
 
     return sentences.filter((sentence) => {
+      const reviewMatches =
+        reviewIdSet.size === 0 ||
+        reviewIdSet.has(sentence.id);
+
       const lessonMatches =
         selectedLesson === "all" ||
         sentence.lesson === selectedLesson;
@@ -126,20 +142,28 @@ const [
         sentence.myanmar,
         sentence.english,
         sentence.category,
-        ...sentence.keywords,
-        ...sentence.grammar,
+        ...(sentence.keywords ?? []),
+        ...(sentence.grammar ?? []),
       ]
         .join(" ")
         .toLowerCase();
 
       const searchMatches =
         normalizedQuery.length === 0 ||
-        searchableText.includes(normalizedQuery);
+        searchableText.includes(
+          normalizedQuery
+        );
 
-      return lessonMatches && categoryMatches && searchMatches;
+      return (
+        reviewMatches &&
+        lessonMatches &&
+        categoryMatches &&
+        searchMatches
+      );
     });
   }, [
     sentences,
+    reviewSentenceIds,
     searchQuery,
     selectedLesson,
     selectedCategory,
@@ -206,24 +230,29 @@ const [
   ]);
 
   useEffect(() => {
-  setSearchQuery(
-    initialSearchQuery
-  );
+    setSearchQuery(
+      initialSearchQuery
+    );
 
-  setSelectedLesson(
-    initialLesson
-  );
+    setSelectedLesson(
+      initialLesson
+    );
 
-  setSelectedCategory(
-    initialCategory
-  );
+    setSelectedCategory(
+      initialCategory
+    );
 
-  setCurrentIndex(0);
-}, [
-  initialSearchQuery,
-  initialLesson,
-  initialCategory,
-]);
+    setReviewSentenceIds(
+      initialReviewSentenceIds
+    );
+
+    setCurrentIndex(0);
+  }, [
+    initialSearchQuery,
+    initialLesson,
+    initialCategory,
+    initialReviewSentenceIds,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -590,6 +619,7 @@ const [
     setSearchQuery("");
     setSelectedLesson("all");
     setSelectedCategory("all");
+    setReviewSentenceIds([]);
     setCurrentIndex(0);
 
     router.replace(
@@ -724,7 +754,35 @@ const [
         </div>
       </div>
 
-      {initialSearchQuery ? (
+      {reviewSentenceIds.length > 0 ? (
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-amber-300/20 bg-amber-400/10 px-5 py-4">
+          <div>
+            <p className="text-sm font-semibold text-amber-100">
+              Smart Review Session
+            </p>
+
+            <p className="mt-1 text-sm text-amber-50/70">
+              Practicing{" "}
+              <strong>
+                {filteredSentences.length}
+              </strong>{" "}
+              difficult sentence
+              {filteredSentences.length === 1
+                ? ""
+                : "s"}{" "}
+              from your history.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="rounded-2xl border border-amber-200/20 bg-black/10 px-4 py-2 text-sm font-semibold text-amber-50 transition hover:bg-black/20"
+          >
+            Exit Review
+          </button>
+        </div>
+      ) : initialSearchQuery ? (
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-amber-300/20 bg-amber-400/10 px-5 py-4">
           <div>
             <p className="text-sm font-semibold text-amber-100">
