@@ -1,5 +1,7 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+
 import {
   useCallback,
   useEffect,
@@ -25,13 +27,21 @@ import type {
 
 type PronunciationPracticeProps = {
   sentences: SpeakingPracticeSentence[];
+  initialSearchQuery?: string;
+  initialLesson?: number | "all";
+  initialCategory?: string;
 };
 
 type AudioMode = "normal" | "slow";
 
 export default function PronunciationPractice({
   sentences,
+  initialSearchQuery = "",
+  initialLesson = "all",
+  initialCategory = "all",
 }: PronunciationPracticeProps) {
+  const router = useRouter();
+
   const sampleAudioRef = useRef<HTMLAudioElement | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const microphoneStreamRef = useRef<MediaStream | null>(null);
@@ -39,9 +49,22 @@ export default function PronunciationPractice({
   const recordingStartedAtRef = useRef<number | null>(null);
   const recordedAudioUrlRef = useRef<string | null>(null);
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedLesson, setSelectedLesson] = useState<number | "all">("all");
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [searchQuery, setSearchQuery] =
+  useState(initialSearchQuery);
+
+const [
+  selectedLesson,
+  setSelectedLesson,
+] = useState<number | "all">(
+  initialLesson
+);
+
+const [
+  selectedCategory,
+  setSelectedCategory,
+] = useState<string>(
+  initialCategory
+);
 
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -181,6 +204,26 @@ export default function PronunciationPractice({
     clearRecordedAudioUrl,
     stopMicrophoneStream,
   ]);
+
+  useEffect(() => {
+  setSearchQuery(
+    initialSearchQuery
+  );
+
+  setSelectedLesson(
+    initialLesson
+  );
+
+  setSelectedCategory(
+    initialCategory
+  );
+
+  setCurrentIndex(0);
+}, [
+  initialSearchQuery,
+  initialLesson,
+  initialCategory,
+]);
 
   useEffect(() => {
     return () => {
@@ -547,6 +590,14 @@ export default function PronunciationPractice({
     setSearchQuery("");
     setSelectedLesson("all");
     setSelectedCategory("all");
+    setCurrentIndex(0);
+
+    router.replace(
+      "/dashboard/ai/pronunciation",
+      {
+        scroll: false,
+      }
+    );
   }
 
   const progressPercentage =
@@ -672,6 +723,31 @@ export default function PronunciationPractice({
           </button>
         </div>
       </div>
+
+      {initialSearchQuery ? (
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-amber-300/20 bg-amber-400/10 px-5 py-4">
+          <div>
+            <p className="text-sm font-semibold text-amber-100">
+              Smart Review
+            </p>
+
+            <p className="mt-1 text-sm text-amber-50/70">
+              Practicing sentences that contain{" "}
+              <span className="text-xl font-bold text-amber-50">
+                {initialSearchQuery}
+              </span>
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="rounded-2xl border border-amber-200/20 bg-black/10 px-4 py-2 text-sm font-semibold text-amber-50 transition hover:bg-black/20"
+          >
+            Exit Smart Review
+          </button>
+        </div>
+      ) : null}
 
       {!currentSentence ? (
         <div className="rounded-3xl border border-white/10 bg-white/5 p-10 text-center">
@@ -991,25 +1067,6 @@ export default function PronunciationPractice({
   );
 }
 
-function ScoreCard({
-  label,
-  value,
-}: {
-  label: string;
-  value: number;
-}) {
-  return (
-    <div className="rounded-2xl bg-black/15 p-4 text-center">
-      <p className="text-xs text-white/50">
-        {label}
-      </p>
-
-      <p className="mt-1 text-2xl font-semibold text-white">
-        {value}
-      </p>
-    </div>
-  );
-}
 
 function ToggleButton({
   active,
