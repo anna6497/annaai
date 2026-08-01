@@ -6,33 +6,24 @@ import {
   useRef,
 } from "react";
 
-import {
-  changeUserPassword,
-  type ChangePasswordState,
-} from "./actions";
+import { changeUserPassword } from "./actions";
+import { initialChangePasswordState } from "./action-state";
 
 interface ChangePasswordFormProps {
   userId: string;
   userEmail?: string;
 }
 
-const initialState: ChangePasswordState = {
-  success: false,
-  message: "",
-};
-
 export default function ChangePasswordForm({
   userId,
   userEmail,
 }: ChangePasswordFormProps) {
-  const formRef =
-    useRef<HTMLFormElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
-  const [state, formAction, pending] =
-    useActionState(
-      changeUserPassword,
-      initialState,
-    );
+  const [state, formAction, pending] = useActionState(
+    changeUserPassword,
+    initialChangePasswordState,
+  );
 
   useEffect(() => {
     if (state.success) {
@@ -75,6 +66,7 @@ export default function ChangePasswordForm({
           name="newPassword"
           type="password"
           minLength={8}
+          maxLength={72}
           required
           autoComplete="new-password"
           className="w-full rounded-lg border px-3 py-2"
@@ -95,6 +87,7 @@ export default function ChangePasswordForm({
           name="confirmPassword"
           type="password"
           minLength={8}
+          maxLength={72}
           required
           autoComplete="new-password"
           className="w-full rounded-lg border px-3 py-2"
@@ -102,7 +95,7 @@ export default function ChangePasswordForm({
         />
       </div>
 
-      {state.message && (
+      {state.message ? (
         <p
           className={
             state.success
@@ -112,12 +105,12 @@ export default function ChangePasswordForm({
         >
           {state.message}
         </p>
-      )}
+      ) : null}
 
       <button
         type="submit"
         disabled={pending}
-        className="rounded-lg bg-black px-4 py-2 text-white disabled:opacity-50"
+        className="rounded-lg bg-black px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-50"
       >
         {pending
           ? "ပြောင်းနေပါသည်..."

@@ -12,10 +12,12 @@ import {
   changeUserPassword,
   grantAiSpeakingAccess,
   grantLifetimeAccess,
-  initialChangePasswordState,
   revokeAiSpeakingAccess,
   revokeLifetimeAccess,
 } from "@/app/admin/users/actions";
+import {
+  initialChangePasswordState,
+} from "@/app/admin/users/action-state";
 import type { AdminUserAccessRow } from "@/lib/admin-portal";
 import {
   AI_SPEAKING_PLAN_IDS,
@@ -206,9 +208,13 @@ function UserSettingsPanel({
               {user.name || "Unnamed User"}
             </h2>
 
-            <p className="truncate text-sm text-white/45">{user.email}</p>
+            <p className="truncate text-sm text-white/45">
+              {user.email}
+            </p>
 
-            <p className="mt-1 break-all text-xs text-white/25">{user.id}</p>
+            <p className="mt-1 break-all text-xs text-white/25">
+              {user.id}
+            </p>
           </div>
         </div>
 
@@ -397,7 +403,11 @@ export default function UserAccessManager({
       return;
     }
 
-    setSelectedUserId(filteredUsers[0]?.id ?? "");
+    const nextUserId = filteredUsers[0]?.id ?? "";
+
+    if (nextUserId !== selectedUserId) {
+      setSelectedUserId(nextUserId);
+    }
   }, [filteredUsers, selectedUserId]);
 
   return (
@@ -427,7 +437,9 @@ export default function UserAccessManager({
 
               <select
                 value={selectedUserId}
-                onChange={(event) => setSelectedUserId(event.target.value)}
+                onChange={(event) =>
+                  setSelectedUserId(event.target.value)
+                }
                 className="rounded-2xl border border-white/10 bg-[#12051f] px-4 py-3 text-sm font-bold outline-none xl:hidden"
               >
                 {filteredUsers.map((user) => (
@@ -472,12 +484,16 @@ export default function UserAccessManager({
                   >
                     <td className="px-4 py-4">
                       <div className="flex min-w-0 items-center gap-3">
-                        <UserInitial name={user.name} email={user.email} />
+                        <UserInitial
+                          name={user.name}
+                          email={user.email}
+                        />
 
                         <div className="min-w-0">
                           <p className="truncate text-sm font-black text-white/85">
                             {user.name || "Unnamed User"}
                           </p>
+
                           <p className="truncate text-xs text-white/35">
                             {user.email}
                           </p>
@@ -535,12 +551,16 @@ export default function UserAccessManager({
                 ].join(" ")}
               >
                 <div className="flex min-w-0 items-center gap-3">
-                  <UserInitial name={user.name} email={user.email} />
+                  <UserInitial
+                    name={user.name}
+                    email={user.email}
+                  />
 
                   <div className="min-w-0">
                     <p className="truncate text-sm font-black">
                       {user.name || "Unnamed User"}
                     </p>
+
                     <p className="truncate text-xs text-white/35">
                       {user.email}
                     </p>
@@ -571,7 +591,10 @@ export default function UserAccessManager({
 
       <section>
         {selectedUser ? (
-          <UserSettingsPanel key={selectedUser.id} user={selectedUser} />
+          <UserSettingsPanel
+            key={selectedUser.id}
+            user={selectedUser}
+          />
         ) : (
           <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-12 text-center text-white/35">
             Select a user to manage access.
