@@ -19,6 +19,10 @@ import {
   savePronunciationAttempt,
 } from "@/lib/speaking-practice/history";
 
+import {
+  saveCompletedReviewSession,
+} from "@/lib/speaking-practice/review-session";
+
 import PronunciationFeedback from "@/components/speaking-practice/PronunciationFeedback";
 
 import type {
@@ -51,27 +55,45 @@ export default function PronunciationPractice({
   const recordingStartedAtRef = useRef<number | null>(null);
   const recordedAudioUrlRef = useRef<string | null>(null);
 
+  const reviewStartedAtRef =
+    useRef<string>(
+      new Date().toISOString()
+    );
+
+  const savedReviewSignatureRef =
+    useRef<string | null>(null);
+
   const [searchQuery, setSearchQuery] =
-  useState(initialSearchQuery);
+    useState(initialSearchQuery);
 
-const [
-  selectedLesson,
-  setSelectedLesson,
-] = useState<number | "all">(
-  initialLesson
-);
+  const [
+    selectedLesson,
+    setSelectedLesson,
+  ] = useState<number | "all">(
+    initialLesson
+  );
 
-const [
-  selectedCategory,
-  setSelectedCategory,
-] = useState<string>(
-  initialCategory
-);
+  const [
+    selectedCategory,
+    setSelectedCategory,
+  ] = useState<string>(
+    initialCategory
+  );
 
   const [reviewSentenceIds, setReviewSentenceIds] =
     useState<string[]>(
       initialReviewSentenceIds
     );
+
+  const [
+    completedSentenceIds,
+    setCompletedSentenceIds,
+  ] = useState<string[]>([]);
+
+  const [
+    sessionScores,
+    setSessionScores,
+  ] = useState<Record<string, number>>({});
 
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -101,6 +123,16 @@ const [
 
   const [saveResultMessage, setSaveResultMessage] =
     useState<string | null>(null);
+
+  const [
+    isSavingReviewSession,
+    setIsSavingReviewSession,
+  ] = useState(false);
+
+  const [
+    reviewSessionMessage,
+    setReviewSessionMessage,
+  ] = useState<string | null>(null);
 
   const lessons = useMemo(() => {
     return Array.from(
@@ -169,7 +201,46 @@ const [
     selectedCategory,
   ]);
 
-  const currentSentence = filteredSentences[currentIndex];
+  const currentSentence =
+    filteredSentences[currentIndex];
+
+  const isReviewMode =
+    reviewSentenceIds.length > 0;
+
+  const completedCount =
+    completedSentenceIds.filter((id) =>
+      reviewSentenceIds.includes(id)
+    ).length;
+
+  const isReviewComplete =
+    isReviewMode &&
+    filteredSentences.length > 0 &&
+    completedCount ===
+      filteredSentences.length;
+
+  const reviewAverageScore =
+    completedCount > 0
+      ? Math.round(
+          Object.entries(sessionScores)
+            .filter(([id]) =>
+              reviewSentenceIds.includes(id)
+            )
+            .reduce(
+              (sum, [, score]) =>
+                sum + score,
+              0
+            ) / completedCount
+        )
+      : 0;
+
+  const reviewProgressPercentage =
+    filteredSentences.length > 0
+      ? Math.round(
+          (completedCount /
+            filteredSentences.length) *
+            100
+        )
+      : 0;
 
   const stopSampleAudio = useCallback(() => {
     if (sampleAudioRef.current) {
@@ -246,12 +317,94 @@ const [
       initialReviewSentenceIds
     );
 
+    setCompletedSentenceIds([]);
+    setSessionScores({});
+    setIsSavingReviewSession(false);
+    setReviewSessionMessage(null);
+
+    reviewStartedAtRef.current =
+      new Date().toISOString();
+
+    savedReviewSignatureRef.current = null;
+
     setCurrentIndex(0);
   }, [
     initialSearchQuery,
     initialLesson,
     initialCategory,
     initialReviewSentenceIds,
+  ]);
+
+  useEffect(() => {
+    if (!isReviewComplete) {
+      return;
+    }
+
+    const signature = [...reviewSentenceIds]
+      .sort()
+      .join(",");
+
+    if (
+      !signature ||
+      savedReviewSignatureRef.current ===
+        signature
+    ) {
+      return;
+    }
+
+    savedReviewSignatureRef.current = signature;
+
+    let isCancelled = false;
+
+    async function saveSession() {
+      setIsSavingReviewSession(true);
+      setReviewSessionMessage(null);
+
+      try {
+        await saveCompletedReviewSession({
+          sentenceIds: reviewSentenceIds,
+          completedSentenceIds,
+          averageScore: reviewAverageScore,
+          startedAt: reviewStartedAtRef.current,
+        });
+
+        if (!isCancelled) {
+          setReviewSessionMessage(
+            "Smart Review session saved to your progress."
+          );
+        }
+      } catch (error) {
+        console.error(
+          "Unable to save Smart Review session:",
+          error
+        );
+
+        if (!isCancelled) {
+          savedReviewSignatureRef.current = null;
+
+          setReviewSessionMessage(
+            error instanceof Error
+              ? error.message
+              : "Smart Review session could not be saved."
+          );
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsSavingReviewSession(false);
+        }
+      }
+    }
+
+    void saveSession();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [
+    isReviewComplete,
+    reviewSentenceIds,
+    completedSentenceIds,
+    reviewAverageScore,
   ]);
 
   useEffect(() => {
@@ -558,6 +711,29 @@ const [
         });
 
       setPronunciationResult(result);
+
+      if (isReviewMode) {
+        setCompletedSentenceIds(
+          (previousIds) =>
+            previousIds.includes(
+              currentSentence.id
+            )
+              ? previousIds
+              : [
+                  ...previousIds,
+                  currentSentence.id,
+                ]
+        );
+
+        setSessionScores(
+          (previousScores) => ({
+            ...previousScores,
+            [currentSentence.id]:
+              result.scores.overall,
+          })
+        );
+      }
+
       setIsSavingResult(true);
 
       try {
@@ -620,6 +796,16 @@ const [
     setSelectedLesson("all");
     setSelectedCategory("all");
     setReviewSentenceIds([]);
+    setCompletedSentenceIds([]);
+    setSessionScores({});
+    setIsSavingReviewSession(false);
+    setReviewSessionMessage(null);
+
+    reviewStartedAtRef.current =
+      new Date().toISOString();
+
+    savedReviewSignatureRef.current = null;
+
     setCurrentIndex(0);
 
     router.replace(
@@ -628,6 +814,21 @@ const [
         scroll: false,
       }
     );
+  }
+
+  function restartReviewSession() {
+    setCompletedSentenceIds([]);
+    setSessionScores({});
+    setIsSavingReviewSession(false);
+    setReviewSessionMessage(null);
+
+    reviewStartedAtRef.current =
+      new Date().toISOString();
+
+    savedReviewSignatureRef.current = null;
+
+    setCurrentIndex(0);
+    resetRecording();
   }
 
   const progressPercentage =
@@ -754,34 +955,58 @@ const [
         </div>
       </div>
 
-      {reviewSentenceIds.length > 0 ? (
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-amber-300/20 bg-amber-400/10 px-5 py-4">
-          <div>
-            <p className="text-sm font-semibold text-amber-100">
-              Smart Review Session
-            </p>
+      {isReviewMode ? (
+        <>
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-amber-300/20 bg-amber-400/10 px-5 py-4">
+            <div>
+              <p className="text-sm font-semibold text-amber-100">
+                Smart Review Session
+              </p>
 
-            <p className="mt-1 text-sm text-amber-50/70">
-              Practicing{" "}
-              <strong>
-                {filteredSentences.length}
-              </strong>{" "}
-              difficult sentence
-              {filteredSentences.length === 1
-                ? ""
-                : "s"}{" "}
-              from your history.
-            </p>
+              <p className="mt-1 text-sm text-amber-50/70">
+                Practicing{" "}
+                <strong>
+                  {filteredSentences.length}
+                </strong>{" "}
+                difficult sentence
+                {filteredSentences.length === 1
+                  ? ""
+                  : "s"}{" "}
+                from your history.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="rounded-2xl border border-amber-200/20 bg-black/10 px-4 py-2 text-sm font-semibold text-amber-50 transition hover:bg-black/20"
+            >
+              Exit Review
+            </button>
           </div>
 
-          <button
-            type="button"
-            onClick={clearFilters}
-            className="rounded-2xl border border-amber-200/20 bg-black/10 px-4 py-2 text-sm font-semibold text-amber-50 transition hover:bg-black/20"
-          >
-            Exit Review
-          </button>
-        </div>
+          <div className="mb-6 rounded-3xl border border-white/10 bg-white/5 p-5">
+            <div className="flex items-center justify-between gap-4">
+              <p className="text-sm font-semibold text-white">
+                Review Progress
+              </p>
+
+              <p className="text-sm text-white/60">
+                {completedCount} /{" "}
+                {filteredSentences.length}
+              </p>
+            </div>
+
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-amber-400 to-violet-400 transition-all duration-300"
+                style={{
+                  width: `${reviewProgressPercentage}%`,
+                }}
+              />
+            </div>
+          </div>
+        </>
       ) : initialSearchQuery ? (
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-amber-300/20 bg-amber-400/10 px-5 py-4">
           <div>
@@ -804,6 +1029,81 @@ const [
           >
             Exit Smart Review
           </button>
+        </div>
+      ) : null}
+
+      {isReviewComplete ? (
+        <div className="mb-6 rounded-[2rem] border border-emerald-300/20 bg-emerald-400/10 p-7 text-center">
+          <p className="text-sm font-semibold text-emerald-200">
+            Smart Review Complete
+          </p>
+
+          <h2 className="mt-2 text-3xl font-bold text-white">
+            Great work!
+          </h2>
+
+          <p className="mt-4 text-5xl font-bold text-white">
+            {reviewAverageScore}
+          </p>
+
+          <p className="mt-1 text-sm text-white/50">
+            Average score
+          </p>
+
+          <p className="mt-4 text-sm text-white/60">
+            You reviewed{" "}
+            {filteredSentences.length} sentence
+            {filteredSentences.length === 1
+              ? ""
+              : "s"}{" "}
+            in this session.
+          </p>
+
+          {isSavingReviewSession ? (
+            <p className="mt-4 text-sm text-violet-200">
+              Saving Smart Review session…
+            </p>
+          ) : null}
+
+          {reviewSessionMessage ? (
+            <div className="mx-auto mt-4 max-w-xl rounded-2xl border border-white/10 bg-black/10 px-4 py-3 text-sm text-white/70">
+              {reviewSessionMessage}
+            </div>
+          ) : null}
+
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
+            <button
+              type="button"
+              onClick={restartReviewSession}
+              className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 font-semibold text-white transition hover:bg-white/15"
+            >
+              Review Again
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                router.push(
+                  "/dashboard/ai/pronunciation/progress"
+                )
+              }
+              className="rounded-2xl bg-violet-500 px-5 py-3 font-semibold text-white transition hover:bg-violet-400"
+            >
+              Back to Dashboard
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                router.push(
+                  "/dashboard/ai/pronunciation"
+                )
+              }
+              className="rounded-2xl border border-white/10 bg-black/10 px-5 py-3 font-semibold text-white transition hover:bg-black/20"
+            >
+              Continue Daily Practice
+            </button>
+          </div>
         </div>
       ) : null}
 
