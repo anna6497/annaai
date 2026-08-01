@@ -1,10 +1,30 @@
 import { createClient } from "@/lib/supabase/client";
 
-export type SaveCompletedReviewSessionInput = {
+export type ReviewResultStatus =
+  | "improved"
+  | "mastered"
+  | "needs_practice"
+  | "unchanged"
+  | "declined";
+
+export type CreateReviewSessionInput = {
   sentenceIds: string[];
+};
+
+export type SaveReviewSessionItemInput = {
+  reviewSessionId: string;
+  sentenceId: string;
+  targetText: string;
+  previousScore: number | null;
+  reviewScore: number;
+  previousAttemptId: string | null;
+  reviewAttemptId: string;
+};
+
+export type CompleteReviewSessionInput = {
+  reviewSessionId: string;
   completedSentenceIds: string[];
   averageScore: number;
-  startedAt: string;
 };
 
 export type LatestCompletedReviewSession = {
@@ -33,12 +53,40 @@ type ReviewSessionRow = {
   created_at: string;
 };
 
-export async function saveCompletedReviewSession({
+export function getReviewResultStatus(
+  previousScore: number | null,
+  reviewScore: number
+): ReviewResultStatus {
+  if (reviewScore >= 85) {
+    return "mastered";
+  }
+
+  if (previousScore === null) {
+    return reviewScore < 75
+      ? "needs_practice"
+      : "unchanged";
+  }
+
+  const change = reviewScore - previousScore;
+
+  if (change >= 5) {
+    return "improved";
+  }
+
+  if (change <= -5) {
+    return "declined";
+  }
+
+  if (reviewScore < 75) {
+    return "needs_practice";
+  }
+
+  return "unchanged";
+}
+
+export async function createReviewSession({
   sentenceIds,
-  completedSentenceIds,
-  averageScore,
-  startedAt,
-}: SaveCompletedReviewSessionInput): Promise<string> {
+}: CreateReviewSessionInput): Promise<string> {
   const supabase = createClient();
 
   const {
@@ -52,7 +100,7 @@ export async function saveCompletedReviewSession({
 
   if (!user) {
     throw new Error(
-      "Please sign in before saving your Smart Review session."
+      "Please sign in before starting Smart Review."
     );
   }
 
@@ -64,53 +112,25 @@ export async function saveCompletedReviewSession({
     )
   );
 
-  const normalizedCompletedSentenceIds = Array.from(
-    new Set(
-      completedSentenceIds
-        .map((sentenceId) => sentenceId.trim())
-        .filter((sentenceId) =>
-          normalizedSentenceIds.includes(sentenceId)
-        )
-    )
-  );
-
   if (normalizedSentenceIds.length === 0) {
     throw new Error(
-      "The Smart Review session does not contain any sentences."
+      "Smart Review does not contain any sentences."
     );
   }
-
-  if (
-    normalizedCompletedSentenceIds.length !==
-    normalizedSentenceIds.length
-  ) {
-    throw new Error(
-      "The Smart Review session is not complete yet."
-    );
-  }
-
-  const safeAverageScore = Math.max(
-    0,
-    Math.min(100, Math.round(averageScore))
-  );
-
-  const completedAt = new Date().toISOString();
 
   const { data, error } = await supabase
     .from("ai_speaking_review_sessions")
     .insert({
       user_id: user.id,
       sentence_ids: normalizedSentenceIds,
-      completed_sentence_ids:
-        normalizedCompletedSentenceIds,
+      completed_sentence_ids: [],
       total_sentences:
         normalizedSentenceIds.length,
-      completed_sentences:
-        normalizedCompletedSentenceIds.length,
-      average_score: safeAverageScore,
-      status: "completed",
-      started_at: startedAt,
-      completed_at: completedAt,
+      completed_sentences: 0,
+      average_score: 0,
+      status: "started",
+      started_at: new Date().toISOString(),
+      completed_at: null,
     })
     .select("id")
     .single();
@@ -121,11 +141,158 @@ export async function saveCompletedReviewSession({
 
   if (!data?.id) {
     throw new Error(
-      "Smart Review session was saved, but no session ID was returned."
+      "Smart Review started, but no session ID was returned."
     );
   }
 
   return String(data.id);
+}
+
+export async function saveReviewSessionItem({
+  reviewSessionId,
+  sentenceId,
+  targetText,
+  previousScore,
+  reviewScore,
+  previousAttemptId,
+  reviewAttemptId,
+}: SaveReviewSessionItemInput): Promise<void> {
+  const supabase = createClient();
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError) {
+    throw new Error(userError.message);
+  }
+
+  if (!user) {
+    throw new Error(
+      "Please sign in before saving Smart Review progress."
+    );
+  }
+
+  const safeReviewScore = Math.max(
+    0,
+    Math.min(100, Math.round(reviewScore))
+  );
+
+  const safePreviousScore =
+    previousScore === null
+      ? null
+      : Math.max(
+          0,
+          Math.min(
+            100,
+            Math.round(previousScore)
+          )
+        );
+
+  const scoreChange =
+    safePreviousScore === null
+      ? 0
+      : safeReviewScore -
+        safePreviousScore;
+
+  const resultStatus =
+    getReviewResultStatus(
+      safePreviousScore,
+      safeReviewScore
+    );
+
+  const { error } = await supabase
+    .from("ai_speaking_review_session_items")
+    .upsert(
+      {
+        review_session_id:
+          reviewSessionId,
+        user_id: user.id,
+        sentence_id: sentenceId,
+        target_text: targetText,
+        previous_score:
+          safePreviousScore,
+        review_score:
+          safeReviewScore,
+        score_change: scoreChange,
+        result_status: resultStatus,
+        previous_attempt_id:
+          previousAttemptId,
+        review_attempt_id:
+          reviewAttemptId,
+      },
+      {
+        onConflict:
+          "review_session_id,sentence_id",
+      }
+    );
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+export async function completeReviewSession({
+  reviewSessionId,
+  completedSentenceIds,
+  averageScore,
+}: CompleteReviewSessionInput): Promise<void> {
+  const supabase = createClient();
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError) {
+    throw new Error(userError.message);
+  }
+
+  if (!user) {
+    throw new Error(
+      "Please sign in before completing Smart Review."
+    );
+  }
+
+  const normalizedCompletedSentenceIds =
+    Array.from(
+      new Set(
+        completedSentenceIds
+          .map((sentenceId) =>
+            sentenceId.trim()
+          )
+          .filter(Boolean)
+      )
+    );
+
+  const safeAverageScore = Math.max(
+    0,
+    Math.min(
+      100,
+      Math.round(averageScore)
+    )
+  );
+
+  const { error } = await supabase
+    .from("ai_speaking_review_sessions")
+    .update({
+      completed_sentence_ids:
+        normalizedCompletedSentenceIds,
+      completed_sentences:
+        normalizedCompletedSentenceIds.length,
+      average_score:
+        safeAverageScore,
+      status: "completed",
+      completed_at:
+        new Date().toISOString(),
+    })
+    .eq("id", reviewSessionId)
+    .eq("user_id", user.id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
 }
 
 export async function getLatestCompletedReviewSession(): Promise<LatestCompletedReviewSession | null> {
@@ -185,13 +352,16 @@ export async function getLatestCompletedReviewSession(): Promise<LatestCompleted
 
   return {
     id: row.id,
-    sentenceIds: row.sentence_ids ?? [],
+    sentenceIds:
+      row.sentence_ids ?? [],
     completedSentenceIds:
       row.completed_sentence_ids ?? [],
     totalSentences:
       Number(row.total_sentences ?? 0),
     completedSentences:
-      Number(row.completed_sentences ?? 0),
+      Number(
+        row.completed_sentences ?? 0
+      ),
     averageScore:
       Number(row.average_score ?? 0),
     status: "completed",

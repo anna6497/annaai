@@ -11,6 +11,7 @@ import type {
 export type PronunciationHistoryRecord = {
   id: string;
   sentence_id: string;
+  review_session_id: string | null;
   level: number;
   lesson: number;
   category: string;
@@ -35,13 +36,15 @@ type SavePronunciationAttemptInput = {
   sentence: SpeakingPracticeSentence;
   result: PronunciationCheckResponse;
   recordingDuration: number;
+  reviewSessionId?: string | null;
 };
 
 export async function savePronunciationAttempt({
   sentence,
   result,
   recordingDuration,
-}: SavePronunciationAttemptInput): Promise<void> {
+  reviewSessionId = null,
+}: SavePronunciationAttemptInput): Promise<string> {
   const supabase = createClient();
 
   const {
@@ -59,10 +62,11 @@ export async function savePronunciationAttempt({
     );
   }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("ai_speaking_pronunciation_attempts")
     .insert({
       user_id: user.id,
+      review_session_id: reviewSessionId,
       sentence_id: sentence.id,
       level: sentence.level,
       lesson: sentence.lesson,
@@ -84,11 +88,82 @@ export async function savePronunciationAttempt({
         recordingDuration,
       processing_seconds:
         result.processing_seconds,
-    });
+    })
+    .select("id")
+    .single();
 
   if (error) {
     throw new Error(error.message);
   }
+
+  if (!data?.id) {
+    throw new Error(
+      "The pronunciation attempt was saved, but no attempt ID was returned."
+    );
+  }
+
+  return String(data.id);
+}
+
+export async function getLatestAttemptBefore(
+  sentenceId: string,
+  beforeIso: string
+): Promise<PronunciationHistoryRecord | null> {
+  const supabase = createClient();
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError) {
+    throw new Error(userError.message);
+  }
+
+  if (!user) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from("ai_speaking_pronunciation_attempts")
+    .select(
+      `
+        id,
+        sentence_id,
+        review_session_id,
+        level,
+        lesson,
+        category,
+        target_text,
+        recognized_text,
+        overall_score,
+        accuracy_score,
+        completeness_score,
+        fluency_score,
+        missing_characters,
+        extra_characters,
+        incorrect_characters,
+        recording_duration_seconds,
+        processing_seconds,
+        created_at
+      `
+    )
+    .eq("user_id", user.id)
+    .eq("sentence_id", sentenceId)
+    .lt("created_at", beforeIso)
+    .order("created_at", {
+      ascending: false,
+    })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (
+    data as PronunciationHistoryRecord | null
+  ) ?? null;
 }
 
 export async function getRecentPronunciationAttempts(
@@ -102,6 +177,7 @@ export async function getRecentPronunciationAttempts(
       `
         id,
         sentence_id,
+        review_session_id,
         level,
         lesson,
         category,

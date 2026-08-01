@@ -16,11 +16,14 @@ import {
 } from "@/lib/speaking-practice/api";
 
 import {
+  getLatestAttemptBefore,
   savePronunciationAttempt,
 } from "@/lib/speaking-practice/history";
 
 import {
-  saveCompletedReviewSession,
+  completeReviewSession,
+  createReviewSession,
+  saveReviewSessionItem,
 } from "@/lib/speaking-practice/review-session";
 
 import PronunciationFeedback from "@/components/speaking-practice/PronunciationFeedback";
@@ -55,12 +58,27 @@ export default function PronunciationPractice({
   const recordingStartedAtRef = useRef<number | null>(null);
   const recordedAudioUrlRef = useRef<string | null>(null);
 
-  const reviewStartedAtRef =
-    useRef<string>(
-      new Date().toISOString()
-    );
+  const [
+    activeReviewSessionId,
+    setActiveReviewSessionId,
+  ] = useState<string | null>(null);
 
-  const savedReviewSignatureRef =
+  const [
+    isCreatingReviewSession,
+    setIsCreatingReviewSession,
+  ] = useState(false);
+
+  const [
+    isSavingReviewSession,
+    setIsSavingReviewSession,
+  ] = useState(false);
+
+  const [
+    reviewSessionMessage,
+    setReviewSessionMessage,
+  ] = useState<string | null>(null);
+
+  const completedReviewSessionIdRef =
     useRef<string | null>(null);
 
   const [searchQuery, setSearchQuery] =
@@ -123,16 +141,6 @@ export default function PronunciationPractice({
 
   const [saveResultMessage, setSaveResultMessage] =
     useState<string | null>(null);
-
-  const [
-    isSavingReviewSession,
-    setIsSavingReviewSession,
-  ] = useState(false);
-
-  const [
-    reviewSessionMessage,
-    setReviewSessionMessage,
-  ] = useState<string | null>(null);
 
   const lessons = useMemo(() => {
     return Array.from(
@@ -319,13 +327,13 @@ export default function PronunciationPractice({
 
     setCompletedSentenceIds([]);
     setSessionScores({});
+    setActiveReviewSessionId(null);
     setIsSavingReviewSession(false);
     setReviewSessionMessage(null);
 
-    reviewStartedAtRef.current =
-      new Date().toISOString();
 
-    savedReviewSignatureRef.current = null;
+    completedReviewSessionIdRef.current =
+      null;
 
     setCurrentIndex(0);
   }, [
@@ -336,36 +344,33 @@ export default function PronunciationPractice({
   ]);
 
   useEffect(() => {
-    if (!isReviewComplete) {
-      return;
-    }
-
-    const signature = [...reviewSentenceIds]
-      .sort()
-      .join(",");
-
     if (
-      !signature ||
-      savedReviewSignatureRef.current ===
-        signature
+      !isReviewComplete ||
+      !activeReviewSessionId ||
+      completedReviewSessionIdRef.current ===
+        activeReviewSessionId
     ) {
       return;
     }
 
-    savedReviewSignatureRef.current = signature;
+    const reviewSessionId =
+      activeReviewSessionId;
+
+    completedReviewSessionIdRef.current =
+      reviewSessionId;
 
     let isCancelled = false;
 
-    async function saveSession() {
+    async function finishSession() {
       setIsSavingReviewSession(true);
       setReviewSessionMessage(null);
 
       try {
-        await saveCompletedReviewSession({
-          sentenceIds: reviewSentenceIds,
+        await completeReviewSession({
+          reviewSessionId,
           completedSentenceIds,
-          averageScore: reviewAverageScore,
-          startedAt: reviewStartedAtRef.current,
+          averageScore:
+            reviewAverageScore,
         });
 
         if (!isCancelled) {
@@ -375,12 +380,13 @@ export default function PronunciationPractice({
         }
       } catch (error) {
         console.error(
-          "Unable to save Smart Review session:",
+          "Unable to complete Smart Review session:",
           error
         );
 
         if (!isCancelled) {
-          savedReviewSignatureRef.current = null;
+          completedReviewSessionIdRef.current =
+            null;
 
           setReviewSessionMessage(
             error instanceof Error
@@ -395,16 +401,74 @@ export default function PronunciationPractice({
       }
     }
 
-    void saveSession();
+    void finishSession();
 
     return () => {
       isCancelled = true;
     };
   }, [
     isReviewComplete,
-    reviewSentenceIds,
+    activeReviewSessionId,
     completedSentenceIds,
     reviewAverageScore,
+  ]);
+
+  useEffect(() => {
+    if (
+      reviewSentenceIds.length === 0 ||
+      activeReviewSessionId ||
+      isCreatingReviewSession
+    ) {
+      return;
+    }
+
+    let isCancelled = false;
+
+    async function startSession() {
+      setIsCreatingReviewSession(true);
+      setReviewSessionMessage(null);
+
+      try {
+        const sessionId =
+          await createReviewSession({
+            sentenceIds:
+              reviewSentenceIds,
+          });
+
+        if (!isCancelled) {
+          setActiveReviewSessionId(
+            sessionId
+          );
+        }
+      } catch (error) {
+        console.error(
+          "Unable to create Smart Review session:",
+          error
+        );
+
+        if (!isCancelled) {
+          setReviewSessionMessage(
+            error instanceof Error
+              ? error.message
+              : "Smart Review session could not be started."
+          );
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsCreatingReviewSession(false);
+        }
+      }
+    }
+
+    void startSession();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [
+    reviewSentenceIds,
+    activeReviewSessionId,
+    isCreatingReviewSession,
   ]);
 
   useEffect(() => {
@@ -737,11 +801,44 @@ export default function PronunciationPractice({
       setIsSavingResult(true);
 
       try {
-        await savePronunciationAttempt({
-          sentence: currentSentence,
-          result,
-          recordingDuration,
-        });
+        const previousAttempt =
+          isReviewMode
+            ? await getLatestAttemptBefore(
+                currentSentence.id,
+                new Date().toISOString()
+              )
+            : null;
+
+        const reviewAttemptId =
+          await savePronunciationAttempt({
+            sentence: currentSentence,
+            result,
+            recordingDuration,
+            reviewSessionId:
+              activeReviewSessionId,
+          });
+
+        if (
+          isReviewMode &&
+          activeReviewSessionId
+        ) {
+          await saveReviewSessionItem({
+            reviewSessionId:
+              activeReviewSessionId,
+            sentenceId:
+              currentSentence.id,
+            targetText:
+              currentSentence.hanzi,
+            previousScore:
+              previousAttempt?.overall_score ??
+              null,
+            reviewScore:
+              result.scores.overall,
+            previousAttemptId:
+              previousAttempt?.id ?? null,
+            reviewAttemptId,
+          });
+        }
 
         setSaveResultMessage(
           "Score saved to your speaking history."
@@ -798,13 +895,13 @@ export default function PronunciationPractice({
     setReviewSentenceIds([]);
     setCompletedSentenceIds([]);
     setSessionScores({});
+    setActiveReviewSessionId(null);
     setIsSavingReviewSession(false);
     setReviewSessionMessage(null);
 
-    reviewStartedAtRef.current =
-      new Date().toISOString();
 
-    savedReviewSignatureRef.current = null;
+    completedReviewSessionIdRef.current =
+      null;
 
     setCurrentIndex(0);
 
@@ -819,13 +916,13 @@ export default function PronunciationPractice({
   function restartReviewSession() {
     setCompletedSentenceIds([]);
     setSessionScores({});
+    setActiveReviewSessionId(null);
     setIsSavingReviewSession(false);
     setReviewSessionMessage(null);
 
-    reviewStartedAtRef.current =
-      new Date().toISOString();
 
-    savedReviewSignatureRef.current = null;
+    completedReviewSessionIdRef.current =
+      null;
 
     setCurrentIndex(0);
     resetRecording();
@@ -984,6 +1081,12 @@ export default function PronunciationPractice({
               Exit Review
             </button>
           </div>
+
+          {isCreatingReviewSession ? (
+            <p className="mb-4 text-sm text-violet-200">
+              Starting Smart Review session…
+            </p>
+          ) : null}
 
           <div className="mb-6 rounded-3xl border border-white/10 bg-white/5 p-5">
             <div className="flex items-center justify-between gap-4">
@@ -1242,7 +1345,9 @@ export default function PronunciationPractice({
                       }
                       disabled={
                         isCheckingScore ||
-                        isSavingResult
+                        isSavingResult ||
+                        (isReviewMode &&
+                          !activeReviewSessionId)
                       }
                       className="rounded-2xl bg-violet-500 px-6 py-3 font-semibold text-white disabled:opacity-50"
                     >
@@ -1376,7 +1481,9 @@ export default function PronunciationPractice({
                   currentIndex === 0 ||
                   isRecording ||
                   isCheckingScore ||
-                  isSavingResult
+                  isSavingResult ||
+                  (isReviewMode &&
+                    !activeReviewSessionId)
                 }
                 className="rounded-xl border border-white/10 px-5 py-3 text-sm font-semibold text-white disabled:opacity-30"
               >
@@ -1392,7 +1499,9 @@ export default function PronunciationPractice({
                   !recordedAudioBlob ||
                   isRecording ||
                   isCheckingScore ||
-                  isSavingResult
+                  isSavingResult ||
+                  (isReviewMode &&
+                    !activeReviewSessionId)
                 }
                 className="rounded-xl bg-violet-500 px-5 py-3 text-sm font-semibold text-white disabled:opacity-40"
               >
@@ -1411,7 +1520,9 @@ export default function PronunciationPractice({
                     filteredSentences.length - 1 ||
                   isRecording ||
                   isCheckingScore ||
-                  isSavingResult
+                  isSavingResult ||
+                  (isReviewMode &&
+                    !activeReviewSessionId)
                 }
                 className="rounded-xl bg-violet-500 px-5 py-3 text-sm font-semibold text-white disabled:opacity-30"
               >

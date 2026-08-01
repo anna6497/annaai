@@ -21,19 +21,17 @@ import {
 
 const EMPTY_DASHBOARD: SpeakingDashboardData = {
   isAuthenticated: false,
-
   todayGoal: 10,
   todayCompleted: 0,
   todayProgressPercentage: 0,
-
   currentStreak: 0,
   averageScore: 0,
   totalAttempts: 0,
   practicedSentenceCount: 0,
-
   weakCharacters: [],
   recentAttempts: [],
   latestReviewSession: null,
+  latestReviewImprovement: null,
 };
 
 const DAILY_GOALS: SpeakingDailyGoal[] = [
@@ -43,12 +41,10 @@ const DAILY_GOALS: SpeakingDailyGoal[] = [
 ];
 
 export default function SpeakingDashboard() {
-  const [
-    dashboard,
-    setDashboard,
-  ] = useState<SpeakingDashboardData>(
-    EMPTY_DASHBOARD
-  );
+  const [dashboard, setDashboard] =
+    useState<SpeakingDashboardData>(
+      EMPTY_DASHBOARD
+    );
 
   const [isLoading, setIsLoading] =
     useState(true);
@@ -72,10 +68,9 @@ export default function SpeakingDashboard() {
       setError(null);
 
       try {
-        const result =
-          await getSpeakingDashboardData();
-
-        setDashboard(result);
+        setDashboard(
+          await getSpeakingDashboardData()
+        );
       } catch (loadError) {
         console.error(
           "Unable to load speaking dashboard:",
@@ -114,21 +109,19 @@ export default function SpeakingDashboard() {
         dailyGoal
       );
 
-      const todayProgressPercentage =
-        Math.min(
-          100,
-          Math.round(
-            (dashboard.todayCompleted /
-              dailyGoal) *
-              100
-          )
-        );
-
       setDashboard(
-        (previousDashboard) => ({
-          ...previousDashboard,
+        (previous) => ({
+          ...previous,
           todayGoal: dailyGoal,
-          todayProgressPercentage,
+          todayProgressPercentage:
+            Math.min(
+              100,
+              Math.round(
+                (previous.todayCompleted /
+                  dailyGoal) *
+                  100
+              )
+            ),
         })
       );
 
@@ -136,11 +129,6 @@ export default function SpeakingDashboard() {
         `Daily goal changed to ${dailyGoal} sentences.`
       );
     } catch (saveError) {
-      console.error(
-        "Unable to save daily goal:",
-        saveError
-      );
-
       setGoalMessage(
         saveError instanceof Error
           ? saveError.message
@@ -151,32 +139,35 @@ export default function SpeakingDashboard() {
     }
   }
 
-  const reviewAgainHref = useMemo(() => {
-    const sentenceIds =
-      dashboard.latestReviewSession
-        ?.sentenceIds ?? [];
+  const reviewAgainHref =
+    useMemo(() => {
+      const sentenceIds =
+        dashboard
+          .latestReviewSession
+          ?.sentenceIds ?? [];
 
-    if (sentenceIds.length === 0) {
-      return "/dashboard/ai/pronunciation/review";
-    }
+      if (sentenceIds.length === 0) {
+        return "/dashboard/ai/pronunciation/review";
+      }
 
-    return `/dashboard/ai/pronunciation?review=${encodeURIComponent(
-      sentenceIds.join(",")
-    )}`;
-  }, [dashboard.latestReviewSession]);
+      return `/dashboard/ai/pronunciation?review=${encodeURIComponent(
+        sentenceIds.join(",")
+      )}`;
+    }, [
+      dashboard.latestReviewSession,
+    ]);
 
   if (isLoading) {
     return (
-      <DashboardMessage>
-        Loading your speaking
-        progress…
-      </DashboardMessage>
+      <MessageCard>
+        Loading your speaking progress…
+      </MessageCard>
     );
   }
 
   if (error) {
     return (
-      <DashboardMessage>
+      <MessageCard>
         <p>{error}</p>
 
         <button
@@ -184,46 +175,37 @@ export default function SpeakingDashboard() {
           onClick={() =>
             void loadDashboard()
           }
-          className="mt-5 rounded-2xl bg-violet-500 px-6 py-3 font-semibold text-white transition hover:bg-violet-400"
+          className="mt-5 rounded-2xl bg-violet-500 px-6 py-3 font-semibold text-white"
         >
           Try Again
         </button>
-      </DashboardMessage>
+      </MessageCard>
     );
   }
 
   if (!dashboard.isAuthenticated) {
     return (
-      <DashboardMessage>
+      <MessageCard>
         <h1 className="text-2xl font-bold text-white">
-          Sign in to view your
-          progress
+          Sign in to view your progress
         </h1>
-
-        <p className="mt-3 text-white/60">
-          Your scores, streak,
-          difficult characters, and
-          practice history will appear
-          here.
-        </p>
 
         <Link
           href="/login"
-          className="mt-6 inline-flex rounded-2xl bg-violet-500 px-6 py-3 font-semibold text-white transition hover:bg-violet-400"
+          className="mt-6 inline-flex rounded-2xl bg-violet-500 px-6 py-3 font-semibold text-white"
         >
           Sign In
         </Link>
-      </DashboardMessage>
+      </MessageCard>
     );
   }
 
-  const goalCompleted =
-    dashboard.todayCompleted >=
-    dashboard.todayGoal;
+  const improvement =
+    dashboard.latestReviewImprovement;
 
   return (
     <section className="mx-auto w-full max-w-6xl">
-      <div className="flex flex-wrap items-end justify-between gap-5">
+      <header className="flex flex-wrap items-end justify-between gap-5">
         <div>
           <p className="text-sm font-semibold text-violet-200">
             Anna AI V6
@@ -232,167 +214,94 @@ export default function SpeakingDashboard() {
           <h1 className="mt-1 text-3xl font-bold text-white sm:text-4xl">
             Speaking Dashboard
           </h1>
-
-          <p className="mt-2 text-white/55">
-            Practice every day and
-            improve your Chinese
-            pronunciation.
-          </p>
         </div>
 
         <div className="flex flex-wrap gap-3">
           <Link
             href="/dashboard/ai/pronunciation/review"
-            className="rounded-2xl border border-amber-300/20 bg-amber-400/10 px-6 py-3 font-semibold text-amber-100 transition hover:bg-amber-400/15"
+            className="rounded-2xl border border-amber-300/20 bg-amber-400/10 px-6 py-3 font-semibold text-amber-100"
           >
             Smart Review
           </Link>
 
           <Link
             href="/dashboard/ai/pronunciation"
-            className="rounded-2xl bg-violet-500 px-6 py-3 font-semibold text-white shadow-lg transition hover:bg-violet-400"
+            className="rounded-2xl bg-violet-500 px-6 py-3 font-semibold text-white"
           >
             Continue Practice →
           </Link>
         </div>
-      </div>
+      </header>
 
       <div className="mt-8 grid gap-5 lg:grid-cols-[1.5fr_1fr]">
-        <div className="rounded-[2rem] border border-white/10 bg-white/10 p-6 shadow-xl backdrop-blur-xl">
-          <div className="flex flex-wrap items-start justify-between gap-5">
-            <div>
-              <p className="text-sm font-semibold text-violet-200">
-                Today&apos;s Goal
-              </p>
+        <section className="rounded-[2rem] border border-white/10 bg-white/10 p-6">
+          <p className="text-sm font-semibold text-violet-200">
+            Today&apos;s Goal
+          </p>
 
-              <p className="mt-2 text-4xl font-bold text-white">
-                {dashboard.todayCompleted}{" "}
-                / {dashboard.todayGoal}
-              </p>
-
-              <p className="mt-2 text-sm text-white/55">
-                Different sentences
-                practiced today
-              </p>
-            </div>
-
-            <div className="flex h-24 w-24 items-center justify-center rounded-full border-8 border-violet-400/25 bg-black/10">
-              <span className="text-xl font-bold text-white">
-                {
-                  dashboard.todayProgressPercentage
-                }
-                %
-              </span>
-            </div>
-          </div>
+          <p className="mt-2 text-4xl font-bold text-white">
+            {dashboard.todayCompleted} /{" "}
+            {dashboard.todayGoal}
+          </p>
 
           <div className="mt-6 h-3 overflow-hidden rounded-full bg-white/10">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-violet-400 to-fuchsia-400 transition-all duration-500"
+              className="h-full rounded-full bg-gradient-to-r from-violet-400 to-fuchsia-400"
               style={{
                 width: `${dashboard.todayProgressPercentage}%`,
               }}
             />
           </div>
 
-          <div className="mt-5 rounded-2xl bg-black/15 px-4 py-3 text-sm text-white/65">
-            {goalCompleted
-              ? "🎉 Daily goal completed! Great work."
-              : `${Math.max(
-                  dashboard.todayGoal -
-                    dashboard.todayCompleted,
-                  0
-                )} more sentence${
-                  dashboard.todayGoal -
-                    dashboard.todayCompleted ===
-                  1
-                    ? ""
-                    : "s"
-                } to complete today’s goal.`}
-          </div>
-
-          <div className="mt-6 border-t border-white/10 pt-5">
-            <p className="text-sm font-semibold text-white">
-              Set daily goal
-            </p>
-
-            <p className="mt-1 text-xs text-white/45">
-              Choose how many different
-              sentences you want to
-              practice each day.
-            </p>
-
-            <div className="mt-4 flex flex-wrap gap-3">
-              {DAILY_GOALS.map(
-                (dailyGoal) => {
-                  const isSelected =
+          <div className="mt-6 flex flex-wrap gap-3">
+            {DAILY_GOALS.map(
+              (dailyGoal) => (
+                <button
+                  key={dailyGoal}
+                  type="button"
+                  disabled={isSavingGoal}
+                  onClick={() =>
+                    void handleGoalChange(
+                      dailyGoal
+                    )
+                  }
+                  className={`rounded-2xl px-5 py-3 text-sm font-semibold ${
                     dashboard.todayGoal ===
-                    dailyGoal;
-
-                  return (
-                    <button
-                      key={dailyGoal}
-                      type="button"
-                      onClick={() =>
-                        void handleGoalChange(
-                          dailyGoal
-                        )
-                      }
-                      disabled={
-                        isSavingGoal
-                      }
-                      className={`rounded-2xl px-5 py-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
-                        isSelected
-                          ? "bg-violet-500 text-white shadow-lg"
-                          : "border border-white/10 bg-white/5 text-white/70 hover:bg-white/10"
-                      }`}
-                    >
-                      {dailyGoal}{" "}
-                      sentences
-                    </button>
-                  );
-                }
-              )}
-            </div>
-
-            {isSavingGoal ? (
-              <p className="mt-3 text-sm text-violet-200">
-                Saving daily goal…
-              </p>
-            ) : null}
-
-            {goalMessage ? (
-              <p className="mt-3 text-sm text-white/60">
-                {goalMessage}
-              </p>
-            ) : null}
+                    dailyGoal
+                      ? "bg-violet-500 text-white"
+                      : "border border-white/10 bg-white/5 text-white/70"
+                  }`}
+                >
+                  {dailyGoal} sentences
+                </button>
+              )
+            )}
           </div>
-        </div>
+
+          {goalMessage ? (
+            <p className="mt-3 text-sm text-white/60">
+              {goalMessage}
+            </p>
+          ) : null}
+        </section>
 
         <div className="grid grid-cols-2 gap-4">
-          <MetricCard
-            icon="🔥"
-            label="Current Streak"
+          <Metric
+            label="Streak"
             value={`${dashboard.currentStreak} days`}
           />
-
-          <MetricCard
-            icon="⭐"
-            label="Average Score"
+          <Metric
+            label="Average"
             value={`${dashboard.averageScore}%`}
           />
-
-          <MetricCard
-            icon="🎤"
-            label="Total Attempts"
+          <Metric
+            label="Attempts"
             value={String(
               dashboard.totalAttempts
             )}
           />
-
-          <MetricCard
-            icon="📚"
-            label="Sentences Practiced"
+          <Metric
+            label="Sentences"
             value={String(
               dashboard.practicedSentenceCount
             )}
@@ -400,59 +309,25 @@ export default function SpeakingDashboard() {
         </div>
       </div>
 
-      <div className="mt-6 rounded-[2rem] border border-violet-300/15 bg-violet-400/10 p-6 shadow-xl backdrop-blur-xl">
+      <section className="mt-6 rounded-[2rem] border border-violet-300/15 bg-violet-400/10 p-6">
         <div className="flex flex-wrap items-start justify-between gap-5">
           <div>
             <p className="text-sm font-semibold text-violet-200">
               Last Smart Review
             </p>
 
-            {dashboard.latestReviewSession ? (
-              <>
-                <h2 className="mt-2 text-2xl font-bold text-white">
-                  {
-                    dashboard
-                      .latestReviewSession
-                      .completedSentences
-                  }{" "}
-                  sentence
-                  {dashboard.latestReviewSession
-                    .completedSentences === 1
-                    ? ""
-                    : "s"}{" "}
-                  reviewed
-                </h2>
-
-                <p className="mt-2 text-sm text-white/55">
-                  Completed{" "}
-                  {formatRelativeDate(
-                    dashboard
-                      .latestReviewSession
-                      .completedAt
-                  )}
-                </p>
-              </>
-            ) : (
-              <>
-                <h2 className="mt-2 text-2xl font-bold text-white">
-                  No completed review yet
-                </h2>
-
-                <p className="mt-2 text-sm text-white/55">
-                  Complete a Smart Review
-                  session to see your latest
-                  result here.
-                </p>
-              </>
-            )}
+            <h2 className="mt-2 text-2xl font-bold text-white">
+              {dashboard.latestReviewSession
+                ? `${dashboard.latestReviewSession.completedSentences} sentences reviewed`
+                : "No completed review yet"}
+            </h2>
           </div>
 
           {dashboard.latestReviewSession ? (
             <div className="rounded-3xl bg-black/15 px-6 py-4 text-center">
-              <p className="text-xs uppercase tracking-wide text-white/40">
+              <p className="text-xs text-white/40">
                 Average Score
               </p>
-
               <p className="mt-1 text-4xl font-bold text-white">
                 {
                   dashboard
@@ -467,359 +342,247 @@ export default function SpeakingDashboard() {
         <div className="mt-6 flex flex-wrap gap-3">
           <Link
             href={reviewAgainHref}
-            className="rounded-2xl bg-violet-500 px-6 py-3 font-semibold text-white transition hover:bg-violet-400"
+            className="rounded-2xl bg-violet-500 px-6 py-3 font-semibold text-white"
           >
-            {dashboard.latestReviewSession
-              ? "Review Again →"
-              : "Start Smart Review →"}
+            Review Again →
           </Link>
 
           <Link
             href="/dashboard/ai/pronunciation/review"
-            className="rounded-2xl border border-white/10 bg-white/5 px-6 py-3 font-semibold text-white/75 transition hover:bg-white/10"
+            className="rounded-2xl border border-white/10 bg-white/5 px-6 py-3 font-semibold text-white/75"
           >
             Build New Review
           </Link>
         </div>
-      </div>
+      </section>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <div className="rounded-[2rem] border border-white/10 bg-white/10 p-6 shadow-xl backdrop-blur-xl">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <p className="text-sm font-semibold text-violet-200">
-                Smart Review
-              </p>
+      <section className="mt-6 rounded-[2rem] border border-emerald-300/15 bg-emerald-400/10 p-6">
+        <p className="text-sm font-semibold text-emerald-200">
+          Improvement Summary
+        </p>
 
-              <h2 className="mt-1 text-xl font-bold text-white">
-                Weak Characters
-              </h2>
+        {!improvement ? (
+          <p className="mt-3 text-white/60">
+            Complete a Smart Review to see
+            improvement analytics.
+          </p>
+        ) : (
+          <>
+            <div className="mt-5 grid gap-4 sm:grid-cols-3">
+              <Metric
+                label="Previous Average"
+                value={
+                  improvement.previousAverage ===
+                  null
+                    ? "—"
+                    : String(
+                        improvement.previousAverage
+                      )
+                }
+              />
 
-              <p className="mt-2 text-sm text-white/45">
-                Review characters you
-                missed or pronounced
-                incorrectly.
-              </p>
+              <Metric
+                label="Latest Average"
+                value={String(
+                  improvement.latestAverage
+                )}
+              />
+
+              <Metric
+                label="Improvement"
+                value={
+                  improvement.averageImprovement ===
+                  null
+                    ? "—"
+                    : `${improvement.averageImprovement >= 0 ? "+" : ""}${improvement.averageImprovement}`
+                }
+              />
             </div>
 
-            <Link
-              href="/dashboard/ai/pronunciation/review"
-              className="rounded-xl border border-amber-300/20 bg-amber-400/10 px-4 py-2 text-sm font-semibold text-amber-100 transition hover:bg-amber-400/15"
-            >
-              Start Smart Review →
-            </Link>
-          </div>
-
-          {dashboard.weakCharacters
-            .length === 0 ? (
-            <div className="mt-6 rounded-2xl bg-black/15 p-6 text-center">
-              <p className="font-semibold text-white">
-                No difficult
-                characters yet
-              </p>
-
-              <p className="mt-2 text-sm text-white/50">
-                Complete pronunciation
-                checks to build your
-                review list.
-              </p>
-
-              <Link
-                href="/dashboard/ai/pronunciation"
-                className="mt-4 inline-flex text-sm font-semibold text-violet-200"
-              >
-                Start practicing →
-              </Link>
+            <div className="mt-5 grid gap-3 sm:grid-cols-4">
+              <SummaryPill
+                label="Improved"
+                value={
+                  improvement.improvedCount
+                }
+              />
+              <SummaryPill
+                label="Mastered"
+                value={
+                  improvement.masteredCount
+                }
+              />
+              <SummaryPill
+                label="Needs Practice"
+                value={
+                  improvement.needsPracticeCount
+                }
+              />
+              <SummaryPill
+                label="Declined"
+                value={
+                  improvement.declinedCount
+                }
+              />
             </div>
-          ) : (
-            <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {dashboard.weakCharacters.map(
+
+            <div className="mt-6 space-y-3">
+              {improvement.items.map(
                 (item) => (
-                  <Link
-                    key={item.character}
-                    href={`/dashboard/ai/pronunciation?q=${encodeURIComponent(
-                      item.character
-                    )}`}
-                    className="rounded-2xl border border-amber-300/15 bg-amber-400/10 p-4 text-center transition hover:-translate-y-0.5 hover:bg-amber-400/15"
+                  <div
+                    key={item.sentenceId}
+                    className="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-black/15 px-4 py-3"
                   >
-                    <p className="text-4xl font-semibold text-amber-50">
-                      {item.character}
-                    </p>
-
-                    <p className="mt-2 text-xs text-amber-100/60">
-                      {
-                        item.mistakeCount
-                      }{" "}
-                      mistake
-                      {item.mistakeCount ===
-                      1
-                        ? ""
-                        : "s"}
-                    </p>
-                  </Link>
-                )
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="rounded-[2rem] border border-white/10 bg-white/10 p-6 shadow-xl backdrop-blur-xl">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <p className="text-sm font-semibold text-violet-200">
-                History
-              </p>
-
-              <h2 className="mt-1 text-xl font-bold text-white">
-                Recent Practice
-              </h2>
-            </div>
-
-            <button
-              type="button"
-              onClick={() =>
-                void loadDashboard()
-              }
-              className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white/70 transition hover:bg-white/10"
-            >
-              Refresh
-            </button>
-          </div>
-
-          {dashboard.recentAttempts
-            .length === 0 ? (
-            <div className="mt-6 rounded-2xl bg-black/15 p-6 text-center">
-              <p className="font-semibold text-white">
-                No practice history
-                yet
-              </p>
-
-              <p className="mt-2 text-sm text-white/50">
-                Your recent scores
-                will appear here.
-              </p>
-
-              <Link
-                href="/dashboard/ai/pronunciation"
-                className="mt-4 inline-flex text-sm font-semibold text-violet-200"
-              >
-                Start practicing →
-              </Link>
-            </div>
-          ) : (
-            <div className="mt-5 space-y-3">
-              {dashboard.recentAttempts.map(
-                (attempt) => (
-                  <Link
-                    key={attempt.id}
-                    href={`/dashboard/ai/pronunciation?q=${encodeURIComponent(
-                      attempt.targetText
-                    )}`}
-                    className="flex items-center justify-between gap-4 rounded-2xl bg-black/15 px-4 py-3 transition hover:bg-black/25"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-lg font-semibold text-white">
-                        {
-                          attempt.targetText
-                        }
+                    <div>
+                      <p className="text-lg font-semibold text-white">
+                        {item.targetText}
                       </p>
 
-                      <p className="mt-1 truncate text-sm text-violet-200/70">
-                        Anna heard:{" "}
-                        {
-                          attempt.recognizedText
-                        }
-                      </p>
-
-                      <p className="mt-1 text-xs text-white/40">
-                        Lesson{" "}
-                        {
-                          attempt.lesson
-                        }{" "}
-                        ·{" "}
-                        {formatCategory(
-                          attempt.category
-                        )}{" "}
-                        ·{" "}
-                        {formatDate(
-                          attempt.createdAt
+                      <p className="mt-1 text-xs text-white/45">
+                        {formatStatus(
+                          item.status
                         )}
                       </p>
                     </div>
 
-                    <div
-                      className={`shrink-0 rounded-full px-3 py-1 text-sm font-bold ${getScoreClass(
-                        attempt.overallScore
-                      )}`}
-                    >
-                      {
-                        attempt.overallScore
-                      }
-                    </div>
-                  </Link>
+                    <p className="font-semibold text-white">
+                      {item.previousScore ??
+                        "—"}{" "}
+                      → {item.reviewScore}
+                      {item.previousScore !==
+                      null ? (
+                        <span className="ml-2 text-emerald-200">
+                          (
+                          {item.scoreChange >= 0
+                            ? "+"
+                            : ""}
+                          {item.scoreChange})
+                        </span>
+                      ) : null}
+                    </p>
+                  </div>
                 )
               )}
             </div>
-          )}
-        </div>
-      </div>
+          </>
+        )}
+      </section>
 
-      <div className="mt-6 flex flex-wrap justify-center gap-3">
-        <Link
-          href="/dashboard/ai/pronunciation/review"
-          className="rounded-2xl border border-amber-300/20 bg-amber-400/10 px-6 py-3 font-semibold text-amber-100 transition hover:bg-amber-400/15"
-        >
-          Practice Weak Sentences
-        </Link>
+      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+        <section className="rounded-[2rem] border border-white/10 bg-white/10 p-6">
+          <h2 className="text-xl font-bold text-white">
+            Weak Characters
+          </h2>
 
-        <Link
-          href="/dashboard/ai/pronunciation"
-          className="rounded-2xl bg-violet-500 px-6 py-3 font-semibold text-white transition hover:bg-violet-400"
-        >
-          Continue Daily Practice
-        </Link>
+          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {dashboard.weakCharacters.map(
+              (item) => (
+                <Link
+                  key={item.character}
+                  href={`/dashboard/ai/pronunciation?q=${encodeURIComponent(
+                    item.character
+                  )}`}
+                  className="rounded-2xl bg-amber-400/10 p-4 text-center"
+                >
+                  <p className="text-4xl font-semibold text-amber-50">
+                    {item.character}
+                  </p>
+                  <p className="mt-2 text-xs text-amber-100/60">
+                    {item.mistakeCount} mistakes
+                  </p>
+                </Link>
+              )
+            )}
+          </div>
+        </section>
+
+        <section className="rounded-[2rem] border border-white/10 bg-white/10 p-6">
+          <h2 className="text-xl font-bold text-white">
+            Recent Practice
+          </h2>
+
+          <div className="mt-5 space-y-3">
+            {dashboard.recentAttempts.map(
+              (attempt) => (
+                <div
+                  key={attempt.id}
+                  className="flex items-center justify-between rounded-2xl bg-black/15 px-4 py-3"
+                >
+                  <p className="text-white">
+                    {attempt.targetText}
+                  </p>
+
+                  <span className="font-bold text-violet-200">
+                    {attempt.overallScore}
+                  </span>
+                </div>
+              )
+            )}
+          </div>
+        </section>
       </div>
     </section>
   );
 }
 
-function DashboardMessage({
+function MessageCard({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <section className="mx-auto max-w-2xl rounded-[2rem] border border-white/10 bg-white/10 p-10 text-center shadow-xl backdrop-blur-xl">
-      <div className="text-white/70">
-        {children}
-      </div>
+    <section className="mx-auto max-w-2xl rounded-[2rem] border border-white/10 bg-white/10 p-10 text-center text-white/70">
+      {children}
     </section>
   );
 }
 
-function MetricCard({
-  icon,
+function Metric({
   label,
   value,
 }: {
-  icon: string;
   label: string;
   value: string;
 }) {
   return (
-    <div className="rounded-3xl border border-white/10 bg-white/10 p-5 shadow-lg backdrop-blur-xl">
-      <p className="text-2xl">
-        {icon}
-      </p>
-
-      <p className="mt-3 text-xs font-medium uppercase tracking-wide text-white/40">
+    <div className="rounded-3xl bg-black/15 p-5">
+      <p className="text-xs uppercase tracking-wide text-white/40">
         {label}
       </p>
 
-      <p className="mt-1 text-xl font-bold text-white">
+      <p className="mt-1 text-2xl font-bold text-white">
         {value}
       </p>
     </div>
   );
 }
 
-function formatCategory(
-  category: string
-): string {
-  return category
-    .replaceAll("-", " ")
-    .replace(
-      /\b\w/g,
-      (character) =>
-        character.toUpperCase()
-    );
-}
+function SummaryPill({
+  label,
+  value,
+}: {
+  label: string;
+  value: number;
+}) {
+  return (
+    <div className="rounded-2xl bg-black/15 px-4 py-3 text-center">
+      <p className="text-xs text-white/45">
+        {label}
+      </p>
 
-function formatDate(
-  value: string
-): string {
-  return new Intl.DateTimeFormat(
-    undefined,
-    {
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }
-  ).format(new Date(value));
-}
-
-function formatRelativeDate(
-  value: string
-): string {
-  const date = new Date(value);
-  const now = new Date();
-
-  const dateKey = [
-    date.getFullYear(),
-    date.getMonth(),
-    date.getDate(),
-  ].join("-");
-
-  const todayKey = [
-    now.getFullYear(),
-    now.getMonth(),
-    now.getDate(),
-  ].join("-");
-
-  const yesterday = new Date(now);
-  yesterday.setDate(
-    yesterday.getDate() - 1
+      <p className="mt-1 text-2xl font-bold text-white">
+        {value}
+      </p>
+    </div>
   );
-
-  const yesterdayKey = [
-    yesterday.getFullYear(),
-    yesterday.getMonth(),
-    yesterday.getDate(),
-  ].join("-");
-
-  const time = new Intl.DateTimeFormat(
-    undefined,
-    {
-      hour: "2-digit",
-      minute: "2-digit",
-    }
-  ).format(date);
-
-  if (dateKey === todayKey) {
-    return `today at ${time}`;
-  }
-
-  if (dateKey === yesterdayKey) {
-    return `yesterday at ${time}`;
-  }
-
-  return new Intl.DateTimeFormat(
-    undefined,
-    {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }
-  ).format(date);
 }
 
-function getScoreClass(
-  score: number
+function formatStatus(
+  status: string
 ): string {
-  if (score >= 90) {
-    return "bg-emerald-400/15 text-emerald-100";
-  }
-
-  if (score >= 75) {
-    return "bg-blue-400/15 text-blue-100";
-  }
-
-  if (score >= 60) {
-    return "bg-amber-400/15 text-amber-100";
-  }
-
-  return "bg-red-400/15 text-red-100";
+  return status
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (character) =>
+      character.toUpperCase()
+    );
 }

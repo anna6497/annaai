@@ -5,6 +5,11 @@ import {
   type LatestCompletedReviewSession,
 } from "@/lib/speaking-practice/review-session";
 
+import {
+  getReviewImprovementSummary,
+  type ReviewImprovementSummary,
+} from "@/lib/speaking-practice/review-analytics";
+
 import type {
   SpeakingDailyGoal,
 } from "@/lib/speaking-practice/preferences";
@@ -42,6 +47,10 @@ export type SpeakingDashboardData = {
 
   latestReviewSession:
     | LatestCompletedReviewSession
+    | null;
+
+  latestReviewImprovement:
+    | ReviewImprovementSummary
     | null;
 };
 
@@ -113,7 +122,9 @@ function calculateCurrentStreak(
 ): number {
   const practicedDates = new Set(
     attempts.map((attempt) =>
-      getLocalDateKey(attempt.created_at)
+      getLocalDateKey(
+        attempt.created_at
+      )
     )
   );
 
@@ -129,7 +140,9 @@ function calculateCurrentStreak(
     yesterday.getDate() - 1
   );
 
-  const todayKey = getLocalDateKey(today);
+  const todayKey =
+    getLocalDateKey(today);
+
   const yesterdayKey =
     getLocalDateKey(yesterday);
 
@@ -280,19 +293,17 @@ export async function getSpeakingDashboardData(): Promise<SpeakingDashboardData>
   if (!user) {
     return {
       isAuthenticated: false,
-
       todayGoal: DEFAULT_DAILY_GOAL,
       todayCompleted: 0,
       todayProgressPercentage: 0,
-
       currentStreak: 0,
       averageScore: 0,
       totalAttempts: 0,
       practicedSentenceCount: 0,
-
       weakCharacters: [],
       recentAttempts: [],
       latestReviewSession: null,
+      latestReviewImprovement: null,
     };
   }
 
@@ -333,7 +344,9 @@ export async function getSpeakingDashboardData(): Promise<SpeakingDashboardData>
       .limit(1000),
 
     supabase
-      .from("ai_speaking_preferences")
+      .from(
+        "ai_speaking_preferences"
+      )
       .select("daily_goal")
       .eq("user_id", user.id)
       .maybeSingle(),
@@ -381,19 +394,21 @@ export async function getSpeakingDashboardData(): Promise<SpeakingDashboardData>
         ) === todayKey
     );
 
-  const todaySentenceIds = new Set(
-    todayAttempts.map(
-      (attempt) =>
-        attempt.sentence_id
-    )
-  );
+  const todaySentenceIds =
+    new Set(
+      todayAttempts.map(
+        (attempt) =>
+          attempt.sentence_id
+      )
+    );
 
-  const allSentenceIds = new Set(
-    attempts.map(
-      (attempt) =>
-        attempt.sentence_id
-    )
-  );
+  const allSentenceIds =
+    new Set(
+      attempts.map(
+        (attempt) =>
+          attempt.sentence_id
+      )
+    );
 
   const totalScore =
     attempts.reduce(
@@ -426,31 +441,29 @@ export async function getSpeakingDashboardData(): Promise<SpeakingDashboardData>
       )
     );
 
+  const latestReviewImprovement =
+    await getReviewImprovementSummary(
+      latestReviewSession
+    );
+
   return {
     isAuthenticated: true,
-
     todayGoal,
     todayCompleted,
     todayProgressPercentage,
-
     currentStreak:
       calculateCurrentStreak(
         attempts
       ),
-
     averageScore,
-
     totalAttempts:
       attempts.length,
-
     practicedSentenceCount:
       allSentenceIds.size,
-
     weakCharacters:
       calculateWeakCharacters(
         attempts
       ),
-
     recentAttempts:
       attempts
         .slice(0, 10)
@@ -471,7 +484,7 @@ export async function getSpeakingDashboardData(): Promise<SpeakingDashboardData>
           createdAt:
             attempt.created_at,
         })),
-
     latestReviewSession,
+    latestReviewImprovement,
   };
 }
