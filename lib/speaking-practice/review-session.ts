@@ -7,6 +7,32 @@ export type SaveCompletedReviewSessionInput = {
   startedAt: string;
 };
 
+export type LatestCompletedReviewSession = {
+  id: string;
+  sentenceIds: string[];
+  completedSentenceIds: string[];
+  totalSentences: number;
+  completedSentences: number;
+  averageScore: number;
+  status: "completed";
+  startedAt: string;
+  completedAt: string;
+  createdAt: string;
+};
+
+type ReviewSessionRow = {
+  id: string;
+  sentence_ids: string[] | null;
+  completed_sentence_ids: string[] | null;
+  total_sentences: number | null;
+  completed_sentences: number | null;
+  average_score: number | null;
+  status: string | null;
+  started_at: string;
+  completed_at: string | null;
+  created_at: string;
+};
+
 export async function saveCompletedReviewSession({
   sentenceIds,
   completedSentenceIds,
@@ -100,4 +126,77 @@ export async function saveCompletedReviewSession({
   }
 
   return String(data.id);
+}
+
+export async function getLatestCompletedReviewSession(): Promise<LatestCompletedReviewSession | null> {
+  const supabase = createClient();
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError) {
+    throw new Error(userError.message);
+  }
+
+  if (!user) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from("ai_speaking_review_sessions")
+    .select(
+      `
+        id,
+        sentence_ids,
+        completed_sentence_ids,
+        total_sentences,
+        completed_sentences,
+        average_score,
+        status,
+        started_at,
+        completed_at,
+        created_at
+      `
+    )
+    .eq("user_id", user.id)
+    .eq("status", "completed")
+    .order("completed_at", {
+      ascending: false,
+      nullsFirst: false,
+    })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  const row = data as ReviewSessionRow;
+
+  if (!row.completed_at) {
+    return null;
+  }
+
+  return {
+    id: row.id,
+    sentenceIds: row.sentence_ids ?? [],
+    completedSentenceIds:
+      row.completed_sentence_ids ?? [],
+    totalSentences:
+      Number(row.total_sentences ?? 0),
+    completedSentences:
+      Number(row.completed_sentences ?? 0),
+    averageScore:
+      Number(row.average_score ?? 0),
+    status: "completed",
+    startedAt: row.started_at,
+    completedAt: row.completed_at,
+    createdAt: row.created_at,
+  };
 }

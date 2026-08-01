@@ -1,5 +1,10 @@
 import { createClient } from "@/lib/supabase/client";
 
+import {
+  getLatestCompletedReviewSession,
+  type LatestCompletedReviewSession,
+} from "@/lib/speaking-practice/review-session";
+
 import type {
   SpeakingDailyGoal,
 } from "@/lib/speaking-practice/preferences";
@@ -34,6 +39,10 @@ export type SpeakingDashboardData = {
 
   weakCharacters: WeakCharacter[];
   recentAttempts: RecentSpeakingAttempt[];
+
+  latestReviewSession:
+    | LatestCompletedReviewSession
+    | null;
 };
 
 type PronunciationAttemptRow = {
@@ -116,7 +125,6 @@ function calculateCurrentStreak(
   today.setHours(0, 0, 0, 0);
 
   const yesterday = new Date(today);
-
   yesterday.setDate(
     yesterday.getDate() - 1
   );
@@ -147,7 +155,6 @@ function calculateCurrentStreak(
     streak += 1;
 
     cursor = new Date(cursor);
-
     cursor.setDate(
       cursor.getDate() - 1
     );
@@ -285,6 +292,7 @@ export async function getSpeakingDashboardData(): Promise<SpeakingDashboardData>
 
       weakCharacters: [],
       recentAttempts: [],
+      latestReviewSession: null,
     };
   }
 
@@ -294,6 +302,7 @@ export async function getSpeakingDashboardData(): Promise<SpeakingDashboardData>
   const [
     attemptsResult,
     preferenceResult,
+    latestReviewSession,
   ] = await Promise.all([
     supabase
       .from(
@@ -328,6 +337,8 @@ export async function getSpeakingDashboardData(): Promise<SpeakingDashboardData>
       .select("daily_goal")
       .eq("user_id", user.id)
       .maybeSingle(),
+
+    getLatestCompletedReviewSession(),
   ]);
 
   if (attemptsResult.error) {
@@ -445,27 +456,22 @@ export async function getSpeakingDashboardData(): Promise<SpeakingDashboardData>
         .slice(0, 10)
         .map((attempt) => ({
           id: attempt.id,
-
           sentenceId:
             attempt.sentence_id,
-
           targetText:
             attempt.target_text,
-
           recognizedText:
             attempt.recognized_text,
-
           overallScore:
             attempt.overall_score,
-
           category:
             attempt.category,
-
           lesson:
             attempt.lesson,
-
           createdAt:
             attempt.created_at,
         })),
+
+    latestReviewSession,
   };
 }

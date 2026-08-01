@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   useCallback,
   useEffect,
+  useMemo,
   useState,
 } from "react";
 
@@ -32,6 +33,7 @@ const EMPTY_DASHBOARD: SpeakingDashboardData = {
 
   weakCharacters: [],
   recentAttempts: [],
+  latestReviewSession: null,
 };
 
 const DAILY_GOALS: SpeakingDailyGoal[] = [
@@ -148,6 +150,20 @@ export default function SpeakingDashboard() {
       setIsSavingGoal(false);
     }
   }
+
+  const reviewAgainHref = useMemo(() => {
+    const sentenceIds =
+      dashboard.latestReviewSession
+        ?.sentenceIds ?? [];
+
+    if (sentenceIds.length === 0) {
+      return "/dashboard/ai/pronunciation/review";
+    }
+
+    return `/dashboard/ai/pronunciation?review=${encodeURIComponent(
+      sentenceIds.join(",")
+    )}`;
+  }, [dashboard.latestReviewSession]);
 
   if (isLoading) {
     return (
@@ -381,6 +397,89 @@ export default function SpeakingDashboard() {
               dashboard.practicedSentenceCount
             )}
           />
+        </div>
+      </div>
+
+      <div className="mt-6 rounded-[2rem] border border-violet-300/15 bg-violet-400/10 p-6 shadow-xl backdrop-blur-xl">
+        <div className="flex flex-wrap items-start justify-between gap-5">
+          <div>
+            <p className="text-sm font-semibold text-violet-200">
+              Last Smart Review
+            </p>
+
+            {dashboard.latestReviewSession ? (
+              <>
+                <h2 className="mt-2 text-2xl font-bold text-white">
+                  {
+                    dashboard
+                      .latestReviewSession
+                      .completedSentences
+                  }{" "}
+                  sentence
+                  {dashboard.latestReviewSession
+                    .completedSentences === 1
+                    ? ""
+                    : "s"}{" "}
+                  reviewed
+                </h2>
+
+                <p className="mt-2 text-sm text-white/55">
+                  Completed{" "}
+                  {formatRelativeDate(
+                    dashboard
+                      .latestReviewSession
+                      .completedAt
+                  )}
+                </p>
+              </>
+            ) : (
+              <>
+                <h2 className="mt-2 text-2xl font-bold text-white">
+                  No completed review yet
+                </h2>
+
+                <p className="mt-2 text-sm text-white/55">
+                  Complete a Smart Review
+                  session to see your latest
+                  result here.
+                </p>
+              </>
+            )}
+          </div>
+
+          {dashboard.latestReviewSession ? (
+            <div className="rounded-3xl bg-black/15 px-6 py-4 text-center">
+              <p className="text-xs uppercase tracking-wide text-white/40">
+                Average Score
+              </p>
+
+              <p className="mt-1 text-4xl font-bold text-white">
+                {
+                  dashboard
+                    .latestReviewSession
+                    .averageScore
+                }
+              </p>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Link
+            href={reviewAgainHref}
+            className="rounded-2xl bg-violet-500 px-6 py-3 font-semibold text-white transition hover:bg-violet-400"
+          >
+            {dashboard.latestReviewSession
+              ? "Review Again →"
+              : "Start Smart Review →"}
+          </Link>
+
+          <Link
+            href="/dashboard/ai/pronunciation/review"
+            className="rounded-2xl border border-white/10 bg-white/5 px-6 py-3 font-semibold text-white/75 transition hover:bg-white/10"
+          >
+            Build New Review
+          </Link>
         </div>
       </div>
 
@@ -648,6 +747,63 @@ function formatDate(
       minute: "2-digit",
     }
   ).format(new Date(value));
+}
+
+function formatRelativeDate(
+  value: string
+): string {
+  const date = new Date(value);
+  const now = new Date();
+
+  const dateKey = [
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+  ].join("-");
+
+  const todayKey = [
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+  ].join("-");
+
+  const yesterday = new Date(now);
+  yesterday.setDate(
+    yesterday.getDate() - 1
+  );
+
+  const yesterdayKey = [
+    yesterday.getFullYear(),
+    yesterday.getMonth(),
+    yesterday.getDate(),
+  ].join("-");
+
+  const time = new Intl.DateTimeFormat(
+    undefined,
+    {
+      hour: "2-digit",
+      minute: "2-digit",
+    }
+  ).format(date);
+
+  if (dateKey === todayKey) {
+    return `today at ${time}`;
+  }
+
+  if (dateKey === yesterdayKey) {
+    return `yesterday at ${time}`;
+  }
+
+  return new Intl.DateTimeFormat(
+    undefined,
+    {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }
+  ).format(date);
 }
 
 function getScoreClass(
