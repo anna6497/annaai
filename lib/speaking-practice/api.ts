@@ -24,6 +24,14 @@ export type PronunciationCheckResponse = {
     extra_characters: string[];
     incorrect_characters: IncorrectCharacter[];
   };
+
+  coach: {
+    title: string;
+    message: string;
+    focus_characters: string[];
+    tone_scoring_available: boolean;
+    tone_note: string;
+  };
 };
 
 type CheckPronunciationInput = {

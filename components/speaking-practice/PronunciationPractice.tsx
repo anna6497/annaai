@@ -51,6 +51,9 @@ export default function PronunciationPractice({
 }: PronunciationPracticeProps) {
   const router = useRouter();
 
+  const [hasMounted, setHasMounted] =
+    useState(false);
+
   const sampleAudioRef = useRef<HTMLAudioElement | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const microphoneStreamRef = useRef<MediaStream | null>(null);
@@ -307,6 +310,10 @@ export default function PronunciationPractice({
     clearRecordedAudioUrl,
     stopMicrophoneStream,
   ]);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   useEffect(() => {
     setSearchQuery(
@@ -619,6 +626,17 @@ export default function PronunciationPractice({
 
       microphoneStreamRef.current = stream;
 
+      console.log(
+        "Active microphone:",
+        stream.getAudioTracks().map((track) => ({
+          label: track.label,
+          enabled: track.enabled,
+          muted: track.muted,
+          readyState: track.readyState,
+          settings: track.getSettings(),
+        }))
+      );
+
       const preferredMimeTypes = [
         "audio/webm;codecs=opus",
         "audio/webm",
@@ -681,6 +699,16 @@ export default function PronunciationPractice({
           startedAt === null
             ? 0
             : (Date.now() - startedAt) / 1000;
+
+        console.log(
+          "Recorded MediaRecorder audio:",
+          {
+            size: audioBlob.size,
+            type: audioBlob.type,
+            duration,
+            chunks: recordedChunksRef.current.length,
+          }
+        );
 
         if (audioBlob.size === 0) {
           setRecordingError(
@@ -1344,6 +1372,7 @@ export default function PronunciationPractice({
                         void startRecording()
                       }
                       disabled={
+                        !hasMounted ||
                         isCheckingScore ||
                         isSavingResult ||
                         (isReviewMode &&
@@ -1478,6 +1507,7 @@ export default function PronunciationPractice({
                 type="button"
                 onClick={goToPreviousSentence}
                 disabled={
+                  !hasMounted ||
                   currentIndex === 0 ||
                   isRecording ||
                   isCheckingScore ||
@@ -1496,6 +1526,7 @@ export default function PronunciationPractice({
                   void handleCheckScore()
                 }
                 disabled={
+                  !hasMounted ||
                   !recordedAudioBlob ||
                   isRecording ||
                   isCheckingScore ||
@@ -1516,6 +1547,7 @@ export default function PronunciationPractice({
                 type="button"
                 onClick={goToNextSentence}
                 disabled={
+                  !hasMounted ||
                   currentIndex ===
                     filteredSentences.length - 1 ||
                   isRecording ||

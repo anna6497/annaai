@@ -29,6 +29,14 @@ export type IncorrectCharacter = {
   recognized: string;
 };
 
+export type PronunciationCoach = {
+  title: string;
+  message: string;
+  focusCharacters: string[];
+  toneScoringAvailable: boolean;
+  toneNote: string;
+};
+
 export type PronunciationScore = {
   overall: number;
   accuracy: number;

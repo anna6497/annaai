@@ -369,6 +369,50 @@ export default function PronunciationFeedback({
         </div>
       ) : null}
 
+
+      <div className="mt-6 rounded-2xl border border-violet-300/20 bg-violet-400/10 p-5 text-left">
+        <p className="text-xs font-semibold uppercase tracking-wide text-violet-200/70">
+          Anna Coach
+        </p>
+
+        <h4 className="mt-2 text-lg font-semibold text-white">
+          {result.coach.title}
+        </h4>
+
+        <p className="mt-2 text-sm leading-relaxed text-white/70">
+          {result.coach.message}
+        </p>
+
+        {result.coach.focus_characters.length > 0 ? (
+          <div className="mt-4">
+            <p className="text-xs text-white/45">
+              Focus characters
+            </p>
+
+            <div className="mt-2 flex flex-wrap gap-2">
+              {result.coach.focus_characters.map(
+                (character, index) => (
+                  <span
+                    key={`${character}-${index}`}
+                    className="rounded-xl border border-violet-200/20 bg-black/15 px-3 py-2 text-xl text-violet-100"
+                  >
+                    {character}
+                  </span>
+                )
+              )}
+            </div>
+          </div>
+        ) : null}
+
+        {!result.coach.tone_scoring_available ? (
+          <p className="mt-4 text-xs leading-relaxed text-white/35">
+            Tone scoring is not shown yet because the current
+            Whisper engine does not provide reliable pitch-based
+            tone measurements.
+          </p>
+        ) : null}
+      </div>
+
       <div className="mt-6 grid gap-3 sm:grid-cols-3">
         <button
           type="button"

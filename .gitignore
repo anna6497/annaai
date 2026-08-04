@@ -45,3 +45,15 @@ voice-server/.venv/
 voice-server/__pycache__/
 voice-server/**/*.pyc
 
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+# Next.js
+.next/
+# Local backups
+*.backup.tsx
+*.wav-broken.backup.tsx
+# Logs
+*.log
