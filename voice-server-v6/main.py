@@ -84,7 +84,18 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
+        allow_origins=[
+        "https://annaai.online",
+        "https://www.annaai.online",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3001",
+    ],
+    allow_origin_regex=(
+        r"^https://annaai-[a-zA-Z0-9-]+-anna-ai"
+        r"\.vercel\.app$"
+    ),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -1,308 +1,485 @@
 from __future__ import annotations
 
-import asyncio
-import json
-import logging
 import os
+import re
 import tempfile
 import time
 from pathlib import Path
-from typing import Literal
+from typing import Any
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from faster_whisper import WhisperModel
 
-from services.llm import OllamaServiceError, check_ollama_connection, generate_reply
-from services.stt import SpeechToTextError, transcribe_audio
 
-Mode = Literal["practice", "sentence_builder"]
+APP_VERSION = "6.0.0-pronunciation-alpha"
 
-APP_NAME = "Anna AI Voice Server"
-APP_VERSION = "5.0.0"
+WHISPER_MODEL_SIZE = os.getenv("WHISPER_MODEL_SIZE", "small")
+WHISPER_DEVICE = os.getenv("WHISPER_DEVICE", "cpu")
+WHISPER_COMPUTE_TYPE = os.getenv("WHISPER_COMPUTE_TYPE", "int8")
 
-VOICE_REQUEST_TIMEOUT = int(os.getenv("VOICE_REQUEST_TIMEOUT", "180"))
-TEXT_REQUEST_TIMEOUT = int(os.getenv("TEXT_REQUEST_TIMEOUT", "120"))
-MAX_AUDIO_MB = int(os.getenv("MAX_AUDIO_MB", "20"))
 
-logging.basicConfig(
-    level=os.getenv("LOG_LEVEL", "INFO").upper(),
-    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+app = FastAPI(
+    title="Anna AI Voice V6",
+    version=APP_VERSION,
 )
-logger = logging.getLogger("anna.voice")
 
-app = FastAPI(title=APP_NAME, version=APP_VERSION)
+DEFAULT_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3001",
+]
 
-allowed_origins = [
+EXTRA_ALLOWED_ORIGINS = [
     origin.strip()
     for origin in os.getenv(
-        "CORS_ORIGINS",
-        "https://annaai.online,https://www.annaai.online,http://localhost:3000,http://127.0.0.1:3000",
+        "ALLOWED_ORIGINS",
+        "",
     ).split(",")
     if origin.strip()
 ]
 
+ALLOWED_ORIGINS = list(
+    dict.fromkeys(
+        [
+            *DEFAULT_ALLOWED_ORIGINS,
+            *EXTRA_ALLOWED_ORIGINS,
+        ]
+    )
+)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-class HistoryMessage(BaseModel):
-    role: Literal["user", "assistant"]
-    content: str = Field(min_length=1, max_length=5000)
+whisper_model: WhisperModel | None = None
 
 
-class TextChatRequest(BaseModel):
-    message: str = Field(min_length=1, max_length=5000)
-    mode: Mode = "practice"
-    history: list[HistoryMessage] = Field(default_factory=list)
+def get_whisper_model() -> WhisperModel:
+    global whisper_model
+
+    if whisper_model is None:
+        whisper_model = WhisperModel(
+            WHISPER_MODEL_SIZE,
+            device=WHISPER_DEVICE,
+            compute_type=WHISPER_COMPUTE_TYPE,
+        )
+
+    return whisper_model
 
 
-class AnnaReplyResponse(BaseModel):
-    hanzi: str
-    pinyin: str
+def clamp_score(value: float) -> int:
+    return max(0, min(100, round(value)))
 
 
-class TextChatResponse(BaseModel):
-    message: str
-    mode: Mode
-    reply: AnnaReplyResponse
+def normalize_chinese_text(text: str) -> str:
+    return re.sub(
+        r"""[\s，。！？、,.!?;；:“”"'（）()【】《》<>…—\-]""",
+        "",
+        text.strip(),
+    )
 
 
-class VoiceChatResponse(BaseModel):
-    transcript: str
-    mode: Mode
-    reply: AnnaReplyResponse
+def levenshtein_operations(
+    target: list[str],
+    recognized: list[str],
+) -> list[dict[str, str]]:
+    rows = len(target) + 1
+    columns = len(recognized) + 1
 
+    matrix = [
+        [0 for _ in range(columns)]
+        for _ in range(rows)
+    ]
 
-def parse_mode(value: str) -> Mode:
-    if value not in {"practice", "sentence_builder"}:
-        raise HTTPException(status_code=422, detail=f"Unsupported mode: {value}")
-    return value  # type: ignore[return-value]
+    for row in range(rows):
+        matrix[row][0] = row
 
+    for column in range(columns):
+        matrix[0][column] = column
 
-def parse_history(value: str) -> list[dict[str, str]]:
-    if not value.strip():
-        return []
+    for row in range(1, rows):
+        for column in range(1, columns):
+            substitution_cost = (
+                0
+                if target[row - 1] == recognized[column - 1]
+                else 1
+            )
 
-    try:
-        raw = json.loads(value)
-    except json.JSONDecodeError as error:
-        raise HTTPException(status_code=422, detail="History must be valid JSON.") from error
+            matrix[row][column] = min(
+                matrix[row - 1][column] + 1,
+                matrix[row][column - 1] + 1,
+                matrix[row - 1][column - 1] + substitution_cost,
+            )
 
-    if not isinstance(raw, list):
-        raise HTTPException(status_code=422, detail="History must be a JSON array.")
+    operations: list[dict[str, str]] = []
 
-    cleaned: list[dict[str, str]] = []
+    row = len(target)
+    column = len(recognized)
 
-    for item in raw:
-        if not isinstance(item, dict):
+    while row > 0 or column > 0:
+        if (
+            row > 0
+            and column > 0
+            and target[row - 1] == recognized[column - 1]
+        ):
+            operations.append(
+                {
+                    "type": "equal",
+                    "expected": target[row - 1],
+                    "recognized": recognized[column - 1],
+                }
+            )
+
+            row -= 1
+            column -= 1
             continue
 
-        role = str(item.get("role", "")).strip()
-        content = str(item.get("content", "")).strip()
+        if (
+            row > 0
+            and column > 0
+            and matrix[row][column]
+            == matrix[row - 1][column - 1] + 1
+        ):
+            operations.append(
+                {
+                    "type": "replace",
+                    "expected": target[row - 1],
+                    "recognized": recognized[column - 1],
+                }
+            )
 
-        if role in {"user", "assistant"} and content:
-            cleaned.append({"role": role, "content": content})
+            row -= 1
+            column -= 1
+            continue
 
-    return cleaned[-20:]
+        if (
+            row > 0
+            and matrix[row][column]
+            == matrix[row - 1][column] + 1
+        ):
+            operations.append(
+                {
+                    "type": "delete",
+                    "expected": target[row - 1],
+                    "recognized": "",
+                }
+            )
+
+            row -= 1
+            continue
+
+        if column > 0:
+            operations.append(
+                {
+                    "type": "insert",
+                    "expected": "",
+                    "recognized": recognized[column - 1],
+                }
+            )
+
+            column -= 1
+
+    operations.reverse()
+
+    return operations
 
 
-async def run_blocking(func, *args, timeout_seconds: int):
-    return await asyncio.wait_for(
-        asyncio.to_thread(func, *args),
-        timeout=timeout_seconds,
+def calculate_scores(
+    target_text: str,
+    recognized_text: str,
+    duration_seconds: float,
+) -> dict[str, Any]:
+    target = list(normalize_chinese_text(target_text))
+    recognized = list(normalize_chinese_text(recognized_text))
+
+    operations = levenshtein_operations(
+        target,
+        recognized,
+    )
+
+    correct_count = sum(
+        1
+        for item in operations
+        if item["type"] == "equal"
+    )
+
+    incorrect_characters = [
+        {
+            "expected": item["expected"],
+            "recognized": item["recognized"],
+        }
+        for item in operations
+        if item["type"] == "replace"
+    ]
+
+    missing_characters = [
+        item["expected"]
+        for item in operations
+        if item["type"] == "delete"
+    ]
+
+    extra_characters = [
+        item["recognized"]
+        for item in operations
+        if item["type"] == "insert"
+    ]
+
+    target_length = max(len(target), 1)
+    comparison_length = max(
+        len(target),
+        len(recognized),
+        1,
+    )
+
+    accuracy = clamp_score(
+        correct_count / comparison_length * 100
+    )
+
+    spoken_count = correct_count + len(incorrect_characters)
+
+    completeness = clamp_score(
+        min(spoken_count, target_length)
+        / target_length
+        * 100
+    )
+
+    ideal_duration = max(
+        1.2,
+        len(target) * 0.45,
+    )
+
+    duration_difference = abs(
+        duration_seconds - ideal_duration
+    )
+
+    fluency = clamp_score(
+        100
+        - (
+            duration_difference
+            / ideal_duration
+            * 35
+        )
+    )
+
+    overall = clamp_score(
+        accuracy * 0.60
+        + completeness * 0.25
+        + fluency * 0.15
+    )
+
+    return {
+        "overall": overall,
+        "accuracy": accuracy,
+        "completeness": completeness,
+        "fluency": fluency,
+        "missing_characters": missing_characters,
+        "extra_characters": extra_characters,
+        "incorrect_characters": incorrect_characters,
+    }
+
+
+def get_audio_suffix(audio: UploadFile) -> str:
+    if audio.filename:
+        suffix = Path(audio.filename).suffix.lower()
+
+        if suffix in {
+            ".webm",
+            ".wav",
+            ".mp3",
+            ".m4a",
+            ".mp4",
+            ".ogg",
+        }:
+            return suffix
+
+    content_type_map = {
+        "audio/webm": ".webm",
+        "audio/wav": ".wav",
+        "audio/x-wav": ".wav",
+        "audio/mpeg": ".mp3",
+        "audio/mp4": ".m4a",
+        "audio/ogg": ".ogg",
+    }
+
+    return content_type_map.get(
+        audio.content_type or "",
+        ".webm",
     )
 
 
 @app.get("/")
-def root() -> dict[str, str]:
+def root() -> dict[str, Any]:
     return {
-        "status": "running",
-        "app": APP_NAME,
+        "status": "ok",
+        "service": "anna-ai-voice-v6-local",
         "version": APP_VERSION,
+        "health": "/health",
+        "pronunciation_check": "/v6/pronunciation/check",
     }
 
 
 @app.get("/health")
-def health() -> dict[str, object]:
-    ollama_running = check_ollama_connection()
-
+def health() -> dict[str, Any]:
     return {
-        "status": "ok" if ollama_running else "degraded",
-        "ollama_running": ollama_running,
+        "status": "ok",
         "version": APP_VERSION,
+        "service": "anna-ai-voice-v6-local",
+        "port": 8001,
+        "whisper_model": WHISPER_MODEL_SIZE,
+        "whisper_device": WHISPER_DEVICE,
+        "whisper_compute_type": WHISPER_COMPUTE_TYPE,
+        "allowed_origins": ALLOWED_ORIGINS,
     }
 
 
-@app.post("/text-chat", response_model=TextChatResponse)
-async def text_chat(request: TextChatRequest) -> TextChatResponse:
-    started = time.perf_counter()
-
-    logger.info(
-        "TEXT_CHAT_START mode=%s history=%d",
-        request.mode,
-        len(request.history),
-    )
-
-    try:
-        reply = await run_blocking(
-            generate_reply,
-            request.message,
-            request.mode,
-            [message.model_dump() for message in request.history],
-            timeout_seconds=TEXT_REQUEST_TIMEOUT,
-        )
-
-        logger.info(
-            "TEXT_CHAT_DONE elapsed=%.2fs",
-            time.perf_counter() - started,
-        )
-
-        return TextChatResponse(
-            message=request.message.strip(),
-            mode=request.mode,
-            reply=AnnaReplyResponse(**reply),
-        )
-
-    except asyncio.TimeoutError as error:
-        logger.exception("TEXT_CHAT_TIMEOUT")
-        raise HTTPException(
-            status_code=504,
-            detail="Anna took too long to answer. Please try again.",
-        ) from error
-
-    except ValueError as error:
-        logger.exception("TEXT_CHAT_VALIDATION_ERROR")
-        raise HTTPException(status_code=422, detail=str(error)) from error
-
-    except OllamaServiceError as error:
-        logger.exception("TEXT_CHAT_OLLAMA_ERROR")
-        raise HTTPException(status_code=503, detail=str(error)) from error
-
-
-@app.post("/voice-chat", response_model=VoiceChatResponse)
-async def voice_chat(
+@app.post("/v6/pronunciation/check")
+async def check_pronunciation(
     audio: UploadFile = File(...),
-    mode: str = Form("practice"),
-    history: str = Form("[]"),
-) -> VoiceChatResponse:
-    parsed_mode = parse_mode(mode)
-
-    if parsed_mode != "practice":
+    target_text: str = Form(...),
+    sentence_id: str = Form(...),
+    duration_seconds: float = Form(0),
+) -> dict[str, Any]:
+    if not target_text.strip():
         raise HTTPException(
-            status_code=422,
-            detail="Voice recording is available only in Chinese Practice mode.",
+            status_code=400,
+            detail="target_text is required.",
         )
 
-    parsed_history = parse_history(history)
-    started = time.perf_counter()
-    suffix = Path(audio.filename or "recording.webm").suffix or ".webm"
-    temp_path: Path | None = None
+    audio_bytes = await audio.read()
+
+    if not audio_bytes:
+        raise HTTPException(
+            status_code=400,
+            detail="The uploaded audio is empty.",
+        )
+
+    if len(audio_bytes) > 15 * 1024 * 1024:
+        raise HTTPException(
+            status_code=413,
+            detail="Audio file exceeds the 15 MB limit.",
+        )
+
+    temporary_path: str | None = None
+    started_at = time.perf_counter()
 
     try:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_file:
-            temp_path = Path(temp_file.name)
-            total = 0
+        suffix = get_audio_suffix(audio)
 
-            while True:
-                chunk = await audio.read(1024 * 1024)
-                if not chunk:
-                    break
+        with tempfile.NamedTemporaryFile(
+            suffix=suffix,
+            delete=False,
+        ) as temporary_file:
+            temporary_file.write(audio_bytes)
+            temporary_path = temporary_file.name
 
-                total += len(chunk)
+        model = get_whisper_model()
 
-                if total > MAX_AUDIO_MB * 1024 * 1024:
-                    raise HTTPException(
-                        status_code=413,
-                        detail=f"Audio is larger than {MAX_AUDIO_MB} MB.",
-                    )
+        print("=" * 60)
+        print("Filename:", audio.filename)
+        print("Content-Type:", audio.content_type)
+        print("Audio Size:", len(audio_bytes))
+        print("Duration:", duration_seconds)
+        print("Temporary Path:", temporary_path)
+        print("=" * 60)
 
-                temp_file.write(chunk)
-
-        if temp_path.stat().st_size == 0:
-            raise HTTPException(status_code=422, detail="Uploaded audio is empty.")
-
-        logger.info(
-            "VOICE_CHAT_START bytes=%d history=%d",
-            temp_path.stat().st_size,
-            len(parsed_history),
+        segments, info = model.transcribe(
+            temporary_path,
+            language="zh",
+            beam_size=5,
+            vad_filter=False,
+            condition_on_previous_text=False,
+            temperature=0,
         )
 
-        logger.info("STT_START")
-
-        transcript = await run_blocking(
-            transcribe_audio,
-            temp_path,
-            timeout_seconds=VOICE_REQUEST_TIMEOUT,
+        recognized_text = "".join(
+            segment.text.strip()
+            for segment in segments
+            if segment.text.strip()
         )
 
-        logger.info("STT_DONE transcript=%r", transcript[:100])
+        print("Recognized:", repr(recognized_text))
+        print("Language:", info.language)
+        print("Probability:", info.language_probability)
+        print("=" * 60)
 
-        if not transcript.strip():
+        if not recognized_text:
             raise HTTPException(
                 status_code=422,
-                detail="No Chinese speech was detected. Please try again.",
+                detail=(
+                    "No Chinese speech was detected. "
+                    "Please speak again."
+                ),
             )
 
-        logger.info("LLM_START")
-
-        elapsed = int(time.perf_counter() - started)
-        remaining = max(20, VOICE_REQUEST_TIMEOUT - elapsed)
-
-        reply = await run_blocking(
-            generate_reply,
-            transcript,
-            "practice",
-            parsed_history,
-            timeout_seconds=remaining,
+        scores = calculate_scores(
+            target_text=target_text,
+            recognized_text=recognized_text,
+            duration_seconds=max(duration_seconds, 0),
         )
 
-        logger.info(
-            "VOICE_CHAT_DONE elapsed=%.2fs",
-            time.perf_counter() - started,
+        return {
+            "sentence_id": sentence_id,
+            "target_text": target_text,
+            "recognized_text": recognized_text,
+            "detected_language": info.language,
+            "language_probability": round(
+                info.language_probability,
+                4,
+            ),
+            "duration_seconds": round(
+                max(duration_seconds, 0),
+                2,
+            ),
+            "processing_seconds": round(
+                time.perf_counter() - started_at,
+                3,
+            ),
+            "scores": {
+                "overall": scores["overall"],
+                "accuracy": scores["accuracy"],
+                "completeness": scores["completeness"],
+                "fluency": scores["fluency"],
+            },
+            "feedback": {
+                "missing_characters": scores[
+                    "missing_characters"
+                ],
+                "extra_characters": scores[
+                    "extra_characters"
+                ],
+                "incorrect_characters": scores[
+                    "incorrect_characters"
+                ],
+            },
+        }
+
+    except HTTPException:
+        raise
+
+    except Exception as error:
+        print(
+            "Pronunciation processing failed:",
+            repr(error),
         )
 
-        return VoiceChatResponse(
-            transcript=transcript.strip(),
-            mode="practice",
-            reply=AnnaReplyResponse(**reply),
-        )
-
-    except asyncio.TimeoutError as error:
-        logger.exception("VOICE_CHAT_TIMEOUT")
         raise HTTPException(
-            status_code=504,
-            detail="Voice processing timed out. Please record a shorter sentence.",
+            status_code=500,
+            detail=(
+                "Pronunciation processing failed: "
+                f"{type(error).__name__}: {error}"
+            ),
         ) from error
 
-    except SpeechToTextError as error:
-        logger.exception("VOICE_CHAT_STT_ERROR")
-        raise HTTPException(status_code=503, detail=str(error)) from error
-
-    except OllamaServiceError as error:
-        logger.exception("VOICE_CHAT_OLLAMA_ERROR")
-        raise HTTPException(status_code=503, detail=str(error)) from error
-
     finally:
-        await audio.close()
-
-        if temp_path is not None:
+        if temporary_path:
             try:
-                temp_path.unlink(missing_ok=True)
+                os.remove(temporary_path)
             except OSError:
-                logger.warning("Could not delete temporary file: %s", temp_path)
-
-
-@app.post("/chat", response_model=TextChatResponse)
-async def chat(request: TextChatRequest) -> TextChatResponse:
-    return await text_chat(request)
-
-
-@app.post("/api/chat", response_model=TextChatResponse)
-async def api_chat(request: TextChatRequest) -> TextChatResponse:
-    return await text_chat(request)
+                pass
