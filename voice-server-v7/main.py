@@ -28,12 +28,13 @@ from pydantic import BaseModel, Field
 from services.llm import (
     OllamaServiceError,
     check_ollama_connection,
+    check_user_correction,
     generate_reply,
     stream_reply_text,
 )
 
 
-APP_VERSION = "7.3.1-live-voice-streaming"
+APP_VERSION = "7.3.2-live-streaming-correction"
 
 Mode = Literal[
     "practice",
@@ -501,6 +502,53 @@ def build_correction_response(
     )
 
 
+def correction_to_dict(
+    correction: dict[
+        str,
+        Any,
+    ],
+) -> dict[
+    str,
+    Any,
+]:
+    return {
+        "needed":
+            bool(
+                correction.get(
+                    "needed",
+                    False,
+                )
+            ),
+
+        "original":
+            str(
+                correction.get(
+                    "original",
+                    "",
+                )
+                or ""
+            ).strip(),
+
+        "corrected":
+            str(
+                correction.get(
+                    "corrected",
+                    "",
+                )
+                or ""
+            ).strip(),
+
+        "pinyin":
+            str(
+                correction.get(
+                    "pinyin",
+                    "",
+                )
+                or ""
+            ).strip(),
+    }
+
+
 # =========================================================
 # STREAM ENCODING
 # =========================================================
@@ -814,6 +862,7 @@ def delete_temporary_files(
             os.remove(
                 path
             )
+
         except OSError:
             pass
 
@@ -1029,6 +1078,7 @@ def generate_piper_audio(
         ):
             try:
                 temporary_output.unlink()
+
             except OSError:
                 pass
 
@@ -1049,6 +1099,7 @@ def generate_piper_audio(
         ):
             try:
                 temporary_output.unlink()
+
             except OSError:
                 pass
 
@@ -1073,6 +1124,7 @@ def generate_piper_audio(
         ):
             try:
                 temporary_output.unlink()
+
             except OSError:
                 pass
 
@@ -1097,6 +1149,7 @@ def generate_piper_audio(
 
         try:
             temporary_output.unlink()
+
         except OSError:
             pass
 
@@ -1204,6 +1257,9 @@ def health() -> dict[
 
         "correction_enabled":
             True,
+
+        "correction_mode":
+            "deferred",
 
         "streaming_enabled":
             True,
@@ -1387,6 +1443,38 @@ def stream_chat(
                     event
                 )
 
+            # -----------------------------------------
+            # Deferred More Natural correction.
+            # It runs AFTER Anna's live answer.
+            # -----------------------------------------
+
+            correction_started = (
+                time.perf_counter()
+            )
+
+            correction = (
+                check_user_correction(
+                    message
+                )
+            )
+
+            correction_seconds = (
+                time.perf_counter()
+                - correction_started
+            )
+
+            yield encode_ndjson(
+                {
+                    "type":
+                        "correction",
+
+                    "correction":
+                        correction_to_dict(
+                            correction
+                        ),
+                }
+            )
+
             elapsed = (
                 time.perf_counter()
                 - started
@@ -1400,6 +1488,17 @@ def stream_chat(
                             elapsed,
                             3,
                         ),
+
+                    "correction":
+                        round(
+                            correction_seconds,
+                            3,
+                        ),
+
+                    "correction_needed":
+                        correction[
+                            "needed"
+                        ],
 
                     "token_events":
                         token_count,
@@ -1417,6 +1516,12 @@ def stream_chat(
                     "seconds":
                         round(
                             elapsed,
+                            3,
+                        ),
+
+                    "correction_seconds":
+                        round(
+                            correction_seconds,
                             3,
                         ),
 
@@ -1598,6 +1703,10 @@ async def voice_stream(
         sentence_count = 0
 
         try:
+            # -----------------------------------------
+            # Start
+            # -----------------------------------------
+
             yield encode_ndjson(
                 {
                     "type":
@@ -1605,8 +1714,10 @@ async def voice_stream(
                 }
             )
 
-            # Transcript is available
-            # before LLM starts.
+            # -----------------------------------------
+            # Transcript first
+            # -----------------------------------------
+
             yield encode_ndjson(
                 {
                     "type":
@@ -1631,9 +1742,14 @@ async def voice_stream(
                 }
             )
 
-            # Hanzi tokens begin streaming.
-            # Sentence events are used by
-            # frontend Piper TTS queue.
+            # -----------------------------------------
+            # TRUE LIVE HANZI STREAM
+            #
+            # token    -> frontend live Hanzi
+            # sentence -> frontend Piper queue
+            # done     -> final Hanzi + Pinyin
+            # -----------------------------------------
+
             for event in (
                 stream_reply_text(
                     user_text=
@@ -1671,6 +1787,41 @@ async def voice_stream(
                 - llm_started
             )
 
+            # -----------------------------------------
+            # DEFERRED CORRECTION
+            #
+            # Important:
+            # Anna live reply is already complete.
+            # This does NOT block first Hanzi/TTS.
+            # -----------------------------------------
+
+            correction_started = (
+                time.perf_counter()
+            )
+
+            correction = (
+                check_user_correction(
+                    transcript
+                )
+            )
+
+            correction_seconds = (
+                time.perf_counter()
+                - correction_started
+            )
+
+            yield encode_ndjson(
+                {
+                    "type":
+                        "correction",
+
+                    "correction":
+                        correction_to_dict(
+                            correction
+                        ),
+                }
+            )
+
             total_seconds = (
                 time.perf_counter()
                 - request_started
@@ -1700,6 +1851,17 @@ async def voice_stream(
                             3,
                         ),
 
+                    "correction":
+                        round(
+                            correction_seconds,
+                            3,
+                        ),
+
+                    "correction_needed":
+                        correction[
+                            "needed"
+                        ],
+
                     "total":
                         round(
                             total_seconds,
@@ -1713,6 +1875,10 @@ async def voice_stream(
                         sentence_count,
                 },
             )
+
+            # -----------------------------------------
+            # Complete
+            # -----------------------------------------
 
             yield encode_ndjson(
                 {
@@ -1740,6 +1906,12 @@ async def voice_stream(
                     "llm_seconds":
                         round(
                             llm_seconds,
+                            3,
+                        ),
+
+                    "correction_seconds":
+                        round(
+                            correction_seconds,
                             3,
                         ),
 

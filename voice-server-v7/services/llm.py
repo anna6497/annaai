@@ -22,6 +22,10 @@ logger = logging.getLogger(
 )
 
 
+# =========================================================
+# OLLAMA SETTINGS
+# =========================================================
+
 OLLAMA_BASE_URL = os.getenv(
     "OLLAMA_BASE_URL",
     "http://127.0.0.1:11434",
@@ -66,6 +70,10 @@ TRADITIONAL_TO_SIMPLIFIED = OpenCC(
 )
 
 
+# =========================================================
+# TYPES
+# =========================================================
+
 class AnnaCorrection(
     TypedDict
 ):
@@ -88,10 +96,14 @@ class StreamEvent(
     total=False,
 ):
     type: str
+
     text: str
-    hanzi: str
-    pinyin: str
+
     sentence: str
+
+    hanzi: str
+
+    pinyin: str
 
 
 class OllamaServiceError(
@@ -104,7 +116,7 @@ class OllamaServiceError(
 
 
 # =========================================================
-# V7.2 NORMAL CONVERSATION + CORRECTION
+# V7.2 STRUCTURED PRACTICE PROMPT
 # =========================================================
 
 PRACTICE_PROMPT = """
@@ -129,7 +141,7 @@ Examples of meaningful problems:
 - a sentence that sounds clearly unnatural because of a learner error
 
 Do NOT correct:
-- punctuation
+- punctuation only
 - minor stylistic preferences
 - sentences that are already acceptable Chinese
 - a sentence merely because another native expression also exists
@@ -148,14 +160,14 @@ When correction is not needed:
 CONVERSATION RULES:
 
 1. Use natural Simplified Chinese only in hanzi.
-2. Respond directly to the meaning of the latest user message.
+2. Respond directly to the actual meaning of the latest user message.
 3. Never reuse an earlier assistant reply.
 4. Never repeat the user's sentence as the whole answer.
 5. Give one short reaction, answer, or related comment.
 6. Usually keep the conversation moving with one natural follow-up question when appropriate.
 7. Never ask more than one question.
-8. Use 1 to 3 short sentences.
-9. Keep vocabulary suitable for HSK 1-4.
+8. For normal conversation, use 1 to 3 short sentences.
+9. Keep vocabulary suitable for HSK 1-4 unless the user asks for something more advanced.
 10. Do not provide pinyin.
 11. Do not provide Myanmar translation.
 12. Do not explain grammar unless the user explicitly asks.
@@ -244,6 +256,10 @@ Required JSON format:
 """.strip()
 
 
+# =========================================================
+# SENTENCE BUILDER
+# =========================================================
+
 SENTENCE_BUILDER_PROMPT = """
 You translate Myanmar text into natural Simplified Mandarin Chinese.
 
@@ -286,6 +302,10 @@ Required format:
 """.strip()
 
 
+# =========================================================
+# RETRY PROMPTS
+# =========================================================
+
 RETRY_PRACTICE_PROMPT = """
 The previous answer was invalid.
 
@@ -297,7 +317,7 @@ Requirements:
 - Do not reuse an earlier assistant sentence.
 - Do not repeat the user's sentence as the whole reply.
 - Use natural Simplified Chinese.
-- Use 1 to 3 short sentences.
+- For normal chat, use 1 to 3 short sentences.
 - Ask no more than one question.
 - Check the user's Chinese for a meaningful learner error.
 - Do not over-correct acceptable Chinese.
@@ -340,11 +360,11 @@ Required format:
 
 
 # =========================================================
-# V7.3 LIVE STREAMING PROMPT
+# V7.3 TRUE LIVE STREAMING PROMPT
 # =========================================================
 
 STREAMING_PRACTICE_PROMPT = """
-You are Anna, a friendly and expressive Mandarin AI speaking partner.
+You are Anna, a friendly, expressive Mandarin AI speaking partner.
 
 Your response is streamed LIVE to the user and spoken aloud by a Mandarin TTS engine.
 
@@ -358,53 +378,59 @@ GENERAL RULES:
 4. Do not output Myanmar translation.
 5. Do not output markdown.
 6. Do not output labels such as "Anna:", "intent:", "emotion:", or "reply:".
-7. Respond naturally to the latest user message.
+7. Respond naturally to the actual meaning of the latest user message.
 8. Never repeat the user's sentence as the whole reply.
 9. Avoid repeating previous Anna replies.
-10. Use natural spoken Mandarin rather than formal written Mandarin.
-11. Normally keep vocabulary suitable for HSK 1-4.
-12. Start answering immediately. Do not write an introduction about what you are going to do.
-
-REPLY LENGTH MUST MATCH THE USER'S INTENT.
+10. Use natural spoken Mandarin, not stiff textbook Chinese.
+11. Normally use vocabulary suitable for HSK 1-4.
+12. Start answering immediately.
+13. Do not announce what you are going to do before answering.
 
 NORMAL CHAT:
+
 - Usually 1 to 3 short sentences.
 - Keep the conversation flowing naturally.
 - You may ask one relevant follow-up question.
 - Do not ask more than one question.
 
 STORY:
+
 If the user asks for a story:
 - Tell an original story.
-- Start the actual story immediately.
-- Normally use about 8 to 20 short learner-friendly sentences.
-- Use short sentences so TTS can speak them naturally.
-- Keep the story interesting but easy to understand.
-- Do not unnecessarily summarize it at the end.
+- Start the story immediately.
+- Normally use about 8 to 20 short sentences.
+- Keep sentences short for spoken TTS.
+- Keep vocabulary learner-friendly.
+- Make the story interesting and natural.
+- Do not add a long summary unless the user asks.
 
 ADVICE:
+
 If the user asks for advice:
-- Give useful, thoughtful advice.
+- Give useful and thoughtful advice.
 - Normally use 3 to 8 short sentences.
-- Be friendly and practical.
-- Do not sound like a formal lecture.
+- Be practical and conversational.
+- Avoid sounding like a formal lecture.
 
 EXPLANATION:
-If the user asks you to explain something:
-- Explain clearly using short sentences.
-- Give a simple example when helpful.
-- Use as many sentences as reasonably needed.
+
+If the user asks for an explanation:
+- Explain clearly in short sentences.
+- Give a simple example when useful.
+- Use as many short sentences as reasonably needed.
 
 ORIGINAL SONG:
-If the user asks you to sing:
-- Create new original Chinese lyrics.
-- Never reproduce lyrics from an existing copyrighted song.
-- Keep it short, usually 4 to 8 lines.
-- Make it rhythmic, simple, and easy to understand.
-- You may use musical symbols such as ♪ sparingly.
-- Do not claim the lyrics are from a real song.
 
-EMOTION AND PERFORMANCE:
+If the user asks you to sing:
+- Create completely original short Chinese lyrics.
+- Never reproduce lyrics from an existing song.
+- Usually use 4 to 8 short lines.
+- Keep it simple, rhythmic, catchy, and learner-friendly.
+- You may use ♪ sparingly.
+- Return only the original lyrics.
+- Do not claim it is a real existing song.
+
+EMOTION / PERFORMANCE:
 
 If the user requests a mood, reflect it naturally in the wording.
 
@@ -412,27 +438,27 @@ friendly:
 - warm and natural
 
 playful:
-- light, fun wording
+- light and fun
 
 teasing:
-- playful friendly teasing
-- do not become cruel or humiliating
+- friendly playful teasing
+- never cruel or humiliating
 
 angry:
 - stronger wording
 - natural frustration
-- do not become abusive or threatening
+- never abusive or threatening
 
 excited:
-- energetic wording and punctuation
+- energetic wording and natural exclamation marks
 
 sad:
-- gentle, softer wording
+- gentle and softer wording
 
 shouting:
-- stronger emphatic wording
-- use exclamation marks when natural
-- do not write all text as repeated symbols
+- emphatic wording
+- stronger punctuation when natural
+- do not spam punctuation
 
 storytelling:
 - expressive narrative style
@@ -441,18 +467,70 @@ song:
 - short rhythmic original lyrics
 
 IMPORTANT FOR LIVE TTS:
+
 - Prefer short complete sentences.
-- Use Chinese sentence punctuation.
+- Use Chinese punctuation correctly.
 - End sentences with 。！？ when appropriate.
-- Avoid huge paragraphs.
+- Avoid giant paragraphs.
 - Each sentence should be easy to speak aloud.
+- Do not wait to form a long essay before beginning.
+- Start with the first useful sentence immediately.
 
 Return only the Chinese words Anna should say.
 """.strip()
 
 
 # =========================================================
-# HELPERS
+# V7.3 DEFERRED CORRECTION PROMPT
+# =========================================================
+
+CORRECTION_ONLY_PROMPT = """
+You are a Mandarin correction checker for a Chinese learner.
+
+Your ONLY task is to check the user's latest Chinese sentence.
+
+Do not continue the conversation.
+Do not answer the user.
+Do not give advice.
+Do not explain grammar.
+
+Decide whether the user's Chinese contains a meaningful learner error.
+
+Set needed=true ONLY when there is a meaningful issue such as:
+- incorrect grammar
+- incorrect word order
+- clearly incorrect word choice
+- missing an important grammar word
+- a sentence that is clearly unnatural because of a learner mistake
+
+Set needed=false when:
+- the sentence is already acceptable natural Chinese
+- only punctuation is different
+- there is only a minor stylistic preference
+- another wording may sound slightly better but the user's sentence is still valid
+- a speech transcription variant is still understandable and acceptable
+
+If needed=true:
+- corrected must be ONE natural Simplified Chinese correction
+- preserve the user's intended meaning
+- do not add extra information
+
+If needed=false:
+- corrected must be ""
+
+Return exactly one JSON object.
+
+Required format:
+
+{
+  "needed":false,
+  "corrected":""
+}
+""".strip()
+
+
+# =========================================================
+# CONNECTION
 # =========================================================
 
 def check_ollama_connection() -> bool:
@@ -467,6 +545,10 @@ def check_ollama_connection() -> bool:
     except requests.RequestException:
         return False
 
+
+# =========================================================
+# TEXT HELPERS
+# =========================================================
 
 def _normalized_text(
     text: str,
@@ -533,10 +615,7 @@ def _clean_history(
             f"{_normalized_text(content)}"
         )
 
-        if (
-            key ==
-            previous_key
-        ):
+        if key == previous_key:
             continue
 
         cleaned.append(
@@ -647,73 +726,6 @@ def _extract_json(
         )
 
     return parsed
-
-
-def _extract_hanzi(
-    raw_content: str,
-) -> str:
-    try:
-        payload = _extract_json(
-            raw_content
-        )
-
-        value = (
-            payload.get("hanzi")
-            or payload.get("reply")
-            or payload.get("content")
-            or payload.get("message")
-            or ""
-        )
-
-        hanzi = str(
-            value
-        ).strip()
-
-    except OllamaServiceError:
-        hanzi = (
-            raw_content.strip()
-        )
-
-    hanzi = re.sub(
-        r"^```(?:json)?\s*",
-        "",
-        hanzi,
-        flags=re.IGNORECASE,
-    )
-
-    hanzi = re.sub(
-        r"\s*```$",
-        "",
-        hanzi,
-    ).strip()
-
-    if hanzi.startswith(
-        '{"hanzi":'
-    ):
-        try:
-            parsed = json.loads(
-                hanzi
-            )
-
-            if isinstance(
-                parsed.get(
-                    "hanzi"
-                ),
-                str,
-            ):
-                hanzi = (
-                    parsed[
-                        "hanzi"
-                    ].strip()
-                )
-
-        except (
-            json.JSONDecodeError,
-            TypeError,
-        ):
-            pass
-
-    return hanzi
 
 
 def _contains_chinese(
@@ -928,7 +940,8 @@ def _is_repeated_reply(
             continue
 
         if (
-            current ==
+            current
+            ==
             previous_normalized
         ):
             return True
@@ -983,6 +996,10 @@ def _parse_boolean(
 
     return False
 
+
+# =========================================================
+# CORRECTION PARSER
+# =========================================================
 
 def _extract_correction(
     payload: dict[
@@ -1062,7 +1079,8 @@ def _extract_correction(
         return empty
 
     return {
-        "needed": True,
+        "needed":
+            True,
 
         "original":
             original.strip(),
@@ -1078,7 +1096,7 @@ def _extract_correction(
 
 
 # =========================================================
-# V7.2 NON-STREAM OLLAMA REQUEST
+# NORMAL NON-STREAM OLLAMA REQUEST
 # =========================================================
 
 def _request_ollama(
@@ -1243,7 +1261,7 @@ def _request_ollama(
 
 
 # =========================================================
-# V7.2 NORMAL STRUCTURED REPLY
+# V7.2 STRUCTURED REPLY
 # =========================================================
 
 def generate_reply(
@@ -1440,11 +1458,6 @@ def generate_reply(
                 )
             )
 
-            payload: dict[
-                str,
-                Any,
-            ]
-
             try:
                 payload = (
                     _extract_json(
@@ -1528,15 +1541,6 @@ def generate_reply(
                     )
                     > 1
                 ):
-                    logger.info(
-                        (
-                            "ANNA_REPLY_"
-                            "QUESTION_LIMIT "
-                            "original=%r"
-                        ),
-                        hanzi,
-                    )
-
                     hanzi = (
                         _limit_to_one_question(
                             hanzi
@@ -1559,8 +1563,7 @@ def generate_reply(
                     raise OllamaServiceError(
                         (
                             "Anna repeated "
-                            "the user's "
-                            "sentence."
+                            "the user's sentence."
                         )
                     )
 
@@ -1575,8 +1578,7 @@ def generate_reply(
                     raise OllamaServiceError(
                         (
                             "Anna repeated "
-                            "an earlier "
-                            "assistant reply."
+                            "an earlier reply."
                         )
                     )
 
@@ -1604,16 +1606,12 @@ def generate_reply(
                 (
                     "ANNA_REPLY_OK "
                     "correction_needed=%s "
-                    "hanzi=%r "
-                    "corrected=%r"
+                    "hanzi=%r"
                 ),
                 correction[
                     "needed"
                 ],
                 hanzi[:200],
-                correction[
-                    "corrected"
-                ][:200],
             )
 
             return result
@@ -1622,18 +1620,18 @@ def generate_reply(
             OllamaServiceError,
             ValueError,
         ) as error:
-            last_error = error
+            last_error = (
+                error
+            )
 
             logger.warning(
                 (
                     "OLLAMA_REPLY_REJECTED "
                     "attempt=%d "
-                    "error=%s "
-                    "reply=%r"
+                    "error=%s"
                 ),
                 attempt + 1,
                 error,
-                rejected_reply[:200],
             )
 
     raise OllamaServiceError(
@@ -1646,7 +1644,242 @@ def generate_reply(
 
 
 # =========================================================
-# V7.3 LIVE STREAMING REPLY
+# V7.3 DEFERRED CORRECTION CHECK
+# =========================================================
+
+def check_user_correction(
+    user_text: str,
+) -> AnnaCorrection:
+    """
+    Check only the user's Chinese sentence.
+
+    This runs AFTER Anna's live reply has already
+    started/finished, so correction does not block
+    live Hanzi or Piper TTS.
+    """
+
+    cleaned_text = (
+        user_text.strip()
+    )
+
+    empty: AnnaCorrection = {
+        "needed":
+            False,
+
+        "original":
+            "",
+
+        "corrected":
+            "",
+
+        "pinyin":
+            "",
+    }
+
+    if not cleaned_text:
+        return empty
+
+    if not _contains_chinese(
+        cleaned_text
+    ):
+        return empty
+
+    messages: list[
+        dict[str, str]
+    ] = [
+        {
+            "role":
+                "system",
+
+            "content":
+                CORRECTION_ONLY_PROMPT,
+        },
+
+        {
+            "role":
+                "user",
+
+            "content":
+                cleaned_text,
+        },
+    ]
+
+    payload = {
+        "model":
+            MODEL_NAME,
+
+        "messages":
+            messages,
+
+        "stream":
+            False,
+
+        "format":
+            "json",
+
+        "think":
+            False,
+
+        "keep_alive":
+            "30m",
+
+        "options": {
+            "temperature":
+                0.0,
+
+            "top_p":
+                0.8,
+
+            "repeat_penalty":
+                1.05,
+
+            "num_ctx":
+                2048,
+
+            "num_predict":
+                120,
+        },
+    }
+
+    try:
+        response = requests.post(
+            OLLAMA_CHAT_URL,
+            json=payload,
+            timeout=(
+                10,
+                REQUEST_TIMEOUT,
+            ),
+        )
+
+        response.raise_for_status()
+
+    except requests.RequestException as error:
+        logger.warning(
+            (
+                "CORRECTION_CHECK_FAILED "
+                "error=%s"
+            ),
+            error,
+        )
+
+        return empty
+
+    try:
+        data = response.json()
+
+        message = (
+            data.get(
+                "message"
+            )
+        )
+
+        if not isinstance(
+            message,
+            dict,
+        ):
+            return empty
+
+        raw_content = str(
+            message.get(
+                "content",
+                "",
+            )
+            or ""
+        ).strip()
+
+        parsed = (
+            _extract_json(
+                raw_content
+            )
+        )
+
+    except (
+        ValueError,
+        OllamaServiceError,
+        TypeError,
+    ):
+        return empty
+
+    needed = _parse_boolean(
+        parsed.get(
+            "needed",
+            False,
+        )
+    )
+
+    corrected = str(
+        parsed.get(
+            "corrected",
+            "",
+        )
+        or ""
+    ).strip()
+
+    if not needed:
+        return empty
+
+    corrected = (
+        _clean_reply_text(
+            corrected
+        )
+    )
+
+    corrected = (
+        _to_simplified(
+            corrected
+        )
+    )
+
+    if not corrected:
+        return empty
+
+    if not _contains_chinese(
+        corrected
+    ):
+        return empty
+
+    if (
+        _normalized_text(
+            corrected
+        )
+        ==
+        _normalized_text(
+            cleaned_text
+        )
+    ):
+        return empty
+
+    result: AnnaCorrection = {
+        "needed":
+            True,
+
+        "original":
+            cleaned_text,
+
+        "corrected":
+            corrected,
+
+        "pinyin":
+            _normalize_pinyin(
+                corrected
+            ),
+    }
+
+    logger.info(
+        (
+            "CORRECTION_CHECK_OK "
+            "original=%r "
+            "corrected=%r"
+        ),
+        cleaned_text[:180],
+        corrected[:180],
+    )
+
+    return result
+
+
+# =========================================================
+# V7.3 TRUE LIVE OLLAMA STREAM
 # =========================================================
 
 def stream_reply_text(
@@ -1661,32 +1894,22 @@ def stream_reply_text(
     StreamEvent
 ]:
     """
-    Stream Anna's Simplified Chinese reply
-    directly from Ollama.
+    Stream Anna's reply directly from Ollama.
 
-    Events:
+    Event order:
 
-    token:
-        {
-            "type": "token",
-            "text": "你"
-        }
+    token
+      -> live Hanzi UI
 
-    sentence:
-        {
-            "type": "sentence",
-            "sentence": "你好！"
-        }
+    sentence
+      -> sentence-level Piper TTS queue
 
-    done:
-        {
-            "type": "done",
-            "hanzi": "你好！今天怎么样？",
-            "pinyin": "nǐ hǎo! jīn tiān zěn me yàng?"
-        }
+    done
+      -> final Hanzi + deferred Pinyin
 
-    Existing generate_reply() remains
-    available for the old V7.2 flow.
+    Correction is intentionally NOT generated here.
+    Use check_user_correction() after/during finalization
+    so correction does not delay the live response.
     """
 
     cleaned_text = str(
@@ -1747,8 +1970,6 @@ def stream_reply_text(
             "30m",
 
         "options": {
-            # More expressive than the
-            # correction JSON flow.
             "temperature":
                 0.68,
 
@@ -1758,14 +1979,10 @@ def stream_reply_text(
             "repeat_penalty":
                 1.12,
 
-            # Enough context for previous
-            # conversation memory.
             "num_ctx":
                 4096,
 
-            # Allows longer stories/advice.
-            # Normal chat should still stay
-            # short because of the prompt.
+            # Allows stories/advice/explanation.
             "num_predict":
                 1200,
 
@@ -1790,9 +2007,11 @@ def stream_reply_text(
 
     full_text = ""
 
-    # Text which has not yet completed
-    # a TTS-ready sentence.
     sentence_buffer = ""
+
+    token_events = 0
+
+    sentence_events = 0
 
     try:
         with requests.post(
@@ -1810,6 +2029,7 @@ def stream_reply_text(
             for raw_line in (
                 response.iter_lines(
                     decode_unicode=True,
+                    chunk_size=1,
                 )
             ):
                 if not raw_line:
@@ -1848,10 +2068,13 @@ def stream_reply_text(
                         )
                     )
 
-                    if isinstance(
-                        raw_chunk,
-                        str,
-                    ) and raw_chunk:
+                    if (
+                        isinstance(
+                            raw_chunk,
+                            str,
+                        )
+                        and raw_chunk
+                    ):
                         chunk = (
                             TRADITIONAL_TO_SIMPLIFIED
                             .convert(
@@ -1859,70 +2082,71 @@ def stream_reply_text(
                             )
                         )
 
-                        full_text += (
-                            chunk
-                        )
-
-                        sentence_buffer += (
-                            chunk
-                        )
-
-                        # Immediately give
-                        # frontend live Hanzi.
-                        yield {
-                            "type":
-                                "token",
-
-                            "text":
-                                chunk,
-                        }
-
-                        # One Ollama chunk may
-                        # contain several Chinese
-                        # sentence endings.
-                        while True:
-                            match = re.search(
-                                r"[。！？!?]",
-                                sentence_buffer,
+                        if chunk:
+                            full_text += (
+                                chunk
                             )
 
-                            if not match:
-                                break
-
-                            end_index = (
-                                match.end()
+                            sentence_buffer += (
+                                chunk
                             )
 
-                            sentence = (
-                                sentence_buffer[
-                                    :end_index
-                                ]
-                                .strip()
-                            )
+                            token_events += 1
 
-                            sentence_buffer = (
-                                sentence_buffer[
-                                    end_index:
-                                ]
-                            )
+                            # Send to browser immediately.
+                            yield {
+                                "type":
+                                    "token",
 
-                            if (
-                                sentence
-                                and
-                                _contains_chinese(
-                                    sentence
+                                "text":
+                                    chunk,
+                            }
+
+                            # Detect TTS-ready complete
+                            # sentences as soon as punctuation
+                            # arrives.
+                            while True:
+                                match = re.search(
+                                    r"[。！？!?]",
+                                    sentence_buffer,
                                 )
-                            ):
-                                # Frontend will later
-                                # use this for the Piper
-                                # sentence queue.
-                                yield {
-                                    "type":
-                                        "sentence",
 
-                                    "sentence":
-                                        sentence,
-                                }
+                                if not match:
+                                    break
+
+                                end_index = (
+                                    match.end()
+                                )
+
+                                sentence = (
+                                    sentence_buffer[
+                                        :end_index
+                                    ]
+                                    .strip()
+                                )
+
+                                sentence_buffer = (
+                                    sentence_buffer[
+                                        end_index:
+                                    ]
+                                )
+
+                                if (
+                                    sentence
+                                    and
+                                    _contains_chinese(
+                                        sentence
+                                    )
+                                ):
+                                    sentence_events += 1
+
+                                    yield {
+                                        "type":
+                                            "sentence",
+
+                                        "sentence":
+                                            sentence,
+                                    }
 
                 if bool(
                     data.get(
@@ -1990,10 +2214,7 @@ def stream_reply_text(
 
     if not final_text:
         raise OllamaServiceError(
-            (
-                "Streaming reply "
-                "was empty."
-            )
+            "Streaming reply was empty."
         )
 
     if not _contains_chinese(
@@ -2006,9 +2227,6 @@ def stream_reply_text(
             )
         )
 
-    # If the final sentence had no
-    # punctuation, still allow it
-    # into the TTS queue.
     remaining_sentence = (
         sentence_buffer.strip()
     )
@@ -2020,6 +2238,8 @@ def stream_reply_text(
             remaining_sentence
         )
     ):
+        sentence_events += 1
+
         yield {
             "type":
                 "sentence",
@@ -2038,17 +2258,18 @@ def stream_reply_text(
         (
             "OLLAMA_STREAM_DONE "
             "characters=%d "
+            "token_events=%d "
+            "sentence_events=%d "
             "hanzi=%r"
         ),
         len(
             final_text
         ),
+        token_events,
+        sentence_events,
         final_text[:300],
     )
 
-    # Pinyin is intentionally sent
-    # only after the Hanzi stream is
-    # completely finished.
     yield {
         "type":
             "done",
