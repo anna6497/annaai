@@ -16,9 +16,9 @@ interface ServerError {
   error?: string;
 }
 
-const VOICE_TIMEOUT_MS = 190_000;
-const TEXT_TIMEOUT_MS = 130_000;
-const HEALTH_TIMEOUT_MS = 10_000;
+const VOICE_TIMEOUT_MS = 90_000;
+const TEXT_TIMEOUT_MS = 60_000;
+const HEALTH_TIMEOUT_MS = 8_000;
 
 async function fetchWithTimeout(
   input: RequestInfo | URL,
@@ -123,6 +123,35 @@ function isTimeoutError(
   );
 }
 
+function normalizeVoiceError(
+  error: unknown,
+): Error {
+  if (isTimeoutError(error)) {
+    return new Error(
+      "Voice processing အချိန်ကြာလွန်းပါတယ်။ စာကြောင်းတိုတိုနဲ့ ပြန်စမ်းပါ။",
+    );
+  }
+
+  if (
+    error instanceof TypeError &&
+    error.message
+      .toLowerCase()
+      .includes("fetch")
+  ) {
+    return new Error(
+      "Anna AI Voice Server ကို ချိတ်ဆက်၍မရပါ။ Network ကိုစစ်ပြီး ပြန်စမ်းပါ။",
+    );
+  }
+
+  if (error instanceof Error) {
+    return error;
+  }
+
+  return new Error(
+    "Voice processing error ဖြစ်နေပါတယ်။",
+  );
+}
+
 export async function sendAudio(
   audio: Blob,
   history: ConversationHistoryMessage[],
@@ -149,9 +178,7 @@ export async function sendAudio(
 
   try {
     response = await fetchWithTimeout(
-      getVoiceServerUrl(
-        "/voice-chat",
-      ),
+      getVoiceServerUrl("/voice-chat"),
       {
         method: "POST",
         body: formData,
@@ -159,11 +186,7 @@ export async function sendAudio(
       VOICE_TIMEOUT_MS,
     );
   } catch (error) {
-    throw new Error(
-      isTimeoutError(error)
-        ? "Voice processing အချိန်ကြာလွန်းပါတယ်။ စာကြောင်းတိုတိုနဲ့ ပြန်စမ်းပါ။"
-        : "Anna AI Voice Server ကို ချိတ်ဆက်၍မရပါ။ ခဏနေရင် ပြန်စမ်းပါ။",
-    );
+    throw normalizeVoiceError(error);
   }
 
   const data = await readJson<
@@ -183,8 +206,7 @@ export async function sendAudio(
     !data ||
     !("transcript" in data) ||
     !("reply" in data) ||
-    typeof data.transcript !==
-      "string" ||
+    typeof data.transcript !== "string" ||
     !data.transcript.trim() ||
     !isAnnaReply(data.reply)
   ) {
@@ -215,9 +237,7 @@ export async function sendTextMessage(
 
   try {
     response = await fetchWithTimeout(
-      getVoiceServerUrl(
-        "/text-chat",
-      ),
+      getVoiceServerUrl("/text-chat"),
       {
         method: "POST",
         headers: {
@@ -233,10 +253,14 @@ export async function sendTextMessage(
       TEXT_TIMEOUT_MS,
     );
   } catch (error) {
+    if (isTimeoutError(error)) {
+      throw new Error(
+        "Anna reply အချိန်ကြာလွန်းပါတယ်။ ပြန်စမ်းပါ။",
+      );
+    }
+
     throw new Error(
-      isTimeoutError(error)
-        ? "Anna reply အချိန်ကြာလွန်းပါတယ်။ ပြန်စမ်းပါ။"
-        : "Anna AI Voice Server ကို ချိတ်ဆက်၍မရပါ။",
+      "Anna AI Voice Server ကို ချိတ်ဆက်၍မရပါ။",
     );
   }
 
@@ -271,9 +295,7 @@ export async function checkVoiceServer(): Promise<boolean> {
   try {
     const response =
       await fetchWithTimeout(
-        getVoiceServerUrl(
-          "/health",
-        ),
+        getVoiceServerUrl("/health"),
         {
           method: "GET",
           headers: {
@@ -293,11 +315,6 @@ export async function checkVoiceServer(): Promise<boolean> {
         response,
       );
 
-    /*
-     * Server ကိုဆက်သွယ်နိုင်ရင် Connected ပြမယ်။
-     * Ollama က ခဏ cold start ဖြစ်နေလည်း
-     * Offline မပြတော့ပါ။
-     */
     return (
       data?.status === "ok" ||
       data?.status === "degraded"
