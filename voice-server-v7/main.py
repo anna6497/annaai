@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import shutil
@@ -17,8 +18,9 @@ from fastapi import (
     UploadFile,
 )
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from fastapi.responses import FileResponse
 from faster_whisper import WhisperModel
+from pydantic import BaseModel, Field
 
 from services.llm import (
     OllamaServiceError,
@@ -27,12 +29,20 @@ from services.llm import (
 )
 
 
-APP_VERSION = "7.0.0-alpha"
+APP_VERSION = "7.1.0-piper-tts"
 
 Mode = Literal[
     "practice",
     "sentence_builder",
 ]
+
+TtsSpeed = Literal[
+    "normal",
+    "slow",
+]
+
+
+BASE_DIR = Path(__file__).resolve().parent
 
 WHISPER_MODEL_SIZE = os.getenv(
     "WHISPER_MODEL_SIZE",
@@ -60,6 +70,14 @@ MAX_HISTORY_MESSAGES = int(
     )
 )
 
+MAX_TTS_CHARACTERS = int(
+    os.getenv(
+        "ANNA_MAX_TTS_CHARACTERS",
+        "500",
+    )
+)
+
+
 DEFAULT_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
@@ -83,6 +101,47 @@ ALLOWED_ORIGINS = list(
             *EXTRA_ALLOWED_ORIGINS,
         ]
     )
+)
+
+
+PIPER_MODEL_PATH = Path(
+    os.getenv(
+        "PIPER_MODEL_PATH",
+        str(
+            BASE_DIR
+            / "models"
+            / "piper"
+            / "zh_CN-huayan-medium.onnx"
+        ),
+    )
+)
+
+PIPER_CONFIG_PATH = Path(
+    os.getenv(
+        "PIPER_CONFIG_PATH",
+        str(
+            BASE_DIR
+            / "models"
+            / "piper"
+            / "zh_CN-huayan-medium.onnx.json"
+        ),
+    )
+)
+
+TTS_CACHE_DIR = Path(
+    os.getenv(
+        "TTS_CACHE_DIR",
+        str(
+            BASE_DIR
+            / "cache"
+            / "tts"
+        ),
+    )
+)
+
+TTS_CACHE_DIR.mkdir(
+    parents=True,
+    exist_ok=True,
 )
 
 
@@ -130,6 +189,15 @@ class TextChatRequest(BaseModel):
     ] = []
 
 
+class TtsRequest(BaseModel):
+    text: str = Field(
+        min_length=1,
+        max_length=MAX_TTS_CHARACTERS,
+    )
+
+    speed: TtsSpeed = "normal"
+
+
 class AnnaReplyResponse(BaseModel):
     hanzi: str
     pinyin: str
@@ -164,8 +232,12 @@ def get_whisper_model() -> WhisperModel:
         print(
             "Loading V7 Whisper:",
             {
-                "model": WHISPER_MODEL_SIZE,
-                "device": WHISPER_DEVICE,
+                "model":
+                    WHISPER_MODEL_SIZE,
+
+                "device":
+                    WHISPER_DEVICE,
+
                 "compute_type":
                     WHISPER_COMPUTE_TYPE,
             },
@@ -185,7 +257,9 @@ def clean_history(
     history: list[
         HistoryMessage
     ],
-) -> list[dict[str, str]]:
+) -> list[
+    dict[str, str]
+]:
     result: list[
         dict[str, str]
     ] = []
@@ -205,6 +279,7 @@ def clean_history(
             {
                 "role":
                     item.role,
+
                 "content":
                     content,
             }
@@ -226,14 +301,14 @@ def parse_form_history(
             raw
         )
 
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as error:
         raise HTTPException(
             status_code=400,
             detail=(
                 "Conversation history "
                 "is invalid JSON."
             ),
-        )
+        ) from error
 
     if not isinstance(
         parsed,
@@ -285,7 +360,9 @@ def parse_form_history(
 
         result.append(
             {
-                "role": role,
+                "role":
+                    role,
+
                 "content":
                     content,
             }
@@ -319,18 +396,25 @@ def get_audio_suffix(
     content_type_map = {
         "audio/webm":
             ".webm",
+
         "audio/webm;codecs=opus":
             ".webm",
+
         "audio/wav":
             ".wav",
+
         "audio/x-wav":
             ".wav",
+
         "audio/mpeg":
             ".mp3",
+
         "audio/mp4":
             ".m4a",
+
         "audio/ogg":
             ".ogg",
+
         "audio/ogg;codecs=opus":
             ".ogg",
     }
@@ -400,14 +484,14 @@ def convert_to_wav(
             check=False,
         )
 
-    except subprocess.TimeoutExpired:
+    except subprocess.TimeoutExpired as error:
         raise HTTPException(
             status_code=504,
             detail=(
                 "Audio processing "
                 "timed out."
             ),
-        )
+        ) from error
 
     if result.returncode != 0:
         raise HTTPException(
@@ -439,9 +523,6 @@ def transcribe_chinese(
 
             task="transcribe",
 
-            # V7:
-            # latency ကိုလျှော့ရန်
-            # beam 5 → 3
             beam_size=3,
 
             best_of=3,
@@ -453,6 +534,7 @@ def transcribe_chinese(
             vad_parameters={
                 "min_silence_duration_ms":
                     350,
+
                 "speech_pad_ms":
                     150,
             },
@@ -481,10 +563,13 @@ def transcribe_chinese(
         {
             "transcript":
                 transcript,
+
             "language":
                 info.language,
+
             "probability":
                 info.language_probability,
+
             "seconds":
                 round(
                     elapsed,
@@ -499,23 +584,290 @@ def transcribe_chinese(
     )
 
 
+def get_piper_binary() -> Path:
+    binary_path = (
+        BASE_DIR
+        / ".venv"
+        / "bin"
+        / "piper"
+    )
+
+    if not binary_path.exists():
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Piper TTS executable "
+                "was not found."
+            ),
+        )
+
+    return binary_path
+
+
+def check_piper_ready() -> bool:
+    try:
+        binary_path = (
+            BASE_DIR
+            / ".venv"
+            / "bin"
+            / "piper"
+        )
+
+        return (
+            binary_path.exists()
+            and PIPER_MODEL_PATH.exists()
+            and PIPER_CONFIG_PATH.exists()
+        )
+
+    except OSError:
+        return False
+
+
+def create_tts_cache_key(
+    text: str,
+    speed: TtsSpeed,
+) -> str:
+    payload = (
+        f"piper-huayan-v1:"
+        f"{speed}:"
+        f"{text.strip()}"
+    )
+
+    return hashlib.sha256(
+        payload.encode(
+            "utf-8"
+        )
+    ).hexdigest()
+
+
+def generate_piper_audio(
+    text: str,
+    speed: TtsSpeed,
+) -> tuple[
+    Path,
+    bool,
+]:
+    cleaned_text = (
+        text.strip()
+    )
+
+    if not cleaned_text:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "TTS text is empty."
+            ),
+        )
+
+    if (
+        len(cleaned_text)
+        > MAX_TTS_CHARACTERS
+    ):
+        raise HTTPException(
+            status_code=413,
+            detail=(
+                "TTS text is too long."
+            ),
+        )
+
+    if not PIPER_MODEL_PATH.exists():
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Piper Mandarin model "
+                "was not found."
+            ),
+        )
+
+    if not PIPER_CONFIG_PATH.exists():
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Piper Mandarin config "
+                "was not found."
+            ),
+        )
+
+    piper_binary = (
+        get_piper_binary()
+    )
+
+    cache_key = (
+        create_tts_cache_key(
+            cleaned_text,
+            speed,
+        )
+    )
+
+    output_path = (
+        TTS_CACHE_DIR
+        / f"{cache_key}.wav"
+    )
+
+    if (
+        output_path.exists()
+        and
+        output_path.stat().st_size
+        > 1000
+    ):
+        return (
+            output_path,
+            True,
+        )
+
+    length_scale = (
+        "1.25"
+        if speed == "slow"
+        else "1.0"
+    )
+
+    temporary_output = (
+        TTS_CACHE_DIR
+        / (
+            f"{cache_key}."
+            f"{os.getpid()}."
+            f"tmp.wav"
+        )
+    )
+
+    command = [
+        str(
+            piper_binary
+        ),
+
+        "--model",
+        str(
+            PIPER_MODEL_PATH
+        ),
+
+        "--config",
+        str(
+            PIPER_CONFIG_PATH
+        ),
+
+        "--output-file",
+        str(
+            temporary_output
+        ),
+
+        "--length-scale",
+        length_scale,
+
+        "--sentence-silence",
+        "0.12",
+
+        "--volume",
+        "1.0",
+    ]
+
+    try:
+        result = subprocess.run(
+            command,
+            input=cleaned_text,
+            text=True,
+            capture_output=True,
+            timeout=30,
+            check=False,
+        )
+
+    except subprocess.TimeoutExpired as error:
+        if temporary_output.exists():
+            try:
+                temporary_output.unlink()
+            except OSError:
+                pass
+
+        raise HTTPException(
+            status_code=504,
+            detail=(
+                "TTS generation "
+                "timed out."
+            ),
+        ) from error
+
+    if result.returncode != 0:
+        if temporary_output.exists():
+            try:
+                temporary_output.unlink()
+            except OSError:
+                pass
+
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "Piper TTS failed: "
+                f"{result.stderr.strip()}"
+            ),
+        )
+
+    if (
+        not temporary_output.exists()
+        or
+        temporary_output.stat().st_size
+        < 1000
+    ):
+        if temporary_output.exists():
+            try:
+                temporary_output.unlink()
+            except OSError:
+                pass
+
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "Piper returned "
+                "invalid audio."
+            ),
+        )
+
+    try:
+        temporary_output.replace(
+            output_path
+        )
+
+    except OSError:
+        shutil.copyfile(
+            temporary_output,
+            output_path,
+        )
+
+        try:
+            temporary_output.unlink()
+        except OSError:
+            pass
+
+    return (
+        output_path,
+        False,
+    )
+
+
 @app.get("/")
 def root() -> dict[
     str,
     Any,
 ]:
     return {
-        "status": "ok",
+        "status":
+            "ok",
+
         "service":
             "anna-ai-speaking-v7",
+
         "version":
             APP_VERSION,
+
         "health":
             "/v7/health",
+
         "voice_chat":
             "/v7/voice-chat",
+
         "text_chat":
             "/v7/text-chat",
+
+        "tts":
+            "/v7/tts",
     }
 
 
@@ -527,12 +879,17 @@ def health() -> dict[
     Any,
 ]:
     return {
-        "status": "ok",
+        "status":
+            "ok",
+
         "service":
             "anna-ai-speaking-v7",
+
         "version":
             APP_VERSION,
-        "port": 8002,
+
+        "port":
+            8002,
 
         "whisper_model":
             WHISPER_MODEL_SIZE,
@@ -544,17 +901,115 @@ def health() -> dict[
             WHISPER_COMPUTE_TYPE,
 
         "ffmpeg_available":
-            shutil.which(
-                "ffmpeg"
-            )
-            is not None,
+            (
+                shutil.which(
+                    "ffmpeg"
+                )
+                is not None
+            ),
 
         "ollama_running":
             check_ollama_connection(),
 
+        "piper_ready":
+            check_piper_ready(),
+
+        "piper_model":
+            str(
+                PIPER_MODEL_PATH
+            ),
+
+        "tts_cache_dir":
+            str(
+                TTS_CACHE_DIR
+            ),
+
         "allowed_origins":
             ALLOWED_ORIGINS,
     }
+
+
+@app.post(
+    "/v7/tts"
+)
+def text_to_speech(
+    request: TtsRequest,
+) -> FileResponse:
+    started = (
+        time.perf_counter()
+    )
+
+    output_path, cached = (
+        generate_piper_audio(
+            request.text,
+            request.speed,
+        )
+    )
+
+    elapsed = (
+        time.perf_counter()
+        - started
+    )
+
+    print(
+        "V7 TTS:",
+        {
+            "characters":
+                len(
+                    request.text
+                ),
+
+            "speed":
+                request.speed,
+
+            "cached":
+                cached,
+
+            "seconds":
+                round(
+                    elapsed,
+                    3,
+                ),
+
+            "file":
+                output_path.name,
+        },
+    )
+
+    return FileResponse(
+        path=str(
+            output_path
+        ),
+
+        media_type=
+            "audio/wav",
+
+        filename=
+            "anna-v7.wav",
+
+        headers={
+            "Cache-Control":
+                (
+                    "public, "
+                    "max-age=86400"
+                ),
+
+            "X-Anna-TTS-Cache":
+                (
+                    "HIT"
+                    if cached
+                    else "MISS"
+                ),
+
+            "X-Anna-TTS-Time":
+                str(
+                    round(
+                        elapsed,
+                        3,
+                    )
+                ),
+        },
+    )
 
 
 @app.post(
@@ -592,17 +1047,25 @@ def text_chat(
     )
 
     try:
-        reply = generate_reply(
-            user_text=message,
-            mode=request.mode,
-            conversation_history=
-                history,
+        reply = (
+            generate_reply(
+                user_text=
+                    message,
+
+                mode=
+                    request.mode,
+
+                conversation_history=
+                    history,
+            )
         )
 
     except OllamaServiceError as error:
         raise HTTPException(
             status_code=503,
-            detail=str(error),
+            detail=str(
+                error
+            ),
         ) from error
 
     llm_seconds = (
@@ -616,16 +1079,24 @@ def text_chat(
     )
 
     return TextChatResponse(
-        message=message,
-        mode=request.mode,
+        message=
+            message,
 
-        reply=AnnaReplyResponse(
-            hanzi=
-                reply["hanzi"],
+        mode=
+            request.mode,
 
-            pinyin=
-                reply["pinyin"],
-        ),
+        reply=
+            AnnaReplyResponse(
+                hanzi=
+                    reply[
+                        "hanzi"
+                    ],
+
+                pinyin=
+                    reply[
+                        "pinyin"
+                    ],
+            ),
 
         timings={
             "llm":
@@ -672,7 +1143,9 @@ async def voice_chat(
             ),
         )
 
-    audio_bytes = await audio.read()
+    audio_bytes = (
+        await audio.read()
+    )
 
     if not audio_bytes:
         raise HTTPException(
@@ -684,7 +1157,9 @@ async def voice_chat(
         )
 
     if (
-        len(audio_bytes)
+        len(
+            audio_bytes
+        )
         > MAX_AUDIO_BYTES
     ):
         raise HTTPException(
@@ -756,8 +1231,10 @@ async def voice_chat(
 
         transcript, (
             stt_seconds
-        ) = transcribe_chinese(
-            wav_path
+        ) = (
+            transcribe_chinese(
+                wav_path
+            )
         )
 
         if not transcript:
