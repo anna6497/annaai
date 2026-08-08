@@ -48,7 +48,8 @@ const MAX_MEMORY_MESSAGES = 40;
 
 function loadSavedMemory(): ConversationHistoryMessage[] {
   if (
-    typeof window === "undefined"
+    typeof window ===
+    "undefined"
   ) {
     return [];
   }
@@ -66,7 +67,11 @@ function loadSavedMemory(): ConversationHistoryMessage[] {
     const parsed: unknown =
       JSON.parse(raw);
 
-    if (!Array.isArray(parsed)) {
+    if (
+      !Array.isArray(
+        parsed,
+      )
+    ) {
       return [];
     }
 
@@ -75,7 +80,8 @@ function loadSavedMemory(): ConversationHistoryMessage[] {
         (
           item,
         ): item is ConversationHistoryMessage =>
-          typeof item === "object" &&
+          typeof item ===
+            "object" &&
           item !== null &&
           "role" in item &&
           "content" in item &&
@@ -85,21 +91,23 @@ function loadSavedMemory(): ConversationHistoryMessage[] {
             ).role === "user" ||
             (
               item as ConversationHistoryMessage
-            ).role === "assistant"
+            ).role ===
+              "assistant"
           ) &&
           typeof (
             item as ConversationHistoryMessage
-          ).content === "string" &&
+          ).content ===
+            "string" &&
           (
             item as ConversationHistoryMessage
-          ).content.trim().length > 0,
+          ).content
+            .trim()
+            .length > 0,
       )
       .slice(
         -MAX_MEMORY_MESSAGES,
       );
-  } catch (
-    error
-  ) {
+  } catch (error) {
     console.error(
       "Unable to load conversation memory:",
       error,
@@ -110,10 +118,12 @@ function loadSavedMemory(): ConversationHistoryMessage[] {
 }
 
 function saveMemory(
-  messages: ConversationHistoryMessage[],
+  messages:
+    ConversationHistoryMessage[],
 ): void {
   if (
-    typeof window === "undefined"
+    typeof window ===
+    "undefined"
   ) {
     return;
   }
@@ -127,9 +137,7 @@ function saveMemory(
         ),
       ),
     );
-  } catch (
-    error
-  ) {
+  } catch (error) {
     console.error(
       "Unable to save conversation memory:",
       error,
@@ -139,7 +147,8 @@ function saveMemory(
 
 function clearSavedMemory(): void {
   if (
-    typeof window === "undefined"
+    typeof window ===
+    "undefined"
   ) {
     return;
   }
@@ -148,9 +157,7 @@ function clearSavedMemory(): void {
     window.localStorage.removeItem(
       MEMORY_STORAGE_KEY,
     );
-  } catch (
-    error
-  ) {
+  } catch (error) {
     console.error(
       "Unable to clear conversation memory:",
       error,
@@ -159,14 +166,18 @@ function clearSavedMemory(): void {
 }
 
 function getConversationStatusText(
-  conversationState: ConversationState,
+  conversationState:
+    ConversationState,
   seconds: number,
 ): string {
   switch (
     conversationState
   ) {
     case "listening":
-      return `Listening... ${seconds}s / ${MAX_RECORDING_SECONDS}s`;
+      return (
+        `Listening... ${seconds}s / ` +
+        `${MAX_RECORDING_SECONDS}s`
+      );
 
     case "processing":
       return "Anna is thinking...";
@@ -265,14 +276,14 @@ export default function ChatWindow() {
     useState(0);
 
   const mediaRecorderRef =
-    useRef<MediaRecorder | null>(
-      null,
-    );
+    useRef<
+      MediaRecorder | null
+    >(null);
 
   const streamRef =
-    useRef<MediaStream | null>(
-      null,
-    );
+    useRef<
+      MediaStream | null
+    >(null);
 
   const chunksRef =
     useRef<Blob[]>([]);
@@ -377,6 +388,7 @@ export default function ChatWindow() {
       stopSpeaking();
 
       stopRecordingTimer();
+
       stopMicrophoneStream();
     };
   }, [
@@ -386,7 +398,8 @@ export default function ChatWindow() {
   ]);
 
   const switchMode = (
-    nextMode: AiPracticeMode,
+    nextMode:
+      AiPracticeMode,
   ) => {
     if (
       isRecording ||
@@ -435,10 +448,14 @@ export default function ChatWindow() {
     stopRecording,
   ]);
 
-  const playAnnaReply =
+  const playChinese =
     useCallback(
       (
         hanzi: string,
+        speed:
+          | "normal"
+          | "slow" =
+          "normal",
       ) => {
         if (
           !speakerEnabled ||
@@ -454,7 +471,7 @@ export default function ChatWindow() {
         void speakChinese(
           hanzi,
           {
-            speed: "normal",
+            speed,
 
             volume: 1,
 
@@ -608,6 +625,7 @@ export default function ChatWindow() {
               );
 
               stopRecordingTimer();
+
               stopMicrophoneStream();
 
               setIsRecording(
@@ -677,7 +695,8 @@ export default function ChatWindow() {
                   );
 
                 const cleanedTranscript =
-                  result.transcript.trim();
+                  result.transcript
+                    .trim();
 
                 setTranscript(
                   cleanedTranscript,
@@ -687,10 +706,13 @@ export default function ChatWindow() {
                   result.reply,
                 );
 
-                const newMessages: ConversationHistoryMessage[] =
+                const newMessages:
+                  ConversationHistoryMessage[] =
                   [
                     {
-                      role: "user",
+                      role:
+                        "user",
+
                       content:
                         cleanedTranscript,
                     },
@@ -729,7 +751,7 @@ export default function ChatWindow() {
                 if (
                   speakerEnabled
                 ) {
-                  playAnnaReply(
+                  playChinese(
                     result.reply
                       .hanzi,
                   );
@@ -782,8 +804,7 @@ export default function ChatWindow() {
                   (
                     current,
                   ) =>
-                    current +
-                    1,
+                    current + 1,
                 );
               },
               1000,
@@ -797,6 +818,7 @@ export default function ChatWindow() {
           );
 
           stopRecordingTimer();
+
           stopMicrophoneStream();
 
           setIsRecording(
@@ -846,7 +868,7 @@ export default function ChatWindow() {
         isProcessing,
         isRecording,
         mode,
-        playAnnaReply,
+        playChinese,
         speakerEnabled,
         stopMicrophoneStream,
         stopRecordingTimer,
@@ -855,7 +877,8 @@ export default function ChatWindow() {
 
   const handleBuilderSubmit =
     async (
-      event: FormEvent<HTMLFormElement>,
+      event:
+        FormEvent<HTMLFormElement>,
     ) => {
       event.preventDefault();
 
@@ -882,6 +905,7 @@ export default function ChatWindow() {
 
       setError("");
       setReply(null);
+
       setTranscript(
         cleaned,
       );
@@ -909,8 +933,9 @@ export default function ChatWindow() {
         if (
           speakerEnabled
         ) {
-          playAnnaReply(
-            result.reply.hanzi,
+          playChinese(
+            result.reply
+              .hanzi,
           );
         } else {
           setConversationState(
@@ -985,7 +1010,7 @@ export default function ChatWindow() {
       }
     };
 
-  const handleReplay =
+  const handleReplyReplay =
     () => {
       if (
         !reply ||
@@ -995,8 +1020,28 @@ export default function ChatWindow() {
         return;
       }
 
-      playAnnaReply(
+      playChinese(
         reply.hanzi,
+      );
+    };
+
+  const handleCorrectionReplay =
+    () => {
+      const correction =
+        reply?.correction;
+
+      if (
+        !correction?.needed ||
+        !correction.corrected ||
+        isRecording ||
+        isProcessing
+      ) {
+        return;
+      }
+
+      playChinese(
+        correction.corrected,
+        "slow",
       );
     };
 
@@ -1004,6 +1049,17 @@ export default function ChatWindow() {
     getConversationStatusText(
       conversationState,
       seconds,
+    );
+
+  const correction =
+    reply?.correction;
+
+  const showCorrection =
+    mode === "practice" &&
+    correction?.needed === true &&
+    Boolean(
+      correction.corrected
+        .trim(),
     );
 
   return (
@@ -1202,6 +1258,7 @@ export default function ChatWindow() {
                 "listening" ? (
                   <span className="flex items-center gap-2 text-xs font-bold text-red-200">
                     <span className="h-2 w-2 animate-pulse rounded-full bg-red-400" />
+
                     LISTENING
                   </span>
                 ) : null}
@@ -1230,6 +1287,79 @@ export default function ChatWindow() {
               <div className="px-5 py-4 text-base leading-7">
                 {transcript}
               </div>
+            </section>
+          ) : null}
+
+          {showCorrection &&
+          correction ? (
+            <section className="overflow-hidden rounded-[26px] border border-emerald-400/35 bg-emerald-500/[0.08] shadow-[0_0_25px_rgba(52,211,153,0.06)]">
+              <div className="flex items-center justify-between gap-4 border-b border-emerald-400/20 px-5 py-4">
+                <div>
+                  <p className="text-xs font-black tracking-[0.18em] text-emerald-200">
+                    ✨ MORE NATURAL
+                  </p>
+
+                  <p className="mt-1 text-xs text-emerald-100/60">
+                    ဒီလိုပြောရင် ပိုသဘာဝကျပါတယ်
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={
+                    isRecording ||
+                    isProcessing
+                  }
+                  onClick={
+                    handleCorrectionReplay
+                  }
+                  className="rounded-full border border-emerald-300/30 bg-emerald-300/10 p-3 text-xl transition hover:bg-emerald-300/20 disabled:opacity-40"
+                  aria-label="Play corrected Chinese slowly"
+                  title="Listen slowly"
+                >
+                  🔊
+                </button>
+              </div>
+
+              {correction.original ? (
+                <div className="border-b border-emerald-400/15 px-5 py-4">
+                  <p className="text-[11px] font-bold tracking-[0.16em] text-emerald-200/60">
+                    YOU SAID
+                  </p>
+
+                  <p className="mt-2 text-lg leading-relaxed text-white/50 line-through decoration-red-400/70 decoration-2">
+                    {
+                      correction.original
+                    }
+                  </p>
+                </div>
+              ) : null}
+
+              <div className="border-b border-emerald-400/15 px-5 py-5">
+                <p className="text-[11px] font-bold tracking-[0.16em] text-emerald-200">
+                  更自然的说法
+                </p>
+
+                <p className="mt-3 text-2xl font-bold leading-relaxed text-emerald-50">
+                  {
+                    correction.corrected
+                  }
+                </p>
+              </div>
+
+              {correction.pinyin ? (
+                <div className="px-5 py-4">
+                  <p className="text-[11px] font-bold tracking-[0.16em] text-emerald-200/70">
+                    拼音 · PINYIN
+                  </p>
+
+                  <p className="mt-2 text-base font-semibold leading-relaxed text-emerald-50/90">
+                    {
+                      correction.pinyin
+                    }
+                  </p>
+                </div>
+              ) : null}
             </section>
           ) : null}
 
@@ -1263,7 +1393,7 @@ export default function ChatWindow() {
                   isProcessing
                 }
                 onClick={
-                  handleReplay
+                  handleReplyReplay
                 }
                 className="rounded-full border border-purple-300/20 bg-white/5 p-3 text-xl transition hover:bg-white/10 disabled:opacity-40"
                 aria-label="Play Chinese sentence"
@@ -1357,6 +1487,7 @@ export default function ChatWindow() {
                 "listening" ? (
                   <>
                     <span className="absolute inset-[-16px] animate-ping rounded-full border border-red-300/30" />
+
                     <span className="absolute inset-[-8px] animate-pulse rounded-full border border-red-300/30" />
                   </>
                 ) : null}
@@ -1401,7 +1532,9 @@ export default function ChatWindow() {
                   {isProcessing ? (
                     <div className="flex gap-1">
                       <span className="h-3 w-3 animate-bounce rounded-full bg-white [animation-delay:-0.3s]" />
+
                       <span className="h-3 w-3 animate-bounce rounded-full bg-white [animation-delay:-0.15s]" />
+
                       <span className="h-3 w-3 animate-bounce rounded-full bg-white" />
                     </div>
                   ) : isRecording ? (

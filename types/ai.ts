@@ -11,48 +11,42 @@ export type ConversationHistoryMessage = {
   content: string;
 };
 
+export type AnnaCorrection = {
+  needed: boolean;
+  original: string;
+  corrected: string;
+  pinyin: string;
+};
+
 export type AnnaReply = {
   hanzi: string;
   pinyin: string;
 
   /**
-   * Kept optional for compatibility with older
-   * MessageBubble versions.
+   * V7.2 Chinese correction.
+   *
+   * Optional so older backend responses
+   * remain compatible during preview testing.
+   */
+  correction?: AnnaCorrection;
+
+  /**
+   * Legacy compatibility.
    */
   myanmar?: string;
 };
 
 export type ChatMessage = {
-  /**
-   * Unique message identifier.
-   */
   id: string;
 
-  /**
-   * Required by conversation storage and history.
-   */
   sender: ConversationRole;
 
-  /**
-   * Required by MessageBubble and conversation memory.
-   */
   text: string;
 
-  /**
-   * Anna's structured Chinese reply.
-   * User messages may not have this value.
-   */
   reply?: AnnaReply | null;
 
-  /**
-   * Unix timestamp created with Date.now().
-   */
   createdAt: number;
 
-  /**
-   * Optional compatibility fields.
-   * These do not replace sender and text.
-   */
   role?: ConversationRole;
   content?: string;
   transcript?: string;
@@ -60,27 +54,58 @@ export type ChatMessage = {
 
 export type VoiceChatResponse = {
   transcript: string;
+
+  mode?: AiPracticeMode;
+
   reply: AnnaReply;
+
+  timings?: Record<
+    string,
+    number
+  >;
 };
 
 export type TextChatResponse = {
-  /**
-   * The backend response includes the original
-   * or processed message together with Anna's reply.
-   */
   message: string;
+
+  mode?: AiPracticeMode;
+
   reply: AnnaReply;
+
+  timings?: Record<
+    string,
+    number
+  >;
 };
 
 export type VoiceServerHealth = {
   status: string;
-  ollama_running: boolean;
 
-  /**
-   * Optional backend service details.
-   */
+  ollama_running?: boolean;
+
+  version?: string;
+
+  service?: string;
+
+  port?: number;
+
   whisper_loaded?: boolean;
+
+  whisper_model?: string;
+
+  whisper_device?: string;
+
+  whisper_compute_type?: string;
+
   model?: string;
+
+  ffmpeg_available?: boolean;
+
+  piper_ready?: boolean;
+
+  correction_enabled?: boolean;
+
+  allowed_origins?: string[];
 };
 
 export type VoiceServerHealthResponse =
