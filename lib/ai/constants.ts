@@ -1,8 +1,14 @@
 const rawVoiceServer =
   process.env.NEXT_PUBLIC_VOICE_API_URL ?? "";
 
+const rawVoiceApiVersion =
+  process.env.NEXT_PUBLIC_VOICE_API_VERSION ?? "v6";
+
 export const VOICE_SERVER =
   rawVoiceServer.trim().replace(/\/+$/, "");
+
+export const VOICE_API_VERSION =
+  rawVoiceApiVersion.trim().toLowerCase();
 
 export const LANGUAGE = "zh-CN";
 
@@ -20,6 +26,20 @@ export function getVoiceServerUrl(
   const cleanPath = pathname.startsWith("/")
     ? pathname
     : `/${pathname}`;
+
+  if (VOICE_API_VERSION === "v7") {
+    if (cleanPath === "/voice-chat") {
+      return `${VOICE_SERVER}/v7/voice-chat`;
+    }
+
+    if (cleanPath === "/text-chat") {
+      return `${VOICE_SERVER}/v7/text-chat`;
+    }
+
+    if (cleanPath === "/health") {
+      return `${VOICE_SERVER}/v7/health`;
+    }
+  }
 
   return `${VOICE_SERVER}${cleanPath}`;
 }
