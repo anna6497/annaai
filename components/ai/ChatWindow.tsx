@@ -451,10 +451,12 @@ export default function ChatWindow() {
           return;
         }
 
-        speakChinese(
+        void speakChinese(
           hanzi,
           {
-            rate: 0.9,
+            speed: "normal",
+
+            volume: 1,
 
             onStart: () => {
               setConversationState(

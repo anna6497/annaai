@@ -16,9 +16,14 @@ interface ServerError {
   error?: string;
 }
 
+export type TtsSpeed =
+  | "normal"
+  | "slow";
+
 const VOICE_TIMEOUT_MS = 90_000;
 const TEXT_TIMEOUT_MS = 60_000;
 const HEALTH_TIMEOUT_MS = 8_000;
+const TTS_TIMEOUT_MS = 30_000;
 
 async function fetchWithTimeout(
   input: RequestInfo | URL,
@@ -28,10 +33,11 @@ async function fetchWithTimeout(
   const controller =
     new AbortController();
 
-  const timer = globalThis.setTimeout(
-    () => controller.abort(),
-    timeoutMs,
-  );
+  const timer =
+    globalThis.setTimeout(
+      () => controller.abort(),
+      timeoutMs,
+    );
 
   try {
     return await fetch(input, {
@@ -40,7 +46,9 @@ async function fetchWithTimeout(
       cache: "no-store",
     });
   } finally {
-    globalThis.clearTimeout(timer);
+    globalThis.clearTimeout(
+      timer,
+    );
   }
 }
 
@@ -48,7 +56,9 @@ async function readJson<T>(
   response: Response,
 ): Promise<T | null> {
   try {
-    return (await response.json()) as T;
+    return (
+      await response.json()
+    ) as T;
   } catch {
     return null;
   }
@@ -68,10 +78,14 @@ function isAnnaReply(
     value as Partial<AnnaReply>;
 
   return (
-    typeof reply.hanzi === "string" &&
-    reply.hanzi.trim().length > 0 &&
-    typeof reply.pinyin === "string" &&
-    reply.pinyin.trim().length > 0
+    typeof reply.hanzi ===
+      "string" &&
+    reply.hanzi.trim().length >
+      0 &&
+    typeof reply.pinyin ===
+      "string" &&
+    reply.pinyin.trim().length >
+      0
   );
 }
 
@@ -80,14 +94,16 @@ function getErrorMessage(
   fallback: string,
 ): string {
   if (
-    typeof data?.detail === "string" &&
+    typeof data?.detail ===
+      "string" &&
     data.detail.trim()
   ) {
     return data.detail.trim();
   }
 
   if (
-    typeof data?.error === "string" &&
+    typeof data?.error ===
+      "string" &&
     data.error.trim()
   ) {
     return data.error.trim();
@@ -99,15 +115,21 @@ function getErrorMessage(
 function getFilename(
   mimeType: string,
 ): string {
-  if (mimeType.includes("ogg")) {
+  if (
+    mimeType.includes("ogg")
+  ) {
     return "recording.ogg";
   }
 
-  if (mimeType.includes("mp4")) {
+  if (
+    mimeType.includes("mp4")
+  ) {
     return "recording.mp4";
   }
 
-  if (mimeType.includes("wav")) {
+  if (
+    mimeType.includes("wav")
+  ) {
     return "recording.wav";
   }
 
@@ -118,7 +140,8 @@ function isTimeoutError(
   error: unknown,
 ): boolean {
   return (
-    error instanceof DOMException &&
+    error instanceof
+      DOMException &&
     error.name === "AbortError"
   );
 }
@@ -126,7 +149,9 @@ function isTimeoutError(
 function normalizeVoiceError(
   error: unknown,
 ): Error {
-  if (isTimeoutError(error)) {
+  if (
+    isTimeoutError(error)
+  ) {
     return new Error(
       "Voice processing အချိန်ကြာလွန်းပါတယ်။ စာကြောင်းတိုတိုနဲ့ ပြန်စမ်းပါ။",
     );
@@ -143,7 +168,9 @@ function normalizeVoiceError(
     );
   }
 
-  if (error instanceof Error) {
+  if (
+    error instanceof Error
+  ) {
     return error;
   }
 
@@ -154,9 +181,11 @@ function normalizeVoiceError(
 
 export async function sendAudio(
   audio: Blob,
-  history: ConversationHistoryMessage[],
+  history:
+    ConversationHistoryMessage[],
 ): Promise<VoiceChatResponse> {
-  const formData = new FormData();
+  const formData =
+    new FormData();
 
   formData.append(
     "audio",
@@ -177,26 +206,33 @@ export async function sendAudio(
   let response: Response;
 
   try {
-    response = await fetchWithTimeout(
-      getVoiceServerUrl("/voice-chat"),
-      {
-        method: "POST",
-        body: formData,
-      },
-      VOICE_TIMEOUT_MS,
-    );
+    response =
+      await fetchWithTimeout(
+        getVoiceServerUrl(
+          "/voice-chat",
+        ),
+        {
+          method: "POST",
+          body: formData,
+        },
+        VOICE_TIMEOUT_MS,
+      );
   } catch (error) {
-    throw normalizeVoiceError(error);
+    throw normalizeVoiceError(
+      error,
+    );
   }
 
   const data = await readJson<
-    VoiceChatResponse | ServerError
+    VoiceChatResponse |
+    ServerError
   >(response);
 
   if (!response.ok) {
     throw new Error(
       getErrorMessage(
-        data as ServerError | null,
+        data as
+          ServerError | null,
         `Voice processing failed (${response.status}).`,
       ),
     );
@@ -206,7 +242,8 @@ export async function sendAudio(
     !data ||
     !("transcript" in data) ||
     !("reply" in data) ||
-    typeof data.transcript !== "string" ||
+    typeof data.transcript !==
+      "string" ||
     !data.transcript.trim() ||
     !isAnnaReply(data.reply)
   ) {
@@ -221,13 +258,17 @@ export async function sendAudio(
 export async function sendTextMessage(
   message: string,
   mode: AiPracticeMode,
-  history: ConversationHistoryMessage[] = [],
+  history:
+    ConversationHistoryMessage[] =
+      [],
 ): Promise<TextChatResponse> {
-  const cleaned = message.trim();
+  const cleaned =
+    message.trim();
 
   if (!cleaned) {
     throw new Error(
-      mode === "sentence_builder"
+      mode ===
+        "sentence_builder"
         ? "မြန်မာစာကြောင်းကို အရင်ရေးပါ။"
         : "Message cannot be empty.",
     );
@@ -236,24 +277,30 @@ export async function sendTextMessage(
   let response: Response;
 
   try {
-    response = await fetchWithTimeout(
-      getVoiceServerUrl("/text-chat"),
-      {
-        method: "POST",
-        headers: {
-          "Content-Type":
-            "application/json",
+    response =
+      await fetchWithTimeout(
+        getVoiceServerUrl(
+          "/text-chat",
+        ),
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body:
+            JSON.stringify({
+              message: cleaned,
+              mode,
+              history,
+            }),
         },
-        body: JSON.stringify({
-          message: cleaned,
-          mode,
-          history,
-        }),
-      },
-      TEXT_TIMEOUT_MS,
-    );
+        TEXT_TIMEOUT_MS,
+      );
   } catch (error) {
-    if (isTimeoutError(error)) {
+    if (
+      isTimeoutError(error)
+    ) {
       throw new Error(
         "Anna reply အချိန်ကြာလွန်းပါတယ်။ ပြန်စမ်းပါ။",
       );
@@ -265,13 +312,15 @@ export async function sendTextMessage(
   }
 
   const data = await readJson<
-    TextChatResponse | ServerError
+    TextChatResponse |
+    ServerError
   >(response);
 
   if (!response.ok) {
     throw new Error(
       getErrorMessage(
-        data as ServerError | null,
+        data as
+          ServerError | null,
         `Text chat failed (${response.status}).`,
       ),
     );
@@ -291,11 +340,99 @@ export async function sendTextMessage(
   return data;
 }
 
+/**
+ * Request Piper Mandarin TTS
+ * from the self-hosted V7 server.
+ *
+ * Returns WAV audio as a Blob.
+ */
+export async function getAnnaTtsAudio(
+  text: string,
+  speed: TtsSpeed =
+    "normal",
+): Promise<Blob> {
+  const cleaned =
+    text.trim();
+
+  if (!cleaned) {
+    throw new Error(
+      "TTS text cannot be empty.",
+    );
+  }
+
+  let response: Response;
+
+  try {
+    response =
+      await fetchWithTimeout(
+        getVoiceServerUrl(
+          "/tts",
+        ),
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+            Accept:
+              "audio/wav",
+          },
+          body:
+            JSON.stringify({
+              text: cleaned,
+              speed,
+            }),
+        },
+        TTS_TIMEOUT_MS,
+      );
+  } catch (error) {
+    if (
+      isTimeoutError(error)
+    ) {
+      throw new Error(
+        "Anna TTS timed out.",
+      );
+    }
+
+    throw new Error(
+      "Anna Piper TTS server could not be reached.",
+    );
+  }
+
+  if (!response.ok) {
+    const data =
+      await readJson<
+        ServerError
+      >(response);
+
+    throw new Error(
+      getErrorMessage(
+        data,
+        `TTS failed (${response.status}).`,
+      ),
+    );
+  }
+
+  const audioBlob =
+    await response.blob();
+
+  if (
+    audioBlob.size < 1000
+  ) {
+    throw new Error(
+      "TTS returned invalid audio.",
+    );
+  }
+
+  return audioBlob;
+}
+
 export async function checkVoiceServer(): Promise<boolean> {
   try {
     const response =
       await fetchWithTimeout(
-        getVoiceServerUrl("/health"),
+        getVoiceServerUrl(
+          "/health",
+        ),
         {
           method: "GET",
           headers: {
@@ -311,13 +448,14 @@ export async function checkVoiceServer(): Promise<boolean> {
     }
 
     const data =
-      await readJson<VoiceServerHealth>(
-        response,
-      );
+      await readJson<
+        VoiceServerHealth
+      >(response);
 
     return (
       data?.status === "ok" ||
-      data?.status === "degraded"
+      data?.status ===
+        "degraded"
     );
   } catch (error) {
     console.error(
