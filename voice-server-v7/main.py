@@ -33,7 +33,7 @@ from services.llm import (
 )
 
 
-APP_VERSION = "7.3.0-live-streaming"
+APP_VERSION = "7.3.1-live-voice-streaming"
 
 Mode = Literal[
     "practice",
@@ -45,6 +45,10 @@ TtsSpeed = Literal[
     "slow",
 ]
 
+
+# =========================================================
+# PATHS / SETTINGS
+# =========================================================
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -65,7 +69,9 @@ WHISPER_COMPUTE_TYPE = os.getenv(
 
 TARGET_SAMPLE_RATE = 16_000
 
-MAX_AUDIO_BYTES = 15 * 1024 * 1024
+MAX_AUDIO_BYTES = (
+    15 * 1024 * 1024
+)
 
 MAX_HISTORY_MESSAGES = int(
     os.getenv(
@@ -108,6 +114,10 @@ ALLOWED_ORIGINS = list(
 )
 
 
+# =========================================================
+# PIPER TTS
+# =========================================================
+
 PIPER_MODEL_PATH = Path(
     os.getenv(
         "PIPER_MODEL_PATH",
@@ -149,24 +159,35 @@ TTS_CACHE_DIR.mkdir(
 )
 
 
+# =========================================================
+# FASTAPI
+# =========================================================
+
 app = FastAPI(
     title="Anna AI Speaking V7",
     version=APP_VERSION,
 )
 
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
-    allow_origin_regex=r"^https://.*\.vercel\.app$",
+    allow_origin_regex=(
+        r"^https://.*\.vercel\.app$"
+    ),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-whisper_model: WhisperModel | None = None
+whisper_model: (
+    WhisperModel | None
+) = None
 
+
+# =========================================================
+# PYDANTIC MODELS
+# =========================================================
 
 class HistoryMessage(BaseModel):
     role: Literal[
@@ -190,7 +211,9 @@ class TextChatRequest(BaseModel):
 
     history: list[
         HistoryMessage
-    ] = []
+    ] = Field(
+        default_factory=list,
+    )
 
 
 class StreamChatRequest(BaseModel):
@@ -201,16 +224,21 @@ class StreamChatRequest(BaseModel):
 
     history: list[
         HistoryMessage
-    ] = []
+    ] = Field(
+        default_factory=list,
+    )
 
 
 class TtsRequest(BaseModel):
     text: str = Field(
         min_length=1,
-        max_length=MAX_TTS_CHARACTERS,
+        max_length=
+            MAX_TTS_CHARACTERS,
     )
 
-    speed: TtsSpeed = "normal"
+    speed: TtsSpeed = (
+        "normal"
+    )
 
 
 class CorrectionResponse(BaseModel):
@@ -224,32 +252,45 @@ class AnnaReplyResponse(BaseModel):
     hanzi: str
     pinyin: str
 
-    correction: CorrectionResponse = (
-        CorrectionResponse()
+    correction: (
+        CorrectionResponse
+    ) = Field(
+        default_factory=
+            CorrectionResponse,
     )
 
 
 class TextChatResponse(BaseModel):
     message: str
     mode: Mode
-    reply: AnnaReplyResponse
 
-    timings: dict[
-        str,
-        float,
-    ] | None = None
+    reply: (
+        AnnaReplyResponse
+    )
+
+    timings: (
+        dict[str, float]
+        | None
+    ) = None
 
 
 class VoiceChatResponse(BaseModel):
     transcript: str
     mode: Mode
-    reply: AnnaReplyResponse
 
-    timings: dict[
-        str,
-        float,
-    ] | None = None
+    reply: (
+        AnnaReplyResponse
+    )
 
+    timings: (
+        dict[str, float]
+        | None
+    ) = None
+
+
+# =========================================================
+# WHISPER
+# =========================================================
 
 def get_whisper_model() -> WhisperModel:
     global whisper_model
@@ -269,15 +310,22 @@ def get_whisper_model() -> WhisperModel:
             },
         )
 
-        whisper_model = WhisperModel(
-            WHISPER_MODEL_SIZE,
-            device=WHISPER_DEVICE,
-            compute_type=
-                WHISPER_COMPUTE_TYPE,
+        whisper_model = (
+            WhisperModel(
+                WHISPER_MODEL_SIZE,
+                device=
+                    WHISPER_DEVICE,
+                compute_type=
+                    WHISPER_COMPUTE_TYPE,
+            )
         )
 
     return whisper_model
 
+
+# =========================================================
+# HISTORY
+# =========================================================
 
 def clean_history(
     history: list[
@@ -294,8 +342,7 @@ def clean_history(
         -MAX_HISTORY_MESSAGES:
     ]:
         content = (
-            item.content
-            .strip()
+            item.content.strip()
         )
 
         if not content:
@@ -376,7 +423,8 @@ def parse_form_history(
         ).strip()
 
         if (
-            role not in {
+            role
+            not in {
                 "user",
                 "assistant",
             }
@@ -397,8 +445,15 @@ def parse_form_history(
     return result
 
 
+# =========================================================
+# CORRECTION
+# =========================================================
+
 def build_correction_response(
-    reply: dict[str, Any],
+    reply: dict[
+        str,
+        Any,
+    ],
 ) -> CorrectionResponse:
     raw = reply.get(
         "correction"
@@ -408,7 +463,9 @@ def build_correction_response(
         raw,
         dict,
     ):
-        return CorrectionResponse()
+        return (
+            CorrectionResponse()
+        )
 
     return CorrectionResponse(
         needed=bool(
@@ -444,6 +501,10 @@ def build_correction_response(
     )
 
 
+# =========================================================
+# STREAM ENCODING
+# =========================================================
+
 def encode_ndjson(
     payload: dict[
         str,
@@ -464,6 +525,10 @@ def encode_ndjson(
         "utf-8"
     )
 
+
+# =========================================================
+# AUDIO
+# =========================================================
 
 def get_audio_suffix(
     audio: UploadFile,
@@ -513,10 +578,12 @@ def get_audio_suffix(
             ".ogg",
     }
 
-    return content_type_map.get(
-        audio.content_type
-        or "",
-        ".webm",
+    return (
+        content_type_map.get(
+            audio.content_type
+            or "",
+            ".webm",
+        )
     )
 
 
@@ -529,8 +596,9 @@ def require_ffmpeg() -> str:
         raise HTTPException(
             status_code=500,
             detail=(
-                "FFmpeg is not available "
-                "on the V7 server."
+                "FFmpeg is not "
+                "available on the "
+                "V7 server."
             ),
         )
 
@@ -541,7 +609,9 @@ def convert_to_wav(
     input_path: str,
     output_path: str,
 ) -> None:
-    ffmpeg = require_ffmpeg()
+    ffmpeg = (
+        require_ffmpeg()
+    )
 
     command = [
         ffmpeg,
@@ -570,12 +640,14 @@ def convert_to_wav(
     ]
 
     try:
-        result = subprocess.run(
-            command,
-            capture_output=True,
-            text=True,
-            timeout=25,
-            check=False,
+        result = (
+            subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                timeout=25,
+                check=False,
+            )
         )
 
     except subprocess.TimeoutExpired as error:
@@ -587,7 +659,14 @@ def convert_to_wav(
             ),
         ) from error
 
-    if result.returncode != 0:
+    if (
+        result.returncode != 0
+    ):
+        print(
+            "FFmpeg error:",
+            result.stderr,
+        )
+
         raise HTTPException(
             status_code=422,
             detail=(
@@ -603,7 +682,9 @@ def transcribe_chinese(
     str,
     float,
 ]:
-    model = get_whisper_model()
+    model = (
+        get_whisper_model()
+    )
 
     started = (
         time.perf_counter()
@@ -635,7 +716,8 @@ def transcribe_chinese(
 
             condition_on_previous_text=False,
 
-            no_speech_threshold=0.45,
+            no_speech_threshold=
+                0.45,
 
             without_timestamps=True,
         )
@@ -678,6 +760,68 @@ def transcribe_chinese(
     )
 
 
+def prepare_uploaded_audio(
+    audio: UploadFile,
+    audio_bytes: bytes,
+) -> tuple[
+    str,
+    str,
+]:
+    suffix = (
+        get_audio_suffix(
+            audio
+        )
+    )
+
+    with (
+        tempfile.NamedTemporaryFile(
+            suffix=suffix,
+            delete=False,
+        )
+    ) as source:
+        source.write(
+            audio_bytes
+        )
+
+        original_path = (
+            source.name
+        )
+
+    with (
+        tempfile.NamedTemporaryFile(
+            suffix=".wav",
+            delete=False,
+        )
+    ) as wav_file:
+        wav_path = (
+            wav_file.name
+        )
+
+    return (
+        original_path,
+        wav_path,
+    )
+
+
+def delete_temporary_files(
+    *paths: str | None,
+) -> None:
+    for path in paths:
+        if not path:
+            continue
+
+        try:
+            os.remove(
+                path
+            )
+        except OSError:
+            pass
+
+
+# =========================================================
+# PIPER
+# =========================================================
+
 def get_piper_binary() -> Path:
     binary_path = (
         BASE_DIR
@@ -709,8 +853,10 @@ def check_piper_ready() -> bool:
 
         return (
             binary_path.exists()
-            and PIPER_MODEL_PATH.exists()
-            and PIPER_CONFIG_PATH.exists()
+            and
+            PIPER_MODEL_PATH.exists()
+            and
+            PIPER_CONFIG_PATH.exists()
         )
 
     except OSError:
@@ -722,16 +868,18 @@ def create_tts_cache_key(
     speed: TtsSpeed,
 ) -> str:
     payload = (
-        f"piper-huayan-v1:"
+        "piper-huayan-v1:"
         f"{speed}:"
         f"{text.strip()}"
     )
 
-    return hashlib.sha256(
-        payload.encode(
-            "utf-8"
-        )
-    ).hexdigest()
+    return (
+        hashlib.sha256(
+            payload.encode(
+                "utf-8"
+            )
+        ).hexdigest()
+    )
 
 
 def generate_piper_audio(
@@ -760,11 +908,15 @@ def generate_piper_audio(
         raise HTTPException(
             status_code=413,
             detail=(
-                "TTS text is too long."
+                "TTS text is "
+                "too long."
             ),
         )
 
-    if not PIPER_MODEL_PATH.exists():
+    if not (
+        PIPER_MODEL_PATH
+        .exists()
+    ):
         raise HTTPException(
             status_code=503,
             detail=(
@@ -773,7 +925,10 @@ def generate_piper_audio(
             ),
         )
 
-    if not PIPER_CONFIG_PATH.exists():
+    if not (
+        PIPER_CONFIG_PATH
+        .exists()
+    ):
         raise HTTPException(
             status_code=503,
             detail=(
@@ -801,8 +956,8 @@ def generate_piper_audio(
     if (
         output_path.exists()
         and
-        output_path.stat().st_size
-        > 1000
+        output_path.stat()
+        .st_size > 1000
     ):
         return (
             output_path,
@@ -820,7 +975,7 @@ def generate_piper_audio(
         / (
             f"{cache_key}."
             f"{os.getpid()}."
-            f"tmp.wav"
+            "tmp.wav"
         )
     )
 
@@ -855,17 +1010,23 @@ def generate_piper_audio(
     ]
 
     try:
-        result = subprocess.run(
-            command,
-            input=cleaned_text,
-            text=True,
-            capture_output=True,
-            timeout=30,
-            check=False,
+        result = (
+            subprocess.run(
+                command,
+                input=
+                    cleaned_text,
+                text=True,
+                capture_output=True,
+                timeout=30,
+                check=False,
+            )
         )
 
     except subprocess.TimeoutExpired as error:
-        if temporary_output.exists():
+        if (
+            temporary_output
+            .exists()
+        ):
             try:
                 temporary_output.unlink()
             except OSError:
@@ -879,8 +1040,13 @@ def generate_piper_audio(
             ),
         ) from error
 
-    if result.returncode != 0:
-        if temporary_output.exists():
+    if (
+        result.returncode != 0
+    ):
+        if (
+            temporary_output
+            .exists()
+        ):
             try:
                 temporary_output.unlink()
             except OSError:
@@ -895,12 +1061,16 @@ def generate_piper_audio(
         )
 
     if (
-        not temporary_output.exists()
+        not temporary_output
+        .exists()
         or
-        temporary_output.stat().st_size
-        < 1000
+        temporary_output.stat()
+        .st_size < 1000
     ):
-        if temporary_output.exists():
+        if (
+            temporary_output
+            .exists()
+        ):
             try:
                 temporary_output.unlink()
             except OSError:
@@ -936,6 +1106,10 @@ def generate_piper_audio(
     )
 
 
+# =========================================================
+# ROOT
+# =========================================================
+
 @app.get("/")
 def root() -> dict[
     str,
@@ -957,6 +1131,9 @@ def root() -> dict[
         "voice_chat":
             "/v7/voice-chat",
 
+        "voice_stream":
+            "/v7/voice-stream",
+
         "text_chat":
             "/v7/text-chat",
 
@@ -967,6 +1144,10 @@ def root() -> dict[
             "/v7/tts",
     }
 
+
+# =========================================================
+# HEALTH
+# =========================================================
 
 @app.get(
     "/v7/health"
@@ -1027,13 +1208,23 @@ def health() -> dict[
         "streaming_enabled":
             True,
 
+        "voice_streaming_enabled":
+            True,
+
         "stream_endpoint":
             "/v7/stream-chat",
+
+        "voice_stream_endpoint":
+            "/v7/voice-stream",
 
         "allowed_origins":
             ALLOWED_ORIGINS,
     }
 
+
+# =========================================================
+# TTS
+# =========================================================
 
 @app.post(
     "/v7/tts"
@@ -1118,6 +1309,10 @@ def text_to_speech(
     )
 
 
+# =========================================================
+# TEXT LIVE STREAM
+# =========================================================
+
 @app.post(
     "/v7/stream-chat"
 )
@@ -1125,8 +1320,7 @@ def stream_chat(
     request: StreamChatRequest,
 ) -> StreamingResponse:
     message = (
-        request.message
-        .strip()
+        request.message.strip()
     )
 
     if not message:
@@ -1170,24 +1364,22 @@ def stream_chat(
                         history,
                 )
             ):
-                event_type = (
-                    str(
-                        event.get(
-                            "type",
-                            "",
-                        )
+                event_type = str(
+                    event.get(
+                        "type",
+                        "",
                     )
                 )
 
                 if (
-                    event_type ==
-                    "token"
+                    event_type
+                    == "token"
                 ):
                     token_count += 1
 
                 elif (
-                    event_type ==
-                    "sentence"
+                    event_type
+                    == "sentence"
                 ):
                     sentence_count += 1
 
@@ -1201,7 +1393,7 @@ def stream_chat(
             )
 
             print(
-                "V7 STREAM TIMINGS:",
+                "V7 TEXT STREAM:",
                 {
                     "seconds":
                         round(
@@ -1238,19 +1430,13 @@ def stream_chat(
 
         except GeneratorExit:
             print(
-                "V7 STREAM CLIENT DISCONNECTED"
+                "V7 TEXT STREAM "
+                "CLIENT DISCONNECTED"
             )
 
             return
 
         except OllamaServiceError as error:
-            print(
-                "V7 STREAM OLLAMA ERROR:",
-                str(
-                    error
-                ),
-            )
-
             yield encode_ndjson(
                 {
                     "type":
@@ -1265,7 +1451,7 @@ def stream_chat(
 
         except Exception as error:
             print(
-                "V7 STREAM ERROR:",
+                "V7 TEXT STREAM ERROR:",
                 repr(
                     error
                 ),
@@ -1296,12 +1482,344 @@ def stream_chat(
 
             "X-Accel-Buffering":
                 "no",
-
-            "Connection":
-                "keep-alive",
         },
     )
 
+
+# =========================================================
+# VOICE LIVE STREAM
+# =========================================================
+
+@app.post(
+    "/v7/voice-stream"
+)
+async def voice_stream(
+    audio: UploadFile = File(...),
+
+    history: str = Form(
+        "[]"
+    ),
+) -> StreamingResponse:
+    request_started = (
+        time.perf_counter()
+    )
+
+    audio_bytes = (
+        await audio.read()
+    )
+
+    if not audio_bytes:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Recorded audio "
+                "is empty."
+            ),
+        )
+
+    if (
+        len(audio_bytes)
+        > MAX_AUDIO_BYTES
+    ):
+        raise HTTPException(
+            status_code=413,
+            detail=(
+                "Audio exceeds "
+                "15 MB."
+            ),
+        )
+
+    conversation_history = (
+        parse_form_history(
+            history
+        )
+    )
+
+    original_path: (
+        str | None
+    ) = None
+
+    wav_path: (
+        str | None
+    ) = None
+
+    try:
+        (
+            original_path,
+            wav_path,
+        ) = prepare_uploaded_audio(
+            audio,
+            audio_bytes,
+        )
+
+        audio_started = (
+            time.perf_counter()
+        )
+
+        convert_to_wav(
+            original_path,
+            wav_path,
+        )
+
+        audio_seconds = (
+            time.perf_counter()
+            - audio_started
+        )
+
+        (
+            transcript,
+            stt_seconds,
+        ) = transcribe_chinese(
+            wav_path
+        )
+
+        if not transcript:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "Chinese speech "
+                    "was not detected. "
+                    "Please speak again."
+                ),
+            )
+
+    finally:
+        delete_temporary_files(
+            original_path,
+            wav_path,
+        )
+
+    def event_stream():
+        llm_started = (
+            time.perf_counter()
+        )
+
+        token_count = 0
+        sentence_count = 0
+
+        try:
+            yield encode_ndjson(
+                {
+                    "type":
+                        "start",
+                }
+            )
+
+            # Transcript is available
+            # before LLM starts.
+            yield encode_ndjson(
+                {
+                    "type":
+                        "transcript",
+
+                    "transcript":
+                        transcript,
+
+                    "timings": {
+                        "audio":
+                            round(
+                                audio_seconds,
+                                3,
+                            ),
+
+                        "stt":
+                            round(
+                                stt_seconds,
+                                3,
+                            ),
+                    },
+                }
+            )
+
+            # Hanzi tokens begin streaming.
+            # Sentence events are used by
+            # frontend Piper TTS queue.
+            for event in (
+                stream_reply_text(
+                    user_text=
+                        transcript,
+
+                    conversation_history=
+                        conversation_history,
+                )
+            ):
+                event_type = str(
+                    event.get(
+                        "type",
+                        "",
+                    )
+                )
+
+                if (
+                    event_type
+                    == "token"
+                ):
+                    token_count += 1
+
+                elif (
+                    event_type
+                    == "sentence"
+                ):
+                    sentence_count += 1
+
+                yield encode_ndjson(
+                    event
+                )
+
+            llm_seconds = (
+                time.perf_counter()
+                - llm_started
+            )
+
+            total_seconds = (
+                time.perf_counter()
+                - request_started
+            )
+
+            print(
+                "V7 VOICE STREAM:",
+                {
+                    "transcript":
+                        transcript,
+
+                    "audio":
+                        round(
+                            audio_seconds,
+                            3,
+                        ),
+
+                    "stt":
+                        round(
+                            stt_seconds,
+                            3,
+                        ),
+
+                    "llm_stream":
+                        round(
+                            llm_seconds,
+                            3,
+                        ),
+
+                    "total":
+                        round(
+                            total_seconds,
+                            3,
+                        ),
+
+                    "token_events":
+                        token_count,
+
+                    "sentences":
+                        sentence_count,
+                },
+            )
+
+            yield encode_ndjson(
+                {
+                    "type":
+                        "complete",
+
+                    "seconds":
+                        round(
+                            total_seconds,
+                            3,
+                        ),
+
+                    "audio_seconds":
+                        round(
+                            audio_seconds,
+                            3,
+                        ),
+
+                    "stt_seconds":
+                        round(
+                            stt_seconds,
+                            3,
+                        ),
+
+                    "llm_seconds":
+                        round(
+                            llm_seconds,
+                            3,
+                        ),
+
+                    "token_events":
+                        token_count,
+
+                    "sentences":
+                        sentence_count,
+                }
+            )
+
+        except GeneratorExit:
+            print(
+                "V7 VOICE STREAM "
+                "CLIENT DISCONNECTED"
+            )
+
+            return
+
+        except OllamaServiceError as error:
+            print(
+                "V7 VOICE STREAM "
+                "OLLAMA ERROR:",
+                str(
+                    error
+                ),
+            )
+
+            yield encode_ndjson(
+                {
+                    "type":
+                        "error",
+
+                    "error":
+                        str(
+                            error
+                        ),
+                }
+            )
+
+        except Exception as error:
+            print(
+                "V7 VOICE STREAM ERROR:",
+                repr(
+                    error
+                ),
+            )
+
+            yield encode_ndjson(
+                {
+                    "type":
+                        "error",
+
+                    "error":
+                        (
+                            "Unexpected "
+                            "voice streaming error."
+                        ),
+                }
+            )
+
+    return StreamingResponse(
+        event_stream(),
+
+        media_type=
+            "application/x-ndjson",
+
+        headers={
+            "Cache-Control":
+                "no-cache, no-transform",
+
+            "X-Accel-Buffering":
+                "no",
+        },
+    )
+
+
+# =========================================================
+# NORMAL TEXT CHAT — V7.2 FALLBACK
+# =========================================================
 
 @app.post(
     "/v7/text-chat",
@@ -1316,8 +1834,7 @@ def text_chat(
     )
 
     message = (
-        request.message
-        .strip()
+        request.message.strip()
     )
 
     if not message:
@@ -1338,17 +1855,15 @@ def text_chat(
     )
 
     try:
-        reply = (
-            generate_reply(
-                user_text=
-                    message,
+        reply = generate_reply(
+            user_text=
+                message,
 
-                mode=
-                    request.mode,
+            mode=
+                request.mode,
 
-                conversation_history=
-                    history,
-            )
+            conversation_history=
+                history,
         )
 
     except OllamaServiceError as error:
@@ -1414,6 +1929,10 @@ def text_chat(
     )
 
 
+# =========================================================
+# NORMAL VOICE CHAT — V7.2 FALLBACK
+# =========================================================
+
 @app.post(
     "/v7/voice-chat",
     response_model=
@@ -1457,9 +1976,7 @@ async def voice_chat(
         )
 
     if (
-        len(
-            audio_bytes
-        )
+        len(audio_bytes)
         > MAX_AUDIO_BYTES
     ):
         raise HTTPException(
@@ -1485,35 +2002,13 @@ async def voice_chat(
     ) = None
 
     try:
-        suffix = (
-            get_audio_suffix(
-                audio
-            )
+        (
+            original_path,
+            wav_path,
+        ) = prepare_uploaded_audio(
+            audio,
+            audio_bytes,
         )
-
-        with (
-            tempfile.NamedTemporaryFile(
-                suffix=suffix,
-                delete=False,
-            )
-        ) as source:
-            source.write(
-                audio_bytes
-            )
-
-            original_path = (
-                source.name
-            )
-
-        with (
-            tempfile.NamedTemporaryFile(
-                suffix=".wav",
-                delete=False,
-            )
-        ) as wav_file:
-            wav_path = (
-                wav_file.name
-            )
 
         audio_started = (
             time.perf_counter()
@@ -1529,12 +2024,11 @@ async def voice_chat(
             - audio_started
         )
 
-        transcript, (
-            stt_seconds
-        ) = (
-            transcribe_chinese(
-                wav_path
-            )
+        (
+            transcript,
+            stt_seconds,
+        ) = transcribe_chinese(
+            wav_path
         )
 
         if not transcript:
@@ -1552,17 +2046,15 @@ async def voice_chat(
         )
 
         try:
-            reply = (
-                generate_reply(
-                    user_text=
-                        transcript,
+            reply = generate_reply(
+                user_text=
+                    transcript,
 
-                    mode=
-                        "practice",
+                mode=
+                    "practice",
 
-                    conversation_history=
-                        conversation_history,
-                )
+                conversation_history=
+                    conversation_history,
             )
 
         except OllamaServiceError as error:
@@ -1672,17 +2164,7 @@ async def voice_chat(
         )
 
     finally:
-        for path in [
+        delete_temporary_files(
             original_path,
             wav_path,
-        ]:
-            if not path:
-                continue
-
-            try:
-                os.remove(
-                    path
-                )
-
-            except OSError:
-                pass
+        )
