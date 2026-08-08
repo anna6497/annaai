@@ -33,10 +33,12 @@ import type {
   ConversationHistoryMessage,
 } from "@/types/ai";
 
+
 type Status =
   | "checking"
   | "connected"
   | "offline";
+
 
 type ConversationState =
   | "ready"
@@ -46,11 +48,25 @@ type ConversationState =
   | "speaking"
   | "error";
 
+
 const MEMORY_STORAGE_KEY =
   "anna-ai-conversation-memory-v1";
 
 const MAX_MEMORY_MESSAGES =
   40;
+
+
+/**
+ * Hanzi typing speed.
+ *
+ * 45ms = about 22 characters / second.
+ *
+ * Change this later if you want
+ * Anna typing slower/faster.
+ */
+const HANZI_CHARACTER_DELAY_MS =
+  45;
+
 
 const EMPTY_CORRECTION:
   AnnaCorrection = {
@@ -59,6 +75,7 @@ const EMPTY_CORRECTION:
     corrected: "",
     pinyin: "",
   };
+
 
 function loadSavedMemory():
   ConversationHistoryMessage[] {
@@ -142,6 +159,7 @@ function loadSavedMemory():
   }
 }
 
+
 function saveMemory(
   messages:
     ConversationHistoryMessage[],
@@ -174,6 +192,7 @@ function saveMemory(
   }
 }
 
+
 function clearSavedMemory(): void {
   if (
     typeof window ===
@@ -196,6 +215,7 @@ function clearSavedMemory(): void {
     );
   }
 }
+
 
 function getConversationStatusText(
   conversationState:
@@ -228,6 +248,7 @@ function getConversationStatusText(
       return "Your turn — tap the microphone";
   }
 }
+
 
 export default function ChatWindow() {
   const [
@@ -316,22 +337,23 @@ export default function ChatWindow() {
   ] =
     useState(0);
 
+
   const mediaRecorderRef =
     useRef<
       MediaRecorder | null
     >(null);
 
-  const streamRef =
+  const microphoneStreamRef =
     useRef<
       MediaStream | null
     >(null);
 
-  const chunksRef =
+  const audioChunksRef =
     useRef<
       Blob[]
     >([]);
 
-  const timerRef =
+  const recordingTimerRef =
     useRef<
       number | null
     >(null);
@@ -341,10 +363,34 @@ export default function ChatWindow() {
       ConversationHistoryMessage[]
     >([]);
 
+
+  /**
+   * Live Hanzi typing refs.
+   */
+  const hanziQueueRef =
+    useRef<
+      string[]
+    >([]);
+
+  const hanziTimerRef =
+    useRef<
+      number | null
+    >(null);
+
+  const displayedHanziRef =
+    useRef("");
+
+  const finalHanziRef =
+    useRef("");
+
+  const pendingPinyinRef =
+    useRef("");
+
   const streamDoneRef =
     useRef(
       false,
     );
+
 
   const refreshHealth =
     useCallback(
@@ -365,28 +411,34 @@ export default function ChatWindow() {
       [],
     );
 
+
   const stopRecordingTimer =
     useCallback(
       () => {
         if (
-          timerRef.current !==
+          recordingTimerRef
+            .current !==
           null
         ) {
           window.clearInterval(
-            timerRef.current,
+            recordingTimerRef
+              .current,
           );
 
-          timerRef.current =
+          recordingTimerRef
+            .current =
             null;
         }
       },
       [],
     );
 
+
   const stopMicrophoneStream =
     useCallback(
       () => {
-        streamRef.current
+        microphoneStreamRef
+          .current
           ?.getTracks()
           .forEach(
             (
@@ -396,11 +448,256 @@ export default function ChatWindow() {
             },
           );
 
-        streamRef.current =
+        microphoneStreamRef
+          .current =
           null;
       },
       [],
     );
+
+
+  const stopHanziTyping =
+    useCallback(
+      () => {
+        if (
+          hanziTimerRef.current !==
+          null
+        ) {
+          window.clearInterval(
+            hanziTimerRef.current,
+          );
+
+          hanziTimerRef.current =
+            null;
+        }
+
+        hanziQueueRef.current =
+          [];
+      },
+      [],
+    );
+
+
+  /**
+   * Character-by-character Hanzi renderer.
+   *
+   * Backend may send 1, 3, or even
+   * 20 characters in one token.
+   *
+   * We split every token into characters
+   * and display only one per timer tick.
+   */
+  const startHanziTyping =
+    useCallback(
+      () => {
+        if (
+          hanziTimerRef.current !==
+          null
+        ) {
+          return;
+        }
+
+        hanziTimerRef.current =
+          window.setInterval(
+            () => {
+              const nextCharacter =
+                hanziQueueRef
+                  .current
+                  .shift();
+
+              if (
+                nextCharacter !==
+                undefined
+              ) {
+                displayedHanziRef
+                  .current +=
+                  nextCharacter;
+
+                setReply(
+                  (
+                    current,
+                  ) => ({
+                    hanzi:
+                      displayedHanziRef
+                        .current,
+
+                    pinyin:
+                      current
+                        ?.pinyin ??
+                      "",
+
+                    correction:
+                      current
+                        ?.correction ??
+                      EMPTY_CORRECTION,
+                  }),
+                );
+
+                return;
+              }
+
+              /**
+               * Queue is empty.
+               *
+               * If backend has finished,
+               * make sure no final character
+               * was missed.
+               */
+              if (
+                streamDoneRef.current &&
+                finalHanziRef.current
+              ) {
+                const displayed =
+                  displayedHanziRef
+                    .current;
+
+                const finalText =
+                  finalHanziRef
+                    .current;
+
+                if (
+                  finalText.startsWith(
+                    displayed,
+                  ) &&
+                  finalText.length >
+                    displayed.length
+                ) {
+                  const missingText =
+                    finalText.slice(
+                      displayed.length,
+                    );
+
+                  hanziQueueRef
+                    .current
+                    .push(
+                      ...Array.from(
+                        missingText,
+                      ),
+                    );
+
+                  return;
+                }
+
+                if (
+                  displayed !==
+                  finalText &&
+                  !finalText.startsWith(
+                    displayed,
+                  )
+                ) {
+                  displayedHanziRef
+                    .current =
+                    finalText;
+                }
+              }
+
+              if (
+                hanziTimerRef.current !==
+                null
+              ) {
+                window.clearInterval(
+                  hanziTimerRef
+                    .current,
+                );
+
+                hanziTimerRef
+                  .current =
+                  null;
+              }
+
+              /**
+               * Pinyin appears only
+               * AFTER Hanzi typing finishes.
+               */
+              if (
+                streamDoneRef.current
+              ) {
+                setReply(
+                  (
+                    current,
+                  ) => ({
+                    hanzi:
+                      displayedHanziRef
+                        .current ||
+                      finalHanziRef
+                        .current,
+
+                    pinyin:
+                      pendingPinyinRef
+                        .current,
+
+                    correction:
+                      current
+                        ?.correction ??
+                      EMPTY_CORRECTION,
+                  }),
+                );
+
+                if (
+                  !speakerEnabled
+                ) {
+                  setConversationState(
+                    "ready",
+                  );
+                }
+              }
+            },
+            HANZI_CHARACTER_DELAY_MS,
+          );
+      },
+      [
+        speakerEnabled,
+      ],
+    );
+
+
+  const queueLiveHanzi =
+    useCallback(
+      (
+        text: string,
+      ) => {
+        if (!text) {
+          return;
+        }
+
+        hanziQueueRef
+          .current
+          .push(
+            ...Array.from(
+              text,
+            ),
+          );
+
+        startHanziTyping();
+      },
+      [
+        startHanziTyping,
+      ],
+    );
+
+
+  const resetStreamingState =
+    useCallback(
+      () => {
+        stopHanziTyping();
+
+        displayedHanziRef.current =
+          "";
+
+        finalHanziRef.current =
+          "";
+
+        pendingPinyinRef.current =
+          "";
+
+        streamDoneRef.current =
+          false;
+      },
+      [
+        stopHanziTyping,
+      ],
+    );
+
 
   const resetCurrentResult =
     useCallback(
@@ -409,8 +706,7 @@ export default function ChatWindow() {
 
         clearSpeechQueue();
 
-        streamDoneRef.current =
-          false;
+        resetStreamingState();
 
         setTranscript("");
 
@@ -428,8 +724,11 @@ export default function ChatWindow() {
           "ready",
         );
       },
-      [],
+      [
+        resetStreamingState,
+      ],
     );
+
 
   useEffect(
     () => {
@@ -448,17 +747,23 @@ export default function ChatWindow() {
       return () => {
         stopSpeaking();
 
+        clearSpeechQueue();
+
         stopRecordingTimer();
 
         stopMicrophoneStream();
+
+        stopHanziTyping();
       };
     },
     [
       refreshHealth,
+      stopHanziTyping,
       stopMicrophoneStream,
       stopRecordingTimer,
     ],
   );
+
 
   const switchMode = (
     nextMode:
@@ -480,6 +785,7 @@ export default function ChatWindow() {
     resetCurrentResult();
   };
 
+
   const stopRecording =
     useCallback(
       () => {
@@ -498,6 +804,7 @@ export default function ChatWindow() {
       [],
     );
 
+
   useEffect(
     () => {
       if (
@@ -514,6 +821,7 @@ export default function ChatWindow() {
       stopRecording,
     ],
   );
+
 
   const playChinese =
     useCallback(
@@ -540,7 +848,8 @@ export default function ChatWindow() {
           {
             speed,
 
-            volume: 1,
+            volume:
+              1,
 
             onStart: () => {
               setConversationState(
@@ -566,6 +875,7 @@ export default function ChatWindow() {
         speakerEnabled,
       ],
     );
+
 
   const saveConversationTurn =
     useCallback(
@@ -628,6 +938,7 @@ export default function ChatWindow() {
       [],
     );
 
+
   const processFallbackVoice =
     useCallback(
       async (
@@ -677,6 +988,7 @@ export default function ChatWindow() {
       ],
     );
 
+
   const processStreamingVoice =
     useCallback(
       async (
@@ -688,20 +1000,16 @@ export default function ChatWindow() {
         let finalHanzi =
           "";
 
-        let finalPinyin =
-          "";
-
-        let correction:
-          AnnaCorrection =
-          EMPTY_CORRECTION;
-
-        streamDoneRef.current =
-          false;
+        resetStreamingState();
 
         setReply(
           {
-            hanzi: "",
-            pinyin: "",
+            hanzi:
+              "",
+
+            pinyin:
+              "",
+
             correction:
               EMPTY_CORRECTION,
           },
@@ -710,7 +1018,9 @@ export default function ChatWindow() {
         const supported =
           await streamVoiceAudio(
             audioBlob,
+
             historyRef.current,
+
             (
               event,
             ) => {
@@ -724,6 +1034,7 @@ export default function ChatWindow() {
 
                 return;
               }
+
 
               if (
                 event.type ===
@@ -744,10 +1055,27 @@ export default function ChatWindow() {
                 return;
               }
 
+
+              /**
+               * CRITICAL FIX:
+               *
+               * DO NOT call:
+               *
+               * setReply(current => current + event.text)
+               *
+               * because React/browser can batch it.
+               *
+               * Instead add characters to
+               * our animation queue.
+               */
               if (
                 event.type ===
                 "token"
               ) {
+                queueLiveHanzi(
+                  event.text,
+                );
+
                 setConversationState(
                   (
                     current,
@@ -758,33 +1086,16 @@ export default function ChatWindow() {
                       : "streaming",
                 );
 
-                setReply(
-                  (
-                    current,
-                  ) => ({
-                    hanzi:
-                      (
-                        current
-                          ?.hanzi ??
-                        ""
-                      ) +
-                      event.text,
-
-                    pinyin:
-                      current
-                        ?.pinyin ??
-                      "",
-
-                    correction:
-                      current
-                        ?.correction ??
-                      EMPTY_CORRECTION,
-                  }),
-                );
-
                 return;
               }
 
+
+              /**
+               * Sentence complete.
+               *
+               * TTS can start while the next
+               * Hanzi is still being generated.
+               */
               if (
                 event.type ===
                 "sentence"
@@ -812,7 +1123,14 @@ export default function ChatWindow() {
                         () => {
                           if (
                             streamDoneRef
+                              .current &&
+                            hanziQueueRef
                               .current
+                              .length ===
+                              0 &&
+                            hanziTimerRef
+                              .current ===
+                              null
                           ) {
                             setConversationState(
                               "ready",
@@ -840,13 +1158,85 @@ export default function ChatWindow() {
                 return;
               }
 
+
+              /**
+               * Backend final result.
+               *
+               * IMPORTANT:
+               * We store final text in refs.
+               * We do NOT put full Hanzi into state.
+               *
+               * Otherwise the whole sentence
+               * would suddenly appear.
+               */
+              if (
+                event.type ===
+                "done"
+              ) {
+                finalHanzi =
+                  event.hanzi
+                    .trim();
+
+                finalHanziRef
+                  .current =
+                  finalHanzi;
+
+                pendingPinyinRef
+                  .current =
+                  event.pinyin
+                    .trim();
+
+                streamDoneRef
+                  .current =
+                  true;
+
+                /**
+                 * Ensure all final characters
+                 * exist in animation queue.
+                 */
+                const projectedText =
+                  (
+                    displayedHanziRef
+                      .current +
+                    hanziQueueRef
+                      .current
+                      .join("")
+                  );
+
+                if (
+                  finalHanzi.startsWith(
+                    projectedText,
+                  ) &&
+                  finalHanzi.length >
+                    projectedText.length
+                ) {
+                  const missing =
+                    finalHanzi.slice(
+                      projectedText.length,
+                    );
+
+                  hanziQueueRef
+                    .current
+                    .push(
+                      ...Array.from(
+                        missing,
+                      ),
+                    );
+
+                  startHanziTyping();
+                }
+
+                return;
+              }
+
+
+              /**
+               * Deferred More Natural.
+               */
               if (
                 event.type ===
                 "correction"
               ) {
-                correction =
-                  event.correction;
-
                 setReply(
                   (
                     current,
@@ -854,12 +1244,13 @@ export default function ChatWindow() {
                     hanzi:
                       current
                         ?.hanzi ??
-                      finalHanzi,
+                      displayedHanziRef
+                        .current,
 
                     pinyin:
                       current
                         ?.pinyin ??
-                      finalPinyin,
+                      "",
 
                     correction:
                       event.correction,
@@ -869,61 +1260,43 @@ export default function ChatWindow() {
                 return;
               }
 
-              if (
-                event.type ===
-                "done"
-              ) {
-                finalHanzi =
-                  event.hanzi
-                    .trim();
-
-                finalPinyin =
-                  event.pinyin
-                    .trim();
-
-                streamDoneRef.current =
-                  true;
-
-                setReply(
-                  (
-                    current,
-                  ) => ({
-                    hanzi:
-                      finalHanzi ||
-                      current
-                        ?.hanzi ||
-                      "",
-
-                    pinyin:
-                      finalPinyin,
-
-                    correction:
-                      current
-                        ?.correction ??
-                      correction,
-                  }),
-                );
-
-                if (
-                  !speakerEnabled
-                ) {
-                  setConversationState(
-                    "ready",
-                  );
-                }
-
-                return;
-              }
 
               if (
                 event.type ===
                 "complete"
               ) {
-                streamDoneRef.current =
+                streamDoneRef
+                  .current =
                   true;
+
+                /**
+                 * If backend reply happened
+                 * to contain zero token events,
+                 * still animate final text.
+                 */
+                if (
+                  finalHanzi &&
+                  !displayedHanziRef
+                    .current &&
+                  hanziQueueRef
+                    .current
+                    .length ===
+                    0
+                ) {
+                  hanziQueueRef
+                    .current
+                    .push(
+                      ...Array.from(
+                        finalHanzi,
+                      ),
+                    );
+
+                  startHanziTyping();
+                }
 
                 return;
               }
+
 
               if (
                 event.type ===
@@ -936,9 +1309,13 @@ export default function ChatWindow() {
             },
           );
 
+
         if (!supported) {
+          resetStreamingState();
+
           return false;
         }
+
 
         if (
           streamedTranscript &&
@@ -950,13 +1327,18 @@ export default function ChatWindow() {
           );
         }
 
+
         return true;
       },
       [
+        queueLiveHanzi,
+        resetStreamingState,
         saveConversationTurn,
         speakerEnabled,
+        startHanziTyping,
       ],
     );
+
 
   const startRecording =
     useCallback(
@@ -976,6 +1358,8 @@ export default function ChatWindow() {
 
         clearSpeechQueue();
 
+        resetStreamingState();
+
         setError("");
 
         setTranscript("");
@@ -992,6 +1376,7 @@ export default function ChatWindow() {
           "listening",
         );
 
+
         try {
           if (
             !navigator
@@ -1003,6 +1388,7 @@ export default function ChatWindow() {
             );
           }
 
+
           if (
             typeof MediaRecorder ===
             "undefined"
@@ -1011,6 +1397,7 @@ export default function ChatWindow() {
               "Audio recording is not supported by this browser.",
             );
           }
+
 
           const stream =
             await navigator
@@ -1030,8 +1417,11 @@ export default function ChatWindow() {
                 },
               );
 
-          streamRef.current =
+
+          microphoneStreamRef
+            .current =
             stream;
+
 
           const preferredTypes =
             [
@@ -1040,6 +1430,7 @@ export default function ChatWindow() {
               "audio/mp4",
               "audio/ogg;codecs=opus",
             ];
+
 
           const mimeType =
             preferredTypes.find(
@@ -1051,6 +1442,7 @@ export default function ChatWindow() {
                     type,
                   ),
             );
+
 
           const recorder =
             mimeType
@@ -1064,11 +1456,13 @@ export default function ChatWindow() {
                   stream,
                 );
 
+
           mediaRecorderRef.current =
             recorder;
 
-          chunksRef.current =
+          audioChunksRef.current =
             [];
+
 
           recorder.ondataavailable =
             (
@@ -1078,12 +1472,14 @@ export default function ChatWindow() {
                 event.data.size >
                 0
               ) {
-                chunksRef.current
+                audioChunksRef
+                  .current
                   .push(
                     event.data,
                   );
               }
             };
+
 
           recorder.onerror =
             (
@@ -1111,6 +1507,7 @@ export default function ChatWindow() {
               );
             };
 
+
           recorder.onstop =
             async () => {
               stopRecordingTimer();
@@ -1121,9 +1518,11 @@ export default function ChatWindow() {
                 false,
               );
 
+
               const audioBlob =
                 new Blob(
-                  chunksRef.current,
+                  audioChunksRef
+                    .current,
                   {
                     type:
                       recorder.mimeType ||
@@ -1131,8 +1530,10 @@ export default function ChatWindow() {
                   },
                 );
 
-              chunksRef.current =
+
+              audioChunksRef.current =
                 [];
+
 
               if (
                 audioBlob.size ===
@@ -1149,6 +1550,7 @@ export default function ChatWindow() {
                 return;
               }
 
+
               setConversationState(
                 "processing",
               );
@@ -1157,17 +1559,20 @@ export default function ChatWindow() {
                 true,
               );
 
+
               try {
                 const streamed =
                   await processStreamingVoice(
                     audioBlob,
                   );
 
+
                 if (!streamed) {
                   await processFallbackVoice(
                     audioBlob,
                   );
                 }
+
 
                 setError("");
               } catch (
@@ -1179,6 +1584,10 @@ export default function ChatWindow() {
                 );
 
                 stopSpeaking();
+
+                clearSpeechQueue();
+
+                stopHanziTyping();
 
                 setConversationState(
                   "error",
@@ -1197,9 +1606,11 @@ export default function ChatWindow() {
               }
             };
 
+
           recorder.start(
             200,
           );
+
 
           setIsRecording(
             true,
@@ -1209,7 +1620,9 @@ export default function ChatWindow() {
             "listening",
           );
 
-          timerRef.current =
+
+          recordingTimerRef
+            .current =
             window.setInterval(
               () => {
                 setSeconds(
@@ -1242,6 +1655,7 @@ export default function ChatWindow() {
             "error",
           );
 
+
           if (
             caughtError instanceof
               DOMException &&
@@ -1255,6 +1669,7 @@ export default function ChatWindow() {
             return;
           }
 
+
           if (
             caughtError instanceof
               DOMException &&
@@ -1267,6 +1682,7 @@ export default function ChatWindow() {
 
             return;
           }
+
 
           setError(
             caughtError instanceof
@@ -1283,10 +1699,13 @@ export default function ChatWindow() {
         mode,
         processFallbackVoice,
         processStreamingVoice,
+        resetStreamingState,
+        stopHanziTyping,
         stopMicrophoneStream,
         stopRecordingTimer,
       ],
     );
+
 
   const handleBuilderSubmit =
     async (
@@ -1303,8 +1722,10 @@ export default function ChatWindow() {
         return;
       }
 
+
       const cleaned =
         builderInput.trim();
+
 
       if (!cleaned) {
         setError(
@@ -1313,6 +1734,7 @@ export default function ChatWindow() {
 
         return;
       }
+
 
       stopSpeaking();
 
@@ -1334,6 +1756,7 @@ export default function ChatWindow() {
         true,
       );
 
+
       try {
         const result =
           await sendTextMessage(
@@ -1342,9 +1765,11 @@ export default function ChatWindow() {
             [],
           );
 
+
         setReply(
           result.reply,
         );
+
 
         if (
           speakerEnabled
@@ -1382,11 +1807,14 @@ export default function ChatWindow() {
       }
     };
 
+
   const newConversation =
     () => {
       stopSpeaking();
 
       clearSpeechQueue();
+
+      resetStreamingState();
 
       historyRef.current =
         [];
@@ -1402,6 +1830,7 @@ export default function ChatWindow() {
       resetCurrentResult();
     };
 
+
   const handleSpeakerToggle =
     () => {
       const nextEnabled =
@@ -1411,6 +1840,7 @@ export default function ChatWindow() {
         nextEnabled,
       );
 
+
       if (
         !nextEnabled
       ) {
@@ -1418,37 +1848,49 @@ export default function ChatWindow() {
 
         clearSpeechQueue();
 
+
         if (
           conversationState ===
             "speaking"
         ) {
           setConversationState(
-            "ready",
+            streamDoneRef.current
+              ? "ready"
+              : "streaming",
           );
         }
       }
     };
 
+
   const handleReplyReplay =
     () => {
+      const finalText =
+        finalHanziRef.current ||
+        reply?.hanzi ||
+        "";
+
+
       if (
-        !reply ||
-        !reply.hanzi ||
+        !finalText ||
         isRecording ||
         isProcessing
       ) {
         return;
       }
 
+
       playChinese(
-        reply.hanzi,
+        finalText,
       );
     };
+
 
   const handleCorrectionReplay =
     () => {
       const correction =
         reply?.correction;
+
 
       if (
         !correction
@@ -1461,11 +1903,13 @@ export default function ChatWindow() {
         return;
       }
 
+
       playChinese(
         correction.corrected,
         "slow",
       );
     };
+
 
   const statusText =
     getConversationStatusText(
@@ -1473,8 +1917,10 @@ export default function ChatWindow() {
       seconds,
     );
 
+
   const correction =
     reply?.correction;
+
 
   const showCorrection =
     mode ===
@@ -1488,10 +1934,13 @@ export default function ChatWindow() {
         .trim(),
     );
 
+
   return (
     <main className="min-h-screen bg-[#12001f] px-4 py-4 text-white sm:px-6">
       <section className="mx-auto max-w-3xl overflow-hidden rounded-[32px] border border-purple-500/40 bg-[#26053b] shadow-2xl">
+
         <header className="flex flex-wrap items-center justify-between gap-4 border-b border-purple-400/20 px-6 py-5">
+
           <div>
             <div className="flex items-center gap-2">
               <p className="text-xs font-bold tracking-[0.22em] text-purple-200">
@@ -1517,7 +1966,9 @@ export default function ChatWindow() {
             </p>
           </div>
 
+
           <div className="flex flex-wrap gap-2 text-sm">
+
             <button
               type="button"
               onClick={() =>
@@ -1546,6 +1997,7 @@ export default function ChatWindow() {
                   : "Offline"}
             </button>
 
+
             <button
               type="button"
               onClick={
@@ -1557,6 +2009,7 @@ export default function ChatWindow() {
                 ? "🔊 Speaker"
                 : "🔇 Muted"}
             </button>
+
 
             <button
               type="button"
@@ -1571,11 +2024,15 @@ export default function ChatWindow() {
             >
               New
             </button>
+
           </div>
         </header>
 
+
         <div className="space-y-5 p-6">
+
           <div className="grid grid-cols-2 rounded-2xl border border-purple-400/25 bg-black/10 p-1">
+
             <button
               type="button"
               disabled={
@@ -1599,6 +2056,7 @@ export default function ChatWindow() {
               🎤 Chinese Practice
             </button>
 
+
             <button
               type="button"
               disabled={
@@ -1621,22 +2079,27 @@ export default function ChatWindow() {
             >
               ✍️ Sentence Builder
             </button>
+
           </div>
+
 
           {mode ===
           "sentence_builder" ? (
+
             <form
               onSubmit={
                 handleBuilderSubmit
               }
               className="space-y-3"
             >
+
               <label
                 htmlFor="builder-input"
                 className="block text-xs font-bold tracking-[0.18em] text-purple-200"
               >
                 မြန်မာ → တရုတ်
               </label>
+
 
               <textarea
                 id="builder-input"
@@ -1659,6 +2122,7 @@ export default function ChatWindow() {
                 className="w-full resize-none rounded-[24px] border border-purple-400/40 bg-purple-950/40 px-5 py-4 text-base leading-7 text-white outline-none placeholder:text-purple-300/55 focus:border-fuchsia-400 disabled:opacity-60"
               />
 
+
               <button
                 type="submit"
                 disabled={
@@ -1672,22 +2136,35 @@ export default function ChatWindow() {
                   ? "Chinese sentence ဖွဲ့နေပါတယ်..."
                   : "တရုတ်စာကြောင်း ဖွဲ့မယ်"}
               </button>
+
             </form>
+
           ) : (
+
             <section className="min-h-28 rounded-[28px] border border-purple-400/40 bg-purple-900/30">
+
               <div className="flex items-center justify-between border-b border-purple-400/20 px-5 py-3">
+
                 <span className="text-xs font-bold tracking-[0.2em] text-purple-200">
                   YOU SAID
                 </span>
 
+
                 {conversationState ===
                 "listening" ? (
+
                   <span className="flex items-center gap-2 text-xs font-bold text-red-200">
+
                     <span className="h-2 w-2 animate-pulse rounded-full bg-red-400" />
+
                     LISTENING
+
                   </span>
+
                 ) : null}
+
               </div>
+
 
               <div className="px-5 py-6 text-2xl font-bold leading-relaxed">
                 {transcript ||
@@ -1698,13 +2175,18 @@ export default function ChatWindow() {
                       : "စကားပြောပြီးရင် ဒီနေရာမှာ ပေါ်လာပါမယ်။"
                   )}
               </div>
+
             </section>
+
           )}
+
 
           {mode ===
             "sentence_builder" &&
           transcript ? (
+
             <section className="rounded-[24px] border border-purple-400/25 bg-purple-900/20">
+
               <div className="border-b border-purple-400/15 px-5 py-3 text-xs font-bold tracking-[0.18em] text-purple-200">
                 မူရင်းမြန်မာစာ
               </div>
@@ -1712,13 +2194,19 @@ export default function ChatWindow() {
               <div className="px-5 py-4 text-base leading-7">
                 {transcript}
               </div>
+
             </section>
+
           ) : null}
+
 
           {showCorrection &&
           correction ? (
+
             <section className="overflow-hidden rounded-[26px] border border-emerald-400/35 bg-emerald-500/[0.08]">
+
               <div className="flex items-center justify-between gap-4 border-b border-emerald-400/20 px-5 py-4">
+
                 <div>
                   <p className="text-xs font-black tracking-[0.18em] text-emerald-200">
                     ✨ MORE NATURAL
@@ -1728,6 +2216,7 @@ export default function ChatWindow() {
                     ဒီလိုပြောရင် ပိုသဘာဝကျပါတယ်
                   </p>
                 </div>
+
 
                 <button
                   type="button"
@@ -1742,10 +2231,14 @@ export default function ChatWindow() {
                 >
                   🔊
                 </button>
+
               </div>
 
+
               {correction.original ? (
+
                 <div className="border-b border-emerald-400/15 px-5 py-4">
+
                   <p className="text-[11px] font-bold tracking-[0.16em] text-emerald-200/60">
                     YOU SAID
                   </p>
@@ -1753,10 +2246,14 @@ export default function ChatWindow() {
                   <p className="mt-2 text-lg text-white/50 line-through decoration-red-400/70">
                     {correction.original}
                   </p>
+
                 </div>
+
               ) : null}
 
+
               <div className="border-b border-emerald-400/15 px-5 py-5">
+
                 <p className="text-[11px] font-bold tracking-[0.16em] text-emerald-200">
                   更自然的说法
                 </p>
@@ -1764,10 +2261,14 @@ export default function ChatWindow() {
                 <p className="mt-3 text-2xl font-bold leading-relaxed text-emerald-50">
                   {correction.corrected}
                 </p>
+
               </div>
 
+
               {correction.pinyin ? (
+
                 <div className="px-5 py-4">
+
                   <p className="text-[11px] font-bold tracking-[0.16em] text-emerald-200/70">
                     拼音 · PINYIN
                   </p>
@@ -1775,13 +2276,18 @@ export default function ChatWindow() {
                   <p className="mt-2 text-base font-semibold leading-relaxed text-emerald-50/90">
                     {correction.pinyin}
                   </p>
+
                 </div>
+
               ) : null}
+
             </section>
+
           ) : null}
 
+
           <section
-            className={`overflow-hidden rounded-[28px] border bg-[#180128] ${
+            className={`overflow-hidden rounded-[28px] border bg-[#180128] transition ${
               conversationState ===
               "speaking"
                 ? "border-fuchsia-400/50 shadow-[0_0_35px_rgba(217,70,239,0.16)]"
@@ -1791,8 +2297,11 @@ export default function ChatWindow() {
                   : "border-purple-400/20"
             }`}
           >
+
             <div className="flex items-center justify-between border-b border-purple-400/20 px-5 py-4">
+
               <div>
+
                 <p className="text-xs font-bold tracking-[0.2em] text-purple-200">
                   {mode ===
                   "practice"
@@ -1803,7 +2312,9 @@ export default function ChatWindow() {
                 <p className="mt-1 text-sm font-semibold">
                   中文 · 拼音
                 </p>
+
               </div>
+
 
               <button
                 type="button"
@@ -1819,125 +2330,190 @@ export default function ChatWindow() {
               >
                 🔊
               </button>
+
             </div>
+
 
             {conversationState ===
             "processing" ? (
+
               <div className="border-b border-purple-400/20 px-5 py-4 text-violet-200">
                 Anna is understanding...
               </div>
+
             ) : null}
+
 
             {conversationState ===
             "streaming" ? (
+
               <div className="border-b border-violet-400/20 bg-violet-400/[0.05] px-5 py-3 text-sm text-violet-200">
+
                 <span className="mr-2 inline-block h-2 w-2 animate-pulse rounded-full bg-violet-400" />
+
                 Anna is replying live...
+
               </div>
+
             ) : null}
+
 
             {conversationState ===
             "speaking" ? (
+
               <div className="border-b border-fuchsia-400/20 bg-fuchsia-400/[0.05] px-5 py-3 text-sm text-fuchsia-200">
+
                 <span className="mr-2 inline-block h-2 w-2 animate-pulse rounded-full bg-fuchsia-400" />
+
                 Anna is speaking...
+
               </div>
+
             ) : null}
 
-            <div className="border-b border-purple-400/20 px-5 py-5">
+
+            <div className="min-h-32 border-b border-purple-400/20 px-5 py-5">
+
               <p className="text-xs font-bold tracking-[0.16em] text-purple-300">
                 中文 · HANZI
               </p>
 
+
               <p className="mt-4 whitespace-pre-wrap text-2xl font-bold leading-relaxed">
+
                 {reply?.hanzi ||
                   (
                     conversationState ===
-                    "streaming"
-                      ? "▌"
+                      "streaming" ||
+                    conversationState ===
+                      "processing"
+                      ? ""
                       : mode ===
                           "practice"
                         ? "Anna 的回复会显示在这里。"
                         : "Chinese sentence will appear here."
                   )}
 
-                {conversationState ===
-                "streaming" &&
-                reply?.hanzi ? (
+
+                {(
+                  conversationState ===
+                    "streaming" ||
+                  conversationState ===
+                    "speaking"
+                ) ? (
+
                   <span className="ml-1 animate-pulse text-fuchsia-300">
                     ▌
                   </span>
+
                 ) : null}
+
               </p>
+
             </div>
 
+
             <div className="px-5 py-5">
+
               <p className="text-xs font-bold tracking-[0.16em] text-purple-300">
                 拼音 · PINYIN
               </p>
 
+
               <p className="mt-4 whitespace-pre-wrap text-lg font-semibold leading-relaxed">
+
                 {reply?.pinyin ||
                   (
                     conversationState ===
-                    "streaming" ||
+                      "streaming" ||
                     conversationState ===
-                    "speaking"
+                      "speaking" ||
+                    conversationState ===
+                      "processing"
                       ? "Hanzi ပြီးရင် Pinyin ပေါ်လာပါမယ်..."
                       : "Pinyin will appear here."
                   )}
+
               </p>
+
             </div>
+
           </section>
 
+
           {error ? (
+
             <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-4 text-sm text-red-100">
               ⚠️ {error}
             </div>
+
           ) : null}
+
 
           {mode ===
           "practice" ? (
+
             <div className="flex flex-col items-center border-t border-purple-300/20 pt-7">
-              <button
-                type="button"
-                onClick={
-                  isRecording
-                    ? stopRecording
-                    : () =>
-                        void startRecording()
-                }
-                disabled={
-                  isProcessing ||
-                  status !==
-                    "connected" ||
-                  conversationState ===
-                    "speaking"
-                }
-                className={`grid h-32 w-32 place-items-center rounded-full border-[3px] text-5xl shadow-[0_0_35px_rgba(192,38,255,0.45)] ${
-                  isRecording
-                    ? "border-red-200 bg-red-500"
-                    : "border-purple-200 bg-gradient-to-b from-fuchsia-500 to-purple-700"
-                } disabled:opacity-50`}
-              >
-                {isRecording
-                  ? "■"
-                  : "🎤"}
-              </button>
+
+              <div className="relative">
+
+                {conversationState ===
+                "listening" ? (
+
+                  <span className="absolute inset-[-12px] animate-ping rounded-full border border-red-300/30" />
+
+                ) : null}
+
+
+                <button
+                  type="button"
+                  onClick={
+                    isRecording
+                      ? stopRecording
+                      : () =>
+                          void startRecording()
+                  }
+                  disabled={
+                    isProcessing ||
+                    status !==
+                      "connected" ||
+                    conversationState ===
+                      "speaking"
+                  }
+                  className={`relative grid h-32 w-32 place-items-center rounded-full border-[3px] text-5xl shadow-[0_0_35px_rgba(192,38,255,0.45)] transition active:scale-95 ${
+                    isRecording
+                      ? "border-red-200 bg-red-500"
+                      : "border-purple-200 bg-gradient-to-b from-fuchsia-500 to-purple-700"
+                  } disabled:opacity-50`}
+                >
+                  {isRecording
+                    ? "■"
+                    : "🎤"}
+                </button>
+
+              </div>
+
 
               <p className="mt-5 text-sm font-medium text-purple-100">
                 {statusText}
               </p>
 
+
               {conversationState ===
               "listening" ? (
+
                 <p className="mt-2 text-xs text-white/40">
                   Tap again when you finish speaking.
                 </p>
+
               ) : null}
+
             </div>
+
           ) : null}
+
         </div>
+
       </section>
     </main>
   );

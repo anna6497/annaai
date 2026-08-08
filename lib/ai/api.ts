@@ -12,14 +12,17 @@ import {
   getVoiceServerUrl,
 } from "@/lib/ai/constants";
 
+
 interface ServerError {
   detail?: string;
   error?: string;
 }
 
+
 export type TtsSpeed =
   | "normal"
   | "slow";
+
 
 export type VoiceStreamEvent =
   | {
@@ -28,6 +31,11 @@ export type VoiceStreamEvent =
   | {
       type: "transcript";
       transcript: string;
+
+      timings?: {
+        audio?: number;
+        stt?: number;
+      };
     }
   | {
       type: "token";
@@ -38,17 +46,21 @@ export type VoiceStreamEvent =
       sentence: string;
     }
   | {
-      type: "correction";
-      correction: AnnaCorrection;
-    }
-  | {
       type: "done";
       hanzi: string;
       pinyin: string;
     }
   | {
+      type: "correction";
+      correction: AnnaCorrection;
+    }
+  | {
       type: "complete";
       seconds?: number;
+      audio_seconds?: number;
+      stt_seconds?: number;
+      llm_seconds?: number;
+      correction_seconds?: number;
       sentences?: number;
       token_events?: number;
     }
@@ -56,6 +68,7 @@ export type VoiceStreamEvent =
       type: "error";
       error: string;
     };
+
 
 export type TextStreamEvent =
   | {
@@ -76,8 +89,13 @@ export type TextStreamEvent =
       pinyin: string;
     }
   | {
+      type: "correction";
+      correction: AnnaCorrection;
+    }
+  | {
       type: "complete";
       seconds?: number;
+      correction_seconds?: number;
       sentences?: number;
       token_events?: number;
     }
@@ -85,6 +103,7 @@ export type TextStreamEvent =
       type: "error";
       error: string;
     };
+
 
 const VOICE_TIMEOUT_MS =
   90_000;
@@ -98,6 +117,7 @@ const HEALTH_TIMEOUT_MS =
 const TTS_TIMEOUT_MS =
   30_000;
 
+
 async function fetchWithTimeout(
   input: RequestInfo | URL,
   init: RequestInit,
@@ -108,8 +128,9 @@ async function fetchWithTimeout(
 
   const timer =
     globalThis.setTimeout(
-      () =>
-        controller.abort(),
+      () => {
+        controller.abort();
+      },
       timeoutMs,
     );
 
@@ -133,6 +154,7 @@ async function fetchWithTimeout(
   }
 }
 
+
 async function readJson<T>(
   response: Response,
 ): Promise<T | null> {
@@ -144,6 +166,7 @@ async function readJson<T>(
     return null;
   }
 }
+
 
 function isAnnaCorrection(
   value: unknown,
@@ -171,6 +194,7 @@ function isAnnaCorrection(
       "string"
   );
 }
+
 
 function isAnnaReply(
   value: unknown,
@@ -211,6 +235,7 @@ function isAnnaReply(
   return true;
 }
 
+
 function getErrorMessage(
   data: ServerError | null,
   fallback: string,
@@ -233,6 +258,7 @@ function getErrorMessage(
 
   return fallback;
 }
+
 
 function getFilename(
   mimeType: string,
@@ -264,6 +290,7 @@ function getFilename(
   return "recording.webm";
 }
 
+
 function isTimeoutError(
   error: unknown,
 ): boolean {
@@ -274,6 +301,7 @@ function isTimeoutError(
       "AbortError"
   );
 }
+
 
 function normalizeVoiceError(
   error: unknown,
@@ -313,14 +341,11 @@ function normalizeVoiceError(
   );
 }
 
+
 /**
- * New V7 endpoints are derived
- * from the already-correct /health URL.
- *
- * Example:
- * /v7/health
- * ->
- * /v7/voice-stream
+ * Build another V7 endpoint
+ * from the already configured
+ * /v7/health endpoint.
  */
 function getV7SiblingUrl(
   pathname: string,
@@ -355,6 +380,11 @@ function getV7SiblingUrl(
   );
 }
 
+
+/**
+ * Read NDJSON without waiting
+ * for the complete response.
+ */
 async function consumeNdjsonStream<T>(
   response: Response,
   onEvent: (
@@ -417,52 +447,57 @@ async function consumeNdjsonStream<T>(
         continue;
       }
 
-      let event: T;
-
       try {
-        event =
+        const event =
           JSON.parse(
             line,
           ) as T;
-      } catch {
+
+        onEvent(
+          event,
+        );
+      } catch (
+        error
+      ) {
         console.warn(
           "Invalid NDJSON line:",
           line,
+          error,
         );
-
-        continue;
       }
-
-      onEvent(
-        event,
-      );
     }
   }
+
+  buffer +=
+    decoder.decode();
 
   const remaining =
-    (
-      buffer +
-      decoder.decode()
-    ).trim();
+    buffer.trim();
 
-  if (remaining) {
-    try {
-      const event =
-        JSON.parse(
-          remaining,
-        ) as T;
+  if (!remaining) {
+    return;
+  }
 
-      onEvent(
-        event,
-      );
-    } catch {
-      console.warn(
-        "Invalid final NDJSON line:",
+  try {
+    const event =
+      JSON.parse(
         remaining,
-      );
-    }
+      ) as T;
+
+    onEvent(
+      event,
+    );
+  } catch (
+    error
+  ) {
+    console.warn(
+      "Invalid final NDJSON line:",
+      remaining,
+      error,
+    );
   }
 }
+
 
 export async function sendAudio(
   audio: Blob,
@@ -509,7 +544,9 @@ export async function sendAudio(
         },
         VOICE_TIMEOUT_MS,
       );
-  } catch (error) {
+  } catch (
+    error
+  ) {
     throw normalizeVoiceError(
       error,
     );
@@ -557,16 +594,7 @@ export async function sendAudio(
   return data;
 }
 
-/**
- * V7.3 true voice streaming.
- *
- * Backend target:
- * POST /v7/voice-stream
- *
- * Returns false when the route
- * is not deployed yet, allowing
- * ChatWindow to use V7.2 fallback.
- */
+
 export async function streamVoiceAudio(
   audio: Blob,
   history:
@@ -611,9 +639,16 @@ export async function streamVoiceAudio(
 
           cache:
             "no-store",
+
+          headers: {
+            Accept:
+              "application/x-ndjson",
+          },
         },
       );
-  } catch (error) {
+  } catch (
+    error
+  ) {
     console.warn(
       "Voice stream connection failed:",
       error,
@@ -622,10 +657,6 @@ export async function streamVoiceAudio(
     return false;
   }
 
-  /**
-   * Backend route not added yet.
-   * Safely use old voice-chat.
-   */
   if (
     response.status ===
       404 ||
@@ -657,10 +688,6 @@ export async function streamVoiceAudio(
     (
       event,
     ) => {
-      onEvent(
-        event,
-      );
-
       if (
         event.type ===
         "error"
@@ -669,11 +696,16 @@ export async function streamVoiceAudio(
           event.error,
         );
       }
+
+      onEvent(
+        event,
+      );
     },
   );
 
   return true;
 }
+
 
 export async function streamTextChat(
   message: string,
@@ -747,10 +779,6 @@ export async function streamTextChat(
     (
       event,
     ) => {
-      onEvent(
-        event,
-      );
-
       if (
         event.type ===
         "error"
@@ -759,9 +787,14 @@ export async function streamTextChat(
           event.error,
         );
       }
+
+      onEvent(
+        event,
+      );
     },
   );
 }
+
 
 export async function sendTextMessage(
   message: string,
@@ -811,7 +844,9 @@ export async function sendTextMessage(
         },
         TEXT_TIMEOUT_MS,
       );
-  } catch (error) {
+  } catch (
+    error
+  ) {
     if (
       isTimeoutError(
         error,
@@ -866,6 +901,7 @@ export async function sendTextMessage(
   return data;
 }
 
+
 export async function getAnnaTtsAudio(
   text: string,
   speed: TtsSpeed =
@@ -910,7 +946,9 @@ export async function getAnnaTtsAudio(
         },
         TTS_TIMEOUT_MS,
       );
-  } catch (error) {
+  } catch (
+    error
+  ) {
     if (
       isTimeoutError(
         error,
@@ -956,6 +994,7 @@ export async function getAnnaTtsAudio(
   return audioBlob;
 }
 
+
 export async function checkVoiceServer(): Promise<boolean> {
   try {
     const response =
@@ -990,7 +1029,9 @@ export async function checkVoiceServer(): Promise<boolean> {
       data?.status ===
         "degraded"
     );
-  } catch (error) {
+  } catch (
+    error
+  ) {
     console.error(
       "Voice health check failed:",
       error,
