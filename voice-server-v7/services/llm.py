@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import re
+from collections.abc import Iterator
 from typing import Any, Literal, TypedDict
 
 import requests
@@ -82,6 +83,17 @@ class AnnaReply(
     correction: AnnaCorrection
 
 
+class StreamEvent(
+    TypedDict,
+    total=False,
+):
+    type: str
+    text: str
+    hanzi: str
+    pinyin: str
+    sentence: str
+
+
 class OllamaServiceError(
     RuntimeError
 ):
@@ -90,6 +102,10 @@ class OllamaServiceError(
     return a valid Anna response.
     """
 
+
+# =========================================================
+# V7.2 NORMAL CONVERSATION + CORRECTION
+# =========================================================
 
 PRACTICE_PROMPT = """
 You are Anna, a friendly Mandarin conversation partner and gentle speaking coach for an HSK 1-4 learner.
@@ -322,6 +338,122 @@ Required format:
 {"hanzi":"准确翻译"}
 """.strip()
 
+
+# =========================================================
+# V7.3 LIVE STREAMING PROMPT
+# =========================================================
+
+STREAMING_PRACTICE_PROMPT = """
+You are Anna, a friendly and expressive Mandarin AI speaking partner.
+
+Your response is streamed LIVE to the user and spoken aloud by a Mandarin TTS engine.
+
+The latest user message is the highest priority.
+
+GENERAL RULES:
+
+1. Output Simplified Chinese only.
+2. Do not output JSON.
+3. Do not output pinyin.
+4. Do not output Myanmar translation.
+5. Do not output markdown.
+6. Do not output labels such as "Anna:", "intent:", "emotion:", or "reply:".
+7. Respond naturally to the latest user message.
+8. Never repeat the user's sentence as the whole reply.
+9. Avoid repeating previous Anna replies.
+10. Use natural spoken Mandarin rather than formal written Mandarin.
+11. Normally keep vocabulary suitable for HSK 1-4.
+12. Start answering immediately. Do not write an introduction about what you are going to do.
+
+REPLY LENGTH MUST MATCH THE USER'S INTENT.
+
+NORMAL CHAT:
+- Usually 1 to 3 short sentences.
+- Keep the conversation flowing naturally.
+- You may ask one relevant follow-up question.
+- Do not ask more than one question.
+
+STORY:
+If the user asks for a story:
+- Tell an original story.
+- Start the actual story immediately.
+- Normally use about 8 to 20 short learner-friendly sentences.
+- Use short sentences so TTS can speak them naturally.
+- Keep the story interesting but easy to understand.
+- Do not unnecessarily summarize it at the end.
+
+ADVICE:
+If the user asks for advice:
+- Give useful, thoughtful advice.
+- Normally use 3 to 8 short sentences.
+- Be friendly and practical.
+- Do not sound like a formal lecture.
+
+EXPLANATION:
+If the user asks you to explain something:
+- Explain clearly using short sentences.
+- Give a simple example when helpful.
+- Use as many sentences as reasonably needed.
+
+ORIGINAL SONG:
+If the user asks you to sing:
+- Create new original Chinese lyrics.
+- Never reproduce lyrics from an existing copyrighted song.
+- Keep it short, usually 4 to 8 lines.
+- Make it rhythmic, simple, and easy to understand.
+- You may use musical symbols such as ♪ sparingly.
+- Do not claim the lyrics are from a real song.
+
+EMOTION AND PERFORMANCE:
+
+If the user requests a mood, reflect it naturally in the wording.
+
+friendly:
+- warm and natural
+
+playful:
+- light, fun wording
+
+teasing:
+- playful friendly teasing
+- do not become cruel or humiliating
+
+angry:
+- stronger wording
+- natural frustration
+- do not become abusive or threatening
+
+excited:
+- energetic wording and punctuation
+
+sad:
+- gentle, softer wording
+
+shouting:
+- stronger emphatic wording
+- use exclamation marks when natural
+- do not write all text as repeated symbols
+
+storytelling:
+- expressive narrative style
+
+song:
+- short rhythmic original lyrics
+
+IMPORTANT FOR LIVE TTS:
+- Prefer short complete sentences.
+- Use Chinese sentence punctuation.
+- End sentences with 。！？ when appropriate.
+- Avoid huge paragraphs.
+- Each sentence should be easy to speak aloud.
+
+Return only the Chinese words Anna should say.
+""".strip()
+
+
+# =========================================================
+# HELPERS
+# =========================================================
 
 def check_ollama_connection() -> bool:
     try:
@@ -918,9 +1050,6 @@ def _extract_correction(
     ):
         return empty
 
-    # If the "correction" is effectively
-    # identical to what the user said,
-    # do not show a correction card.
     if (
         _normalized_text(
             corrected
@@ -947,6 +1076,10 @@ def _extract_correction(
             ),
     }
 
+
+# =========================================================
+# V7.2 NON-STREAM OLLAMA REQUEST
+# =========================================================
 
 def _request_ollama(
     messages: list[
@@ -990,9 +1123,6 @@ def _request_ollama(
             "num_ctx":
                 4096,
 
-            # Slightly larger than V7.1
-            # because correction JSON
-            # contains extra fields.
             "num_predict":
                 230,
 
@@ -1111,6 +1241,10 @@ def _request_ollama(
 
     return content
 
+
+# =========================================================
+# V7.2 NORMAL STRUCTURED REPLY
+# =========================================================
 
 def generate_reply(
     user_text: str,
@@ -1319,8 +1453,6 @@ def generate_reply(
                 )
 
             except OllamaServiceError:
-                # Keep the older fallback
-                # behavior for stability.
                 payload = {
                     "hanzi":
                         raw_content,
@@ -1511,3 +1643,419 @@ def generate_reply(
             f"Last error: {last_error}"
         )
     )
+
+
+# =========================================================
+# V7.3 LIVE STREAMING REPLY
+# =========================================================
+
+def stream_reply_text(
+    user_text: str,
+    conversation_history: (
+        list[
+            dict[str, str]
+        ]
+        | None
+    ) = None,
+) -> Iterator[
+    StreamEvent
+]:
+    """
+    Stream Anna's Simplified Chinese reply
+    directly from Ollama.
+
+    Events:
+
+    token:
+        {
+            "type": "token",
+            "text": "你"
+        }
+
+    sentence:
+        {
+            "type": "sentence",
+            "sentence": "你好！"
+        }
+
+    done:
+        {
+            "type": "done",
+            "hanzi": "你好！今天怎么样？",
+            "pinyin": "nǐ hǎo! jīn tiān zěn me yàng?"
+        }
+
+    Existing generate_reply() remains
+    available for the old V7.2 flow.
+    """
+
+    cleaned_text = str(
+        user_text
+    ).strip()
+
+    if not cleaned_text:
+        raise OllamaServiceError(
+            "User message is empty."
+        )
+
+    cleaned_history = (
+        _clean_history(
+            conversation_history
+        )
+    )
+
+    messages: list[
+        dict[str, str]
+    ] = [
+        {
+            "role":
+                "system",
+
+            "content":
+                STREAMING_PRACTICE_PROMPT,
+        }
+    ]
+
+    messages.extend(
+        cleaned_history
+    )
+
+    messages.append(
+        {
+            "role":
+                "user",
+
+            "content":
+                cleaned_text,
+        }
+    )
+
+    payload = {
+        "model":
+            MODEL_NAME,
+
+        "messages":
+            messages,
+
+        "stream":
+            True,
+
+        "think":
+            False,
+
+        "keep_alive":
+            "30m",
+
+        "options": {
+            # More expressive than the
+            # correction JSON flow.
+            "temperature":
+                0.68,
+
+            "top_p":
+                0.9,
+
+            "repeat_penalty":
+                1.12,
+
+            # Enough context for previous
+            # conversation memory.
+            "num_ctx":
+                4096,
+
+            # Allows longer stories/advice.
+            # Normal chat should still stay
+            # short because of the prompt.
+            "num_predict":
+                1200,
+
+            "seed":
+                -1,
+        },
+    }
+
+    logger.info(
+        (
+            "OLLAMA_STREAM_START "
+            "model=%s "
+            "history=%d "
+            "latest=%r"
+        ),
+        MODEL_NAME,
+        len(
+            cleaned_history
+        ),
+        cleaned_text[:160],
+    )
+
+    full_text = ""
+
+    # Text which has not yet completed
+    # a TTS-ready sentence.
+    sentence_buffer = ""
+
+    try:
+        with requests.post(
+            OLLAMA_CHAT_URL,
+            json=payload,
+            stream=True,
+            timeout=(
+                10,
+                REQUEST_TIMEOUT,
+            ),
+        ) as response:
+
+            response.raise_for_status()
+
+            for raw_line in (
+                response.iter_lines(
+                    decode_unicode=True,
+                )
+            ):
+                if not raw_line:
+                    continue
+
+                try:
+                    data = json.loads(
+                        raw_line
+                    )
+
+                except json.JSONDecodeError:
+                    logger.warning(
+                        (
+                            "OLLAMA_STREAM_"
+                            "INVALID_LINE %r"
+                        ),
+                        raw_line[:200],
+                    )
+
+                    continue
+
+                message = (
+                    data.get(
+                        "message"
+                    )
+                )
+
+                if isinstance(
+                    message,
+                    dict,
+                ):
+                    raw_chunk = (
+                        message.get(
+                            "content",
+                            "",
+                        )
+                    )
+
+                    if isinstance(
+                        raw_chunk,
+                        str,
+                    ) and raw_chunk:
+                        chunk = (
+                            TRADITIONAL_TO_SIMPLIFIED
+                            .convert(
+                                raw_chunk
+                            )
+                        )
+
+                        full_text += (
+                            chunk
+                        )
+
+                        sentence_buffer += (
+                            chunk
+                        )
+
+                        # Immediately give
+                        # frontend live Hanzi.
+                        yield {
+                            "type":
+                                "token",
+
+                            "text":
+                                chunk,
+                        }
+
+                        # One Ollama chunk may
+                        # contain several Chinese
+                        # sentence endings.
+                        while True:
+                            match = re.search(
+                                r"[。！？!?]",
+                                sentence_buffer,
+                            )
+
+                            if not match:
+                                break
+
+                            end_index = (
+                                match.end()
+                            )
+
+                            sentence = (
+                                sentence_buffer[
+                                    :end_index
+                                ]
+                                .strip()
+                            )
+
+                            sentence_buffer = (
+                                sentence_buffer[
+                                    end_index:
+                                ]
+                            )
+
+                            if (
+                                sentence
+                                and
+                                _contains_chinese(
+                                    sentence
+                                )
+                            ):
+                                # Frontend will later
+                                # use this for the Piper
+                                # sentence queue.
+                                yield {
+                                    "type":
+                                        "sentence",
+
+                                    "sentence":
+                                        sentence,
+                                }
+
+                if bool(
+                    data.get(
+                        "done",
+                        False,
+                    )
+                ):
+                    break
+
+    except requests.ConnectionError as error:
+        logger.exception(
+            "OLLAMA_STREAM_CONNECTION_ERROR"
+        )
+
+        raise OllamaServiceError(
+            (
+                "Cannot connect to Ollama "
+                "for live streaming."
+            )
+        ) from error
+
+    except requests.Timeout as error:
+        logger.exception(
+            "OLLAMA_STREAM_TIMEOUT"
+        )
+
+        raise OllamaServiceError(
+            (
+                "Ollama live response "
+                "timed out."
+            )
+        ) from error
+
+    except requests.RequestException as error:
+        logger.exception(
+            "OLLAMA_STREAM_REQUEST_ERROR"
+        )
+
+        detail = (
+            error.response.text
+            if error.response
+            is not None
+            else str(error)
+        )
+
+        raise OllamaServiceError(
+            (
+                "Ollama streaming "
+                "request failed: "
+                f"{detail}"
+            )
+        ) from error
+
+    final_text = (
+        _clean_reply_text(
+            full_text
+        )
+    )
+
+    final_text = (
+        _to_simplified(
+            final_text
+        )
+    )
+
+    if not final_text:
+        raise OllamaServiceError(
+            (
+                "Streaming reply "
+                "was empty."
+            )
+        )
+
+    if not _contains_chinese(
+        final_text
+    ):
+        raise OllamaServiceError(
+            (
+                "Streaming reply "
+                "contains no Chinese."
+            )
+        )
+
+    # If the final sentence had no
+    # punctuation, still allow it
+    # into the TTS queue.
+    remaining_sentence = (
+        sentence_buffer.strip()
+    )
+
+    if (
+        remaining_sentence
+        and
+        _contains_chinese(
+            remaining_sentence
+        )
+    ):
+        yield {
+            "type":
+                "sentence",
+
+            "sentence":
+                remaining_sentence,
+        }
+
+    final_pinyin = (
+        _normalize_pinyin(
+            final_text
+        )
+    )
+
+    logger.info(
+        (
+            "OLLAMA_STREAM_DONE "
+            "characters=%d "
+            "hanzi=%r"
+        ),
+        len(
+            final_text
+        ),
+        final_text[:300],
+    )
+
+    # Pinyin is intentionally sent
+    # only after the Hanzi stream is
+    # completely finished.
+    yield {
+        "type":
+            "done",
+
+        "hanzi":
+            final_text,
+
+        "pinyin":
+            final_pinyin,
+    }

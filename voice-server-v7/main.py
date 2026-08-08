@@ -18,7 +18,10 @@ from fastapi import (
     UploadFile,
 )
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import (
+    FileResponse,
+    StreamingResponse,
+)
 from faster_whisper import WhisperModel
 from pydantic import BaseModel, Field
 
@@ -26,10 +29,11 @@ from services.llm import (
     OllamaServiceError,
     check_ollama_connection,
     generate_reply,
+    stream_reply_text,
 )
 
 
-APP_VERSION = "7.2.0-correction"
+APP_VERSION = "7.3.0-live-streaming"
 
 Mode = Literal[
     "practice",
@@ -183,6 +187,17 @@ class TextChatRequest(BaseModel):
     )
 
     mode: Mode = "practice"
+
+    history: list[
+        HistoryMessage
+    ] = []
+
+
+class StreamChatRequest(BaseModel):
+    message: str = Field(
+        min_length=1,
+        max_length=5000,
+    )
 
     history: list[
         HistoryMessage
@@ -426,6 +441,27 @@ def build_correction_response(
             )
             or ""
         ).strip(),
+    )
+
+
+def encode_ndjson(
+    payload: dict[
+        str,
+        Any,
+    ],
+) -> bytes:
+    return (
+        json.dumps(
+            payload,
+            ensure_ascii=False,
+            separators=(
+                ",",
+                ":",
+            ),
+        )
+        + "\n"
+    ).encode(
+        "utf-8"
     )
 
 
@@ -924,6 +960,9 @@ def root() -> dict[
         "text_chat":
             "/v7/text-chat",
 
+        "stream_chat":
+            "/v7/stream-chat",
+
         "tts":
             "/v7/tts",
     }
@@ -984,6 +1023,12 @@ def health() -> dict[
 
         "correction_enabled":
             True,
+
+        "streaming_enabled":
+            True,
+
+        "stream_endpoint":
+            "/v7/stream-chat",
 
         "allowed_origins":
             ALLOWED_ORIGINS,
@@ -1069,6 +1114,191 @@ def text_to_speech(
                         3,
                     )
                 ),
+        },
+    )
+
+
+@app.post(
+    "/v7/stream-chat"
+)
+def stream_chat(
+    request: StreamChatRequest,
+) -> StreamingResponse:
+    message = (
+        request.message
+        .strip()
+    )
+
+    if not message:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Message cannot "
+                "be empty."
+            ),
+        )
+
+    history = clean_history(
+        request.history
+    )
+
+    def event_stream():
+        started = (
+            time.perf_counter()
+        )
+
+        token_count = 0
+        sentence_count = 0
+
+        try:
+            yield encode_ndjson(
+                {
+                    "type":
+                        "start",
+
+                    "message":
+                        message,
+                }
+            )
+
+            for event in (
+                stream_reply_text(
+                    user_text=
+                        message,
+
+                    conversation_history=
+                        history,
+                )
+            ):
+                event_type = (
+                    str(
+                        event.get(
+                            "type",
+                            "",
+                        )
+                    )
+                )
+
+                if (
+                    event_type ==
+                    "token"
+                ):
+                    token_count += 1
+
+                elif (
+                    event_type ==
+                    "sentence"
+                ):
+                    sentence_count += 1
+
+                yield encode_ndjson(
+                    event
+                )
+
+            elapsed = (
+                time.perf_counter()
+                - started
+            )
+
+            print(
+                "V7 STREAM TIMINGS:",
+                {
+                    "seconds":
+                        round(
+                            elapsed,
+                            3,
+                        ),
+
+                    "token_events":
+                        token_count,
+
+                    "sentences":
+                        sentence_count,
+                },
+            )
+
+            yield encode_ndjson(
+                {
+                    "type":
+                        "complete",
+
+                    "seconds":
+                        round(
+                            elapsed,
+                            3,
+                        ),
+
+                    "token_events":
+                        token_count,
+
+                    "sentences":
+                        sentence_count,
+                }
+            )
+
+        except GeneratorExit:
+            print(
+                "V7 STREAM CLIENT DISCONNECTED"
+            )
+
+            return
+
+        except OllamaServiceError as error:
+            print(
+                "V7 STREAM OLLAMA ERROR:",
+                str(
+                    error
+                ),
+            )
+
+            yield encode_ndjson(
+                {
+                    "type":
+                        "error",
+
+                    "error":
+                        str(
+                            error
+                        ),
+                }
+            )
+
+        except Exception as error:
+            print(
+                "V7 STREAM ERROR:",
+                repr(
+                    error
+                ),
+            )
+
+            yield encode_ndjson(
+                {
+                    "type":
+                        "error",
+
+                    "error":
+                        (
+                            "Unexpected "
+                            "streaming error."
+                        ),
+                }
+            )
+
+    return StreamingResponse(
+        event_stream(),
+
+        media_type=
+            "application/x-ndjson",
+
+        headers={
+            "Cache-Control":
+                "no-cache, no-transform",
+
+            "X-Accel-Buffering":
+                "no",
+
+            "Connection":
+                "keep-alive",
         },
     )
 
