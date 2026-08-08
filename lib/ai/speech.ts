@@ -2,6 +2,9 @@ export type SpeakChineseOptions = {
   rate?: number;
   pitch?: number;
   volume?: number;
+  onStart?: () => void;
+  onEnd?: () => void;
+  onError?: () => void;
 };
 
 export function stopSpeaking(): void {
@@ -32,6 +35,18 @@ export function speakChinese(
   utterance.rate = options.rate ?? 0.9;
   utterance.pitch = options.pitch ?? 1;
   utterance.volume = options.volume ?? 1;
+
+  utterance.onstart = () => {
+    options.onStart?.();
+  };
+
+  utterance.onend = () => {
+    options.onEnd?.();
+  };
+
+  utterance.onerror = () => {
+    options.onError?.();
+  };
 
   const voices =
     window.speechSynthesis.getVoices();

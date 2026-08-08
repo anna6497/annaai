@@ -13,13 +13,16 @@ import {
   sendAudio,
   sendTextMessage,
 } from "@/lib/ai/api";
+
 import {
   MAX_RECORDING_SECONDS,
 } from "@/lib/ai/constants";
+
 import {
   speakChinese,
   stopSpeaking,
 } from "@/lib/ai/speech";
+
 import type {
   AiPracticeMode,
   AnnaReply,
@@ -31,26 +34,37 @@ type Status =
   | "connected"
   | "offline";
 
+type ConversationState =
+  | "ready"
+  | "listening"
+  | "processing"
+  | "speaking"
+  | "error";
+
 const MEMORY_STORAGE_KEY =
   "anna-ai-conversation-memory-v1";
 
 const MAX_MEMORY_MESSAGES = 40;
 
 function loadSavedMemory(): ConversationHistoryMessage[] {
-  if (typeof window === "undefined") {
+  if (
+    typeof window === "undefined"
+  ) {
     return [];
   }
 
   try {
-    const raw = window.localStorage.getItem(
-      MEMORY_STORAGE_KEY
-    );
+    const raw =
+      window.localStorage.getItem(
+        MEMORY_STORAGE_KEY,
+      );
 
     if (!raw) {
       return [];
     }
 
-    const parsed: unknown = JSON.parse(raw);
+    const parsed: unknown =
+      JSON.parse(raw);
 
     if (!Array.isArray(parsed)) {
       return [];
@@ -59,35 +73,48 @@ function loadSavedMemory(): ConversationHistoryMessage[] {
     return parsed
       .filter(
         (
-          item
+          item,
         ): item is ConversationHistoryMessage =>
           typeof item === "object" &&
           item !== null &&
           "role" in item &&
           "content" in item &&
           (
-            (item as ConversationHistoryMessage)
-              .role === "user" ||
-            (item as ConversationHistoryMessage)
-              .role === "assistant"
+            (
+              item as ConversationHistoryMessage
+            ).role === "user" ||
+            (
+              item as ConversationHistoryMessage
+            ).role === "assistant"
           ) &&
           typeof (
             item as ConversationHistoryMessage
           ).content === "string" &&
           (
             item as ConversationHistoryMessage
-          ).content.trim().length > 0
+          ).content.trim().length > 0,
       )
-      .slice(-MAX_MEMORY_MESSAGES);
-  } catch {
+      .slice(
+        -MAX_MEMORY_MESSAGES,
+      );
+  } catch (
+    error
+  ) {
+    console.error(
+      "Unable to load conversation memory:",
+      error,
+    );
+
     return [];
   }
 }
 
 function saveMemory(
-  messages: ConversationHistoryMessage[]
+  messages: ConversationHistoryMessage[],
 ): void {
-  if (typeof window === "undefined") {
+  if (
+    typeof window === "undefined"
+  ) {
     return;
   }
 
@@ -95,74 +122,165 @@ function saveMemory(
     window.localStorage.setItem(
       MEMORY_STORAGE_KEY,
       JSON.stringify(
-        messages.slice(-MAX_MEMORY_MESSAGES)
-      )
+        messages.slice(
+          -MAX_MEMORY_MESSAGES,
+        ),
+      ),
     );
-  } catch {
-    // Ignore localStorage failures.
+  } catch (
+    error
+  ) {
+    console.error(
+      "Unable to save conversation memory:",
+      error,
+    );
   }
 }
 
 function clearSavedMemory(): void {
-  if (typeof window === "undefined") {
+  if (
+    typeof window === "undefined"
+  ) {
     return;
   }
 
   try {
     window.localStorage.removeItem(
-      MEMORY_STORAGE_KEY
+      MEMORY_STORAGE_KEY,
     );
-  } catch {
-    // Ignore localStorage failures.
+  } catch (
+    error
+  ) {
+    console.error(
+      "Unable to clear conversation memory:",
+      error,
+    );
+  }
+}
+
+function getConversationStatusText(
+  conversationState: ConversationState,
+  seconds: number,
+): string {
+  switch (
+    conversationState
+  ) {
+    case "listening":
+      return `Listening... ${seconds}s / ${MAX_RECORDING_SECONDS}s`;
+
+    case "processing":
+      return "Anna is thinking...";
+
+    case "speaking":
+      return "Anna is speaking...";
+
+    case "error":
+      return "Something went wrong. Please try again.";
+
+    case "ready":
+    default:
+      return "Tap the microphone and speak Chinese";
   }
 }
 
 export default function ChatWindow() {
-  const [mode, setMode] =
+  const [
+    mode,
+    setMode,
+  ] =
     useState<AiPracticeMode>(
-      "practice"
+      "practice",
     );
 
-  const [status, setStatus] =
-    useState<Status>("checking");
+  const [
+    status,
+    setStatus,
+  ] =
+    useState<Status>(
+      "checking",
+    );
 
-  const [isRecording, setIsRecording] =
+  const [
+    conversationState,
+    setConversationState,
+  ] =
+    useState<ConversationState>(
+      "ready",
+    );
+
+  const [
+    isRecording,
+    setIsRecording,
+  ] =
     useState(false);
 
-  const [isProcessing, setIsProcessing] =
+  const [
+    isProcessing,
+    setIsProcessing,
+  ] =
     useState(false);
 
   const [
     speakerEnabled,
     setSpeakerEnabled,
-  ] = useState(true);
+  ] =
+    useState(true);
 
-  const [transcript, setTranscript] =
+  const [
+    transcript,
+    setTranscript,
+  ] =
     useState("");
 
-  const [builderInput, setBuilderInput] =
+  const [
+    builderInput,
+    setBuilderInput,
+  ] =
     useState("");
 
-  const [reply, setReply] =
-    useState<AnnaReply | null>(null);
+  const [
+    reply,
+    setReply,
+  ] =
+    useState<AnnaReply | null>(
+      null,
+    );
 
-  const [error, setError] =
+  const [
+    error,
+    setError,
+  ] =
     useState("");
 
-  const [seconds, setSeconds] =
+  const [
+    seconds,
+    setSeconds,
+  ] =
+    useState(0);
+
+  const [
+    memoryCount,
+    setMemoryCount,
+  ] =
     useState(0);
 
   const mediaRecorderRef =
-    useRef<MediaRecorder | null>(null);
+    useRef<MediaRecorder | null>(
+      null,
+    );
 
   const streamRef =
-    useRef<MediaStream | null>(null);
+    useRef<MediaStream | null>(
+      null,
+    );
 
   const chunksRef =
     useRef<Blob[]>([]);
 
   const timerRef =
-    useRef<number | null>(null);
+    useRef<number | null>(
+      null,
+    );
 
   const historyRef =
     useRef<
@@ -170,79 +288,138 @@ export default function ChatWindow() {
     >([]);
 
   const refreshHealth =
-    useCallback(async () => {
-      setStatus("checking");
+    useCallback(
+      async () => {
+        setStatus(
+          "checking",
+        );
 
-      const online =
-        await checkVoiceServer();
+        const online =
+          await checkVoiceServer();
 
-      setStatus(
-        online
-          ? "connected"
-          : "offline"
-      );
-    }, []);
+        setStatus(
+          online
+            ? "connected"
+            : "offline",
+        );
+      },
+      [],
+    );
+
+  const stopRecordingTimer =
+    useCallback(
+      () => {
+        if (
+          timerRef.current !==
+          null
+        ) {
+          window.clearInterval(
+            timerRef.current,
+          );
+
+          timerRef.current =
+            null;
+        }
+      },
+      [],
+    );
+
+  const stopMicrophoneStream =
+    useCallback(
+      () => {
+        streamRef.current
+          ?.getTracks()
+          .forEach(
+            (
+              track,
+            ) => {
+              track.stop();
+            },
+          );
+
+        streamRef.current =
+          null;
+      },
+      [],
+    );
+
+  const resetCurrentResult =
+    useCallback(
+      () => {
+        stopSpeaking();
+
+        setTranscript("");
+        setReply(null);
+        setError("");
+        setSeconds(0);
+
+        setConversationState(
+          "ready",
+        );
+      },
+      [],
+    );
 
   useEffect(() => {
-    historyRef.current =
+    const memory =
       loadSavedMemory();
+
+    historyRef.current =
+      memory;
+
+    setMemoryCount(
+      memory.length,
+    );
 
     void refreshHealth();
 
     return () => {
       stopSpeaking();
 
-      if (
-        timerRef.current !== null
-      ) {
-        window.clearInterval(
-          timerRef.current
-        );
-      }
-
-      streamRef.current
-        ?.getTracks()
-        .forEach((track) =>
-          track.stop()
-        );
+      stopRecordingTimer();
+      stopMicrophoneStream();
     };
-  }, [refreshHealth]);
-
-  const resetCurrentResult =
-    useCallback(() => {
-      stopSpeaking();
-      setTranscript("");
-      setReply(null);
-      setError("");
-      setSeconds(0);
-    }, []);
+  }, [
+    refreshHealth,
+    stopMicrophoneStream,
+    stopRecordingTimer,
+  ]);
 
   const switchMode = (
-    nextMode: AiPracticeMode
+    nextMode: AiPracticeMode,
   ) => {
     if (
       isRecording ||
-      isProcessing
+      isProcessing ||
+      conversationState ===
+        "speaking"
     ) {
       return;
     }
 
-    setMode(nextMode);
+    setMode(
+      nextMode,
+    );
+
     resetCurrentResult();
   };
 
   const stopRecording =
-    useCallback(() => {
-      const recorder =
-        mediaRecorderRef.current;
+    useCallback(
+      () => {
+        const recorder =
+          mediaRecorderRef.current;
 
-      if (
-        recorder &&
-        recorder.state !== "inactive"
-      ) {
-        recorder.stop();
-      }
-    }, []);
+        if (
+          recorder &&
+          recorder.state !==
+            "inactive"
+        ) {
+          recorder.stop();
+        }
+      },
+      [],
+    );
 
   useEffect(() => {
     if (
@@ -258,203 +435,425 @@ export default function ChatWindow() {
     stopRecording,
   ]);
 
-  const startRecording =
-    useCallback(async () => {
-      if (
-        mode !== "practice" ||
-        isRecording ||
-        isProcessing
-      ) {
-        return;
-      }
-
-      setError("");
-      setTranscript("");
-      setReply(null);
-      setSeconds(0);
-
-      try {
-        const stream =
-          await navigator.mediaDevices
-            .getUserMedia({
-              audio: true,
-            });
-
-        streamRef.current = stream;
-
-        const preferredTypes = [
-          "audio/webm;codecs=opus",
-          "audio/webm",
-          "audio/mp4",
-        ];
-
-        const mimeType =
-          preferredTypes.find((type) =>
-            MediaRecorder
-              .isTypeSupported(type)
+  const playAnnaReply =
+    useCallback(
+      (
+        hanzi: string,
+      ) => {
+        if (
+          !speakerEnabled ||
+          !hanzi.trim()
+        ) {
+          setConversationState(
+            "ready",
           );
 
-        const recorder = mimeType
-          ? new MediaRecorder(
-              stream,
-              { mimeType }
-            )
-          : new MediaRecorder(
-              stream
-            );
+          return;
+        }
 
-        mediaRecorderRef.current =
-          recorder;
+        speakChinese(
+          hanzi,
+          {
+            rate: 0.9,
 
-        chunksRef.current = [];
-
-        recorder.ondataavailable = (
-          event
-        ) => {
-          if (event.data.size > 0) {
-            chunksRef.current.push(
-              event.data
-            );
-          }
-        };
-
-        recorder.onerror = () => {
-          setError(
-            "Microphone recording failed."
-          );
-
-          setIsRecording(false);
-        };
-
-        recorder.onstop =
-          async () => {
-            if (
-              timerRef.current !== null
-            ) {
-              window.clearInterval(
-                timerRef.current
-              );
-
-              timerRef.current = null;
-            }
-
-            stream
-              .getTracks()
-              .forEach((track) =>
-                track.stop()
-              );
-
-            setIsRecording(false);
-
-            const audioBlob =
-              new Blob(
-                chunksRef.current,
-                {
-                  type:
-                    recorder.mimeType ||
-                    "audio/webm",
-                }
-              );
-
-            if (
-              audioBlob.size === 0
-            ) {
-              setError(
-                "Recorded audio is empty."
-              );
-
-              return;
-            }
-
-            setIsProcessing(true);
-
-            try {
-              const result =
-                await sendAudio(
-                  audioBlob,
-                  historyRef.current
-                );
-
-              setTranscript(
-                result.transcript
-              );
-
-              setReply(
-                result.reply
-              );
-
-              const newMessages: ConversationHistoryMessage[] = [
-                {
-                  role: "user",
-                  content: result.transcript,
-                },
-                {
-                  role: "assistant",
-                  content: result.reply.hanzi,
-                },
-              ];
-
-              const updatedHistory: ConversationHistoryMessage[] = [
-                ...historyRef.current,
-                ...newMessages,
-              ].slice(-MAX_MEMORY_MESSAGES);
-
-              historyRef.current =
-                updatedHistory;
-
-              saveMemory(
-                updatedHistory
-              );
-
-              if (
-                speakerEnabled
-              ) {
-                speakChinese(
-                  result.reply.hanzi
-                );
-              }
-            } catch (
-              caughtError
-            ) {
-              setError(
-                caughtError instanceof Error
-                  ? caughtError.message
-                  : "Unknown error occurred."
-              );
-            } finally {
-              setIsProcessing(false);
-            }
-          };
-
-        recorder.start(250);
-
-        setIsRecording(true);
-
-        timerRef.current =
-          window.setInterval(
-            () => {
-              setSeconds(
-                (current) =>
-                  current + 1
+            onStart: () => {
+              setConversationState(
+                "speaking",
               );
             },
-            1000
-          );
-      } catch {
-        setError(
-          "Microphone permission မရပါ။ Browser permission ကို Allow လုပ်ပါ။"
+
+            onEnd: () => {
+              setConversationState(
+                "ready",
+              );
+            },
+
+            onError: () => {
+              setConversationState(
+                "ready",
+              );
+            },
+          },
         );
-      }
-    }, [
-      mode,
-      isProcessing,
-      isRecording,
-      speakerEnabled,
-    ]);
+      },
+      [
+        speakerEnabled,
+      ],
+    );
+
+  const startRecording =
+    useCallback(
+      async () => {
+        if (
+          mode !==
+            "practice" ||
+          isRecording ||
+          isProcessing ||
+          conversationState ===
+            "speaking"
+        ) {
+          return;
+        }
+
+        stopSpeaking();
+
+        setError("");
+        setTranscript("");
+        setReply(null);
+        setSeconds(0);
+
+        setConversationState(
+          "listening",
+        );
+
+        try {
+          if (
+            !navigator
+              .mediaDevices
+              ?.getUserMedia
+          ) {
+            throw new Error(
+              "Microphone is not supported by this browser.",
+            );
+          }
+
+          if (
+            typeof MediaRecorder ===
+            "undefined"
+          ) {
+            throw new Error(
+              "Audio recording is not supported by this browser.",
+            );
+          }
+
+          const stream =
+            await navigator
+              .mediaDevices
+              .getUserMedia({
+                audio: {
+                  echoCancellation:
+                    true,
+
+                  noiseSuppression:
+                    true,
+
+                  autoGainControl:
+                    true,
+                },
+              });
+
+          streamRef.current =
+            stream;
+
+          const preferredTypes =
+            [
+              "audio/webm;codecs=opus",
+              "audio/webm",
+              "audio/mp4",
+              "audio/ogg;codecs=opus",
+            ];
+
+          const mimeType =
+            preferredTypes.find(
+              (
+                type,
+              ) =>
+                MediaRecorder
+                  .isTypeSupported(
+                    type,
+                  ),
+            );
+
+          const recorder =
+            mimeType
+              ? new MediaRecorder(
+                  stream,
+                  {
+                    mimeType,
+                  },
+                )
+              : new MediaRecorder(
+                  stream,
+                );
+
+          mediaRecorderRef.current =
+            recorder;
+
+          chunksRef.current =
+            [];
+
+          recorder.ondataavailable =
+            (
+              event,
+            ) => {
+              if (
+                event.data.size >
+                0
+              ) {
+                chunksRef.current.push(
+                  event.data,
+                );
+              }
+            };
+
+          recorder.onerror =
+            (
+              recorderError,
+            ) => {
+              console.error(
+                "MediaRecorder error:",
+                recorderError,
+              );
+
+              stopRecordingTimer();
+              stopMicrophoneStream();
+
+              setIsRecording(
+                false,
+              );
+
+              setConversationState(
+                "error",
+              );
+
+              setError(
+                "Microphone recording failed. Please try again.",
+              );
+            };
+
+          recorder.onstop =
+            async () => {
+              stopRecordingTimer();
+
+              stopMicrophoneStream();
+
+              setIsRecording(
+                false,
+              );
+
+              const audioBlob =
+                new Blob(
+                  chunksRef.current,
+                  {
+                    type:
+                      recorder.mimeType ||
+                      "audio/webm",
+                  },
+                );
+
+              chunksRef.current =
+                [];
+
+              if (
+                audioBlob.size ===
+                0
+              ) {
+                setConversationState(
+                  "error",
+                );
+
+                setError(
+                  "Recorded audio is empty. Please record again.",
+                );
+
+                return;
+              }
+
+              setConversationState(
+                "processing",
+              );
+
+              setIsProcessing(
+                true,
+              );
+
+              try {
+                const result =
+                  await sendAudio(
+                    audioBlob,
+                    historyRef.current,
+                  );
+
+                const cleanedTranscript =
+                  result.transcript.trim();
+
+                setTranscript(
+                  cleanedTranscript,
+                );
+
+                setReply(
+                  result.reply,
+                );
+
+                const newMessages: ConversationHistoryMessage[] =
+                  [
+                    {
+                      role: "user",
+                      content:
+                        cleanedTranscript,
+                    },
+
+                    {
+                      role:
+                        "assistant",
+
+                      content:
+                        result.reply
+                          .hanzi,
+                    },
+                  ];
+
+                const updatedHistory =
+                  [
+                    ...historyRef.current,
+                    ...newMessages,
+                  ].slice(
+                    -MAX_MEMORY_MESSAGES,
+                  );
+
+                historyRef.current =
+                  updatedHistory;
+
+                saveMemory(
+                  updatedHistory,
+                );
+
+                setMemoryCount(
+                  updatedHistory.length,
+                );
+
+                setError("");
+
+                if (
+                  speakerEnabled
+                ) {
+                  playAnnaReply(
+                    result.reply
+                      .hanzi,
+                  );
+                } else {
+                  setConversationState(
+                    "ready",
+                  );
+                }
+              } catch (
+                caughtError
+              ) {
+                console.error(
+                  "Voice conversation failed:",
+                  caughtError,
+                );
+
+                setConversationState(
+                  "error",
+                );
+
+                setError(
+                  caughtError instanceof
+                    Error
+                    ? caughtError.message
+                    : "Voice processing failed. Please try again.",
+                );
+              } finally {
+                setIsProcessing(
+                  false,
+                );
+              }
+            };
+
+          recorder.start(
+            200,
+          );
+
+          setIsRecording(
+            true,
+          );
+
+          setConversationState(
+            "listening",
+          );
+
+          timerRef.current =
+            window.setInterval(
+              () => {
+                setSeconds(
+                  (
+                    current,
+                  ) =>
+                    current +
+                    1,
+                );
+              },
+              1000,
+            );
+        } catch (
+          caughtError
+        ) {
+          console.error(
+            "Unable to start recording:",
+            caughtError,
+          );
+
+          stopRecordingTimer();
+          stopMicrophoneStream();
+
+          setIsRecording(
+            false,
+          );
+
+          setConversationState(
+            "error",
+          );
+
+          if (
+            caughtError instanceof
+              DOMException &&
+            caughtError.name ===
+              "NotAllowedError"
+          ) {
+            setError(
+              "Microphone permission မရပါ။ Browser permission ကို Allow လုပ်ပါ။",
+            );
+
+            return;
+          }
+
+          if (
+            caughtError instanceof
+              DOMException &&
+            caughtError.name ===
+              "NotFoundError"
+          ) {
+            setError(
+              "Microphone မတွေ့ပါ။ Microphone connection ကိုစစ်ပါ။",
+            );
+
+            return;
+          }
+
+          setError(
+            caughtError instanceof
+              Error
+              ? caughtError.message
+              : "Microphone ကိုဖွင့်၍မရပါ။",
+          );
+        }
+      },
+      [
+        conversationState,
+        isProcessing,
+        isRecording,
+        mode,
+        playAnnaReply,
+        speakerEnabled,
+        stopMicrophoneStream,
+        stopRecordingTimer,
+      ],
+    );
 
   const handleBuilderSubmit =
     async (
-      event: FormEvent<HTMLFormElement>
+      event: FormEvent<HTMLFormElement>,
     ) => {
       event.preventDefault();
 
@@ -471,64 +870,167 @@ export default function ChatWindow() {
 
       if (!cleaned) {
         setError(
-          "မြန်မာစာကြောင်းကို အရင်ရေးပါ။"
+          "မြန်မာစာကြောင်းကို အရင်ရေးပါ။",
         );
 
         return;
       }
 
+      stopSpeaking();
+
       setError("");
       setReply(null);
-      setTranscript(cleaned);
-      setIsProcessing(true);
+      setTranscript(
+        cleaned,
+      );
+
+      setConversationState(
+        "processing",
+      );
+
+      setIsProcessing(
+        true,
+      );
 
       try {
         const result =
           await sendTextMessage(
             cleaned,
             "sentence_builder",
-            []
+            [],
           );
 
-        setReply(result.reply);
+        setReply(
+          result.reply,
+        );
 
-        if (speakerEnabled) {
-          speakChinese(
-            result.reply.hanzi
+        if (
+          speakerEnabled
+        ) {
+          playAnnaReply(
+            result.reply.hanzi,
+          );
+        } else {
+          setConversationState(
+            "ready",
           );
         }
-      } catch (caughtError) {
+      } catch (
+        caughtError
+      ) {
+        console.error(
+          "Sentence Builder failed:",
+          caughtError,
+        );
+
+        setConversationState(
+          "error",
+        );
+
         setError(
-          caughtError instanceof Error
+          caughtError instanceof
+            Error
             ? caughtError.message
-            : "Unknown error occurred."
+            : "Sentence Builder error occurred.",
         );
       } finally {
-        setIsProcessing(false);
+        setIsProcessing(
+          false,
+        );
       }
     };
 
-  const newConversation = () => {
-    historyRef.current = [];
-    clearSavedMemory();
-    setBuilderInput("");
-    resetCurrentResult();
-  };
+  const newConversation =
+    () => {
+      stopSpeaking();
+
+      historyRef.current =
+        [];
+
+      clearSavedMemory();
+
+      setMemoryCount(
+        0,
+      );
+
+      setBuilderInput("");
+
+      resetCurrentResult();
+    };
+
+  const handleSpeakerToggle =
+    () => {
+      const nextEnabled =
+        !speakerEnabled;
+
+      setSpeakerEnabled(
+        nextEnabled,
+      );
+
+      if (
+        !nextEnabled
+      ) {
+        stopSpeaking();
+
+        if (
+          conversationState ===
+          "speaking"
+        ) {
+          setConversationState(
+            "ready",
+          );
+        }
+      }
+    };
+
+  const handleReplay =
+    () => {
+      if (
+        !reply ||
+        isRecording ||
+        isProcessing
+      ) {
+        return;
+      }
+
+      playAnnaReply(
+        reply.hanzi,
+      );
+    };
+
+  const statusText =
+    getConversationStatusText(
+      conversationState,
+      seconds,
+    );
 
   return (
     <main className="min-h-screen bg-[#12001f] px-4 py-4 text-white sm:px-6">
       <section className="mx-auto max-w-3xl overflow-hidden rounded-[32px] border border-purple-500/40 bg-[#26053b] shadow-2xl">
         <header className="flex flex-wrap items-center justify-between gap-4 border-b border-purple-400/20 px-6 py-5">
           <div>
-            <p className="text-xs font-bold tracking-[0.22em] text-purple-200">
-              ANNA AI
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-xs font-bold tracking-[0.22em] text-purple-200">
+                ANNA AI
+              </p>
+
+              <span className="rounded-full border border-fuchsia-300/20 bg-fuchsia-400/10 px-2 py-1 text-[10px] font-black tracking-wider text-fuchsia-200">
+                V7 PREVIEW
+              </span>
+            </div>
 
             <h1 className="mt-1 text-2xl font-bold">
-              {mode === "practice"
+              {mode ===
+              "practice"
                 ? "Chinese Practice"
                 : "Sentence Builder"}
             </h1>
+
+            <p className="mt-1 text-xs text-white/35">
+              Memory:{" "}
+              {memoryCount} /{" "}
+              {MAX_MEMORY_MESSAGES}
+            </p>
           </div>
 
           <div className="flex flex-wrap gap-2 text-sm">
@@ -537,7 +1039,7 @@ export default function ChatWindow() {
               onClick={() =>
                 void refreshHealth()
               }
-              className="rounded-full border border-purple-300/20 bg-white/5 px-4 py-2"
+              className="rounded-full border border-purple-300/20 bg-white/5 px-4 py-2 transition hover:bg-white/10"
             >
               <span
                 className={`mr-2 inline-block h-2 w-2 rounded-full ${
@@ -546,29 +1048,26 @@ export default function ChatWindow() {
                     ? "bg-emerald-400"
                     : status ===
                         "checking"
-                      ? "bg-amber-300"
+                      ? "animate-pulse bg-amber-300"
                       : "bg-red-400"
                 }`}
               />
 
-              {status === "connected"
+              {status ===
+              "connected"
                 ? "Connected"
-                : status === "checking"
+                : status ===
+                    "checking"
                   ? "Checking"
                   : "Offline"}
             </button>
 
             <button
               type="button"
-              onClick={() => {
-                setSpeakerEnabled(
-                  (current) =>
-                    !current
-                );
-
-                stopSpeaking();
-              }}
-              className="rounded-full border border-purple-300/20 bg-white/5 px-4 py-2"
+              onClick={
+                handleSpeakerToggle
+              }
+              className="rounded-full border border-purple-300/20 bg-white/5 px-4 py-2 transition hover:bg-white/10"
             >
               {speakerEnabled
                 ? "🔊 Speaker"
@@ -577,10 +1076,14 @@ export default function ChatWindow() {
 
             <button
               type="button"
+              disabled={
+                isRecording ||
+                isProcessing
+              }
               onClick={
                 newConversation
               }
-              className="rounded-full border border-purple-300/20 bg-white/5 px-4 py-2"
+              className="rounded-full border border-purple-300/20 bg-white/5 px-4 py-2 transition hover:bg-white/10 disabled:opacity-40"
             >
               New
             </button>
@@ -593,15 +1096,18 @@ export default function ChatWindow() {
               type="button"
               disabled={
                 isRecording ||
-                isProcessing
+                isProcessing ||
+                conversationState ===
+                  "speaking"
               }
               onClick={() =>
                 switchMode(
-                  "practice"
+                  "practice",
                 )
               }
               className={`rounded-xl px-4 py-3 text-sm font-bold transition ${
-                mode === "practice"
+                mode ===
+                "practice"
                   ? "bg-gradient-to-r from-fuchsia-600 to-purple-700 shadow-lg"
                   : "text-purple-200 hover:bg-white/5"
               } disabled:opacity-50`}
@@ -613,11 +1119,13 @@ export default function ChatWindow() {
               type="button"
               disabled={
                 isRecording ||
-                isProcessing
+                isProcessing ||
+                conversationState ===
+                  "speaking"
               }
               onClick={() =>
                 switchMode(
-                  "sentence_builder"
+                  "sentence_builder",
                 )
               }
               className={`rounded-xl px-4 py-3 text-sm font-bold transition ${
@@ -648,10 +1156,15 @@ export default function ChatWindow() {
 
               <textarea
                 id="builder-input"
-                value={builderInput}
-                onChange={(event) =>
+                value={
+                  builderInput
+                }
+                onChange={(
+                  event,
+                ) =>
                   setBuilderInput(
-                    event.target.value
+                    event.target
+                      .value,
                   )
                 }
                 placeholder="ဥပမာ — မနက်ဖြန် ကျွန်မ အလုပ်သွားမယ်။"
@@ -678,32 +1191,54 @@ export default function ChatWindow() {
             </form>
           ) : (
             <section className="min-h-28 rounded-[28px] border border-purple-400/40 bg-purple-900/30">
-              <div className="border-b border-purple-400/20 px-5 py-3 text-xs font-bold tracking-[0.2em] text-purple-200">
-                YOU SAID
+              <div className="flex items-center justify-between border-b border-purple-400/20 px-5 py-3">
+                <span className="text-xs font-bold tracking-[0.2em] text-purple-200">
+                  YOU SAID
+                </span>
+
+                {conversationState ===
+                "listening" ? (
+                  <span className="flex items-center gap-2 text-xs font-bold text-red-200">
+                    <span className="h-2 w-2 animate-pulse rounded-full bg-red-400" />
+                    LISTENING
+                  </span>
+                ) : null}
               </div>
 
               <div className="px-5 py-6 text-2xl font-bold leading-relaxed">
                 {transcript ||
-                  "စကားပြောပြီးရင် ဒီနေရာမှာ ပေါ်လာပါမယ်။"}
+                  (
+                    conversationState ===
+                    "listening"
+                      ? "正在听你说话..."
+                      : "စကားပြောပြီးရင် ဒီနေရာမှာ ပေါ်လာပါမယ်။"
+                  )}
               </div>
             </section>
           )}
 
           {mode ===
             "sentence_builder" &&
-            transcript && (
-              <section className="rounded-[24px] border border-purple-400/25 bg-purple-900/20">
-                <div className="border-b border-purple-400/15 px-5 py-3 text-xs font-bold tracking-[0.18em] text-purple-200">
-                  မူရင်းမြန်မာစာ
-                </div>
+          transcript ? (
+            <section className="rounded-[24px] border border-purple-400/25 bg-purple-900/20">
+              <div className="border-b border-purple-400/15 px-5 py-3 text-xs font-bold tracking-[0.18em] text-purple-200">
+                မူရင်းမြန်မာစာ
+              </div>
 
-                <div className="px-5 py-4 text-base leading-7">
-                  {transcript}
-                </div>
-              </section>
-            )}
+              <div className="px-5 py-4 text-base leading-7">
+                {transcript}
+              </div>
+            </section>
+          ) : null}
 
-          <section className="overflow-hidden rounded-[28px] border border-purple-400/20 bg-[#180128]">
+          <section
+            className={`overflow-hidden rounded-[28px] border bg-[#180128] transition-all duration-300 ${
+              conversationState ===
+              "speaking"
+                ? "border-fuchsia-400/50 shadow-[0_0_35px_rgba(217,70,239,0.16)]"
+                : "border-purple-400/20"
+            }`}
+          >
             <div className="flex items-center justify-between border-b border-purple-400/20 px-5 py-4">
               <div>
                 <p className="text-xs font-bold tracking-[0.2em] text-purple-200">
@@ -720,19 +1255,49 @@ export default function ChatWindow() {
 
               <button
                 type="button"
-                disabled={!reply}
-                onClick={() =>
-                  reply &&
-                  speakChinese(
-                    reply.hanzi
-                  )
+                disabled={
+                  !reply ||
+                  isRecording ||
+                  isProcessing
                 }
-                className="rounded-full border border-purple-300/20 bg-white/5 p-3 text-xl disabled:opacity-40"
+                onClick={
+                  handleReplay
+                }
+                className="rounded-full border border-purple-300/20 bg-white/5 p-3 text-xl transition hover:bg-white/10 disabled:opacity-40"
                 aria-label="Play Chinese sentence"
               >
-                🔊
+                {conversationState ===
+                "speaking"
+                  ? "🔉"
+                  : "🔊"}
               </button>
             </div>
+
+            {conversationState ===
+            "processing" ? (
+              <div className="border-b border-purple-400/20 px-5 py-4">
+                <div className="flex items-center gap-3 text-sm text-violet-200">
+                  <div className="flex gap-1">
+                    <span className="h-2 w-2 animate-bounce rounded-full bg-violet-300 [animation-delay:-0.3s]" />
+                    <span className="h-2 w-2 animate-bounce rounded-full bg-violet-300 [animation-delay:-0.15s]" />
+                    <span className="h-2 w-2 animate-bounce rounded-full bg-violet-300" />
+                  </div>
+
+                  Anna is thinking...
+                </div>
+              </div>
+            ) : null}
+
+            {conversationState ===
+            "speaking" ? (
+              <div className="border-b border-fuchsia-400/20 bg-fuchsia-400/[0.05] px-5 py-3">
+                <div className="flex items-center gap-2 text-sm font-semibold text-fuchsia-200">
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-fuchsia-400" />
+
+                  Anna is speaking
+                </div>
+              </div>
+            ) : null}
 
             <div className="border-b border-purple-400/20 px-5 py-5">
               <p className="text-xs font-bold tracking-[0.16em] text-purple-300">
@@ -741,10 +1306,12 @@ export default function ChatWindow() {
 
               <p className="mt-4 whitespace-pre-wrap text-2xl font-bold leading-relaxed">
                 {reply?.hanzi ||
-                  (mode ===
-                  "practice"
-                    ? "Anna 的回复会显示在这里。"
-                    : "Chinese sentence will appear here.")}
+                  (
+                    mode ===
+                    "practice"
+                      ? "Anna 的回复会显示在这里。"
+                      : "Chinese sentence will appear here."
+                  )}
               </p>
             </div>
 
@@ -760,95 +1327,156 @@ export default function ChatWindow() {
             </div>
           </section>
 
-          {error && (
-            <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-100">
-              {error}
-            </div>
-          )}
+          {error ? (
+            <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-4 text-sm text-red-100">
+              <div className="flex items-start gap-3">
+                <span className="text-lg">
+                  ⚠️
+                </span>
 
-          {mode === "practice" && (
+                <div>
+                  <p className="font-bold">
+                    Anna couldn&apos;t continue
+                  </p>
+
+                  <p className="mt-1 leading-6 text-red-100/80">
+                    {error}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {mode ===
+          "practice" ? (
             <div className="flex flex-col items-center border-t border-purple-300/20 pt-7">
-              <button
-                type="button"
-                onClick={
-                  isRecording
-                    ? stopRecording
-                    : () =>
-                        void startRecording()
-                }
-                disabled={
-                  isProcessing ||
-                  status !==
-                    "connected"
-                }
-                className={`grid h-32 w-32 place-items-center rounded-full border-[3px] shadow-[0_0_35px_rgba(192,38,255,0.45)] transition-all duration-200 active:scale-95 ${
-                  isRecording
-                    ? "border-red-200 bg-red-500"
-                    : "border-purple-200 bg-gradient-to-b from-fuchsia-500 to-purple-700"
-                } disabled:cursor-not-allowed disabled:opacity-50`}
-                aria-label={
-                  isRecording
-                    ? "Stop recording"
-                    : "Start recording"
-                }
+              <div className="relative">
+                {conversationState ===
+                "listening" ? (
+                  <>
+                    <span className="absolute inset-[-16px] animate-ping rounded-full border border-red-300/30" />
+                    <span className="absolute inset-[-8px] animate-pulse rounded-full border border-red-300/30" />
+                  </>
+                ) : null}
+
+                {conversationState ===
+                "speaking" ? (
+                  <span className="absolute inset-[-10px] animate-pulse rounded-full border border-fuchsia-300/40" />
+                ) : null}
+
+                <button
+                  type="button"
+                  onClick={
+                    isRecording
+                      ? stopRecording
+                      : () =>
+                          void startRecording()
+                  }
+                  disabled={
+                    isProcessing ||
+                    status !==
+                      "connected" ||
+                    conversationState ===
+                      "speaking"
+                  }
+                  className={`relative z-10 grid h-32 w-32 place-items-center rounded-full border-[3px] shadow-[0_0_35px_rgba(192,38,255,0.45)] transition-all duration-200 active:scale-95 ${
+                    isRecording
+                      ? "border-red-200 bg-red-500 shadow-[0_0_45px_rgba(239,68,68,0.5)]"
+                      : conversationState ===
+                          "processing"
+                        ? "border-violet-200 bg-violet-700"
+                        : conversationState ===
+                            "speaking"
+                          ? "border-fuchsia-200 bg-fuchsia-700"
+                          : "border-purple-200 bg-gradient-to-b from-fuchsia-500 to-purple-700 hover:scale-[1.03]"
+                  } disabled:cursor-not-allowed disabled:opacity-50`}
+                  aria-label={
+                    isRecording
+                      ? "Stop recording"
+                      : "Start recording"
+                  }
+                >
+                  {isProcessing ? (
+                    <div className="flex gap-1">
+                      <span className="h-3 w-3 animate-bounce rounded-full bg-white [animation-delay:-0.3s]" />
+                      <span className="h-3 w-3 animate-bounce rounded-full bg-white [animation-delay:-0.15s]" />
+                      <span className="h-3 w-3 animate-bounce rounded-full bg-white" />
+                    </div>
+                  ) : isRecording ? (
+                    <span className="block h-10 w-10 rounded-lg bg-white" />
+                  ) : conversationState ===
+                    "speaking" ? (
+                    <span className="text-5xl">
+                      🔊
+                    </span>
+                  ) : (
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-16 w-16"
+                      aria-hidden="true"
+                    >
+                      <rect
+                        x="8"
+                        y="2.5"
+                        width="8"
+                        height="13"
+                        rx="4"
+                        stroke="currentColor"
+                        strokeWidth="2.2"
+                      />
+
+                      <path
+                        d="M5.5 11.5V12.5C5.5 16.09 8.41 19 12 19C15.59 19 18.5 16.09 18.5 12.5V11.5"
+                        stroke="currentColor"
+                        strokeWidth="2.2"
+                        strokeLinecap="round"
+                      />
+
+                      <path
+                        d="M12 19V22"
+                        stroke="currentColor"
+                        strokeWidth="2.2"
+                        strokeLinecap="round"
+                      />
+
+                      <path
+                        d="M8.5 22H15.5"
+                        stroke="currentColor"
+                        strokeWidth="2.2"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  )}
+                </button>
+              </div>
+
+              <p
+                className={`mt-5 text-sm font-medium ${
+                  conversationState ===
+                  "error"
+                    ? "text-red-200"
+                    : conversationState ===
+                        "listening"
+                      ? "text-red-100"
+                      : conversationState ===
+                          "speaking"
+                        ? "text-fuchsia-200"
+                        : "text-purple-100"
+                }`}
               >
-                {isProcessing ? (
-                  <span className="text-5xl font-bold leading-none">
-                    …
-                  </span>
-                ) : isRecording ? (
-                  <span className="block h-10 w-10 rounded-lg bg-white" />
-                ) : (
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-16 w-16"
-                    aria-hidden="true"
-                  >
-                    <rect
-                      x="8"
-                      y="2.5"
-                      width="8"
-                      height="13"
-                      rx="4"
-                      stroke="currentColor"
-                      strokeWidth="2.2"
-                    />
-
-                    <path
-                      d="M5.5 11.5V12.5C5.5 16.09 8.41 19 12 19C15.59 19 18.5 16.09 18.5 12.5V11.5"
-                      stroke="currentColor"
-                      strokeWidth="2.2"
-                      strokeLinecap="round"
-                    />
-
-                    <path
-                      d="M12 19V22"
-                      stroke="currentColor"
-                      strokeWidth="2.2"
-                      strokeLinecap="round"
-                    />
-
-                    <path
-                      d="M8.5 22H15.5"
-                      stroke="currentColor"
-                      strokeWidth="2.2"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                )}
-              </button>
-
-              <p className="mt-4 text-sm text-purple-100">
-                {isProcessing
-                  ? "Anna is thinking..."
-                  : isRecording
-                    ? `Recording ${seconds}s / ${MAX_RECORDING_SECONDS}s`
-                    : "Tap the microphone and speak Chinese"}
+                {statusText}
               </p>
+
+              {conversationState ===
+              "listening" ? (
+                <p className="mt-2 text-xs text-white/40">
+                  Tap again when you finish speaking.
+                </p>
+              ) : null}
             </div>
-          )}
+          ) : null}
         </div>
       </section>
     </main>
