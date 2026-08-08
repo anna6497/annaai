@@ -1,8 +1,10 @@
 const rawVoiceServer =
-  process.env.NEXT_PUBLIC_VOICE_API_URL ?? "";
+  process.env.NEXT_PUBLIC_VOICE_API_URL ??
+  "https://api.annaai.online";
 
 const rawVoiceApiVersion =
-  process.env.NEXT_PUBLIC_VOICE_API_VERSION ?? "v6";
+  process.env.NEXT_PUBLIC_VOICE_API_VERSION ??
+  "v7";
 
 export const VOICE_SERVER =
   rawVoiceServer.trim().replace(/\/+$/, "");
@@ -17,12 +19,6 @@ export const MAX_RECORDING_SECONDS = 30;
 export function getVoiceServerUrl(
   pathname: string,
 ): string {
-  if (!VOICE_SERVER) {
-    throw new Error(
-      "NEXT_PUBLIC_VOICE_API_URL is not configured.",
-    );
-  }
-
   const cleanPath = pathname.startsWith("/")
     ? pathname
     : `/${pathname}`;
