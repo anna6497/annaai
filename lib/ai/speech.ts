@@ -13,9 +13,33 @@ export type SpeakChineseOptions = {
 
   onStart?: () => void;
   onEnd?: () => void;
+
   onError?: (
     error?: unknown,
   ) => void;
+};
+
+export type QueueChineseOptions = {
+  speed?:
+    | "normal"
+    | "slow";
+
+  volume?: number;
+
+  onStart?: () => void;
+
+  onQueueIdle?: () => void;
+
+  onError?: (
+    error?: unknown,
+  ) => void;
+};
+
+type QueueItem = {
+  text: string;
+
+  options:
+    QueueChineseOptions;
 };
 
 let currentAudio:
@@ -26,9 +50,21 @@ let currentObjectUrl:
   string | null =
     null;
 
-let playbackGeneration = 0;
+let playbackGeneration =
+  0;
 
-function cleanupPiperAudio(): void {
+const speechQueue:
+  QueueItem[] =
+    [];
+
+let queueRunning =
+  false;
+
+let queueIdleCallback:
+  (() => void) | null =
+    null;
+
+function cleanupAudio(): void {
   if (currentAudio) {
     currentAudio.onplay =
       null;
@@ -41,9 +77,11 @@ function cleanupPiperAudio(): void {
 
     currentAudio.pause();
 
-    currentAudio.src = "";
+    currentAudio.src =
+      "";
 
-    currentAudio = null;
+    currentAudio =
+      null;
   }
 
   if (
@@ -58,6 +96,31 @@ function cleanupPiperAudio(): void {
   }
 }
 
+function cancelBrowserSpeech(): void {
+  if (
+    typeof window ===
+    "undefined"
+  ) {
+    return;
+  }
+
+  window.speechSynthesis
+    .cancel();
+}
+
+export function clearSpeechQueue(): void {
+  speechQueue.splice(
+    0,
+    speechQueue.length,
+  );
+
+  queueRunning =
+    false;
+
+  queueIdleCallback =
+    null;
+}
+
 export function stopSpeaking(): void {
   if (
     typeof window ===
@@ -66,25 +129,175 @@ export function stopSpeaking(): void {
     return;
   }
 
-  playbackGeneration += 1;
+  playbackGeneration +=
+    1;
 
-  cleanupPiperAudio();
+  clearSpeechQueue();
 
-  window.speechSynthesis.cancel();
+  cleanupAudio();
+
+  cancelBrowserSpeech();
 }
 
-function speakWithBrowser(
-  text: string,
-  options:
-    SpeakChineseOptions,
-  generation: number,
-): void {
+function findChineseVoice():
+  SpeechSynthesisVoice |
+  undefined {
   if (
     typeof window ===
     "undefined"
   ) {
-    return;
+    return undefined;
   }
+
+  const voices =
+    window.speechSynthesis
+      .getVoices();
+
+  return voices.find(
+    (
+      voice,
+    ) => {
+      const language =
+        voice.lang
+          .toLowerCase();
+
+      return (
+        language ===
+          "zh-cn" ||
+        language.startsWith(
+          "zh",
+        )
+      );
+    },
+  );
+}
+
+function playWithBrowserTts(
+  text: string,
+  options:
+    SpeakChineseOptions,
+  generation: number,
+): Promise<void> {
+  return new Promise(
+    (
+      resolve,
+      reject,
+    ) => {
+      if (
+        typeof window ===
+        "undefined"
+      ) {
+        resolve();
+
+        return;
+      }
+
+      if (
+        generation !==
+        playbackGeneration
+      ) {
+        resolve();
+
+        return;
+      }
+
+      cancelBrowserSpeech();
+
+      const utterance =
+        new SpeechSynthesisUtterance(
+          text,
+        );
+
+      utterance.lang =
+        "zh-CN";
+
+      utterance.rate =
+        options.rate ??
+        (
+          options.speed ===
+            "slow"
+            ? 0.78
+            : 0.9
+        );
+
+      utterance.pitch =
+        options.pitch ??
+        1;
+
+      utterance.volume =
+        options.volume ??
+        1;
+
+      const chineseVoice =
+        findChineseVoice();
+
+      if (chineseVoice) {
+        utterance.voice =
+          chineseVoice;
+      }
+
+      utterance.onstart =
+        () => {
+          if (
+            generation ===
+            playbackGeneration
+          ) {
+            options.onStart?.();
+          }
+        };
+
+      utterance.onend =
+        () => {
+          if (
+            generation ===
+            playbackGeneration
+          ) {
+            options.onEnd?.();
+          }
+
+          resolve();
+        };
+
+      utterance.onerror =
+        (
+          event,
+        ) => {
+          if (
+            generation ===
+            playbackGeneration
+          ) {
+            options.onError?.(
+              event,
+            );
+          }
+
+          reject(
+            new Error(
+              "Browser TTS failed.",
+            ),
+          );
+        };
+
+      window.speechSynthesis
+        .speak(
+          utterance,
+        );
+    },
+  );
+}
+
+async function playPiperAudio(
+  text: string,
+  options:
+    SpeakChineseOptions,
+  generation: number,
+): Promise<void> {
+  const audioBlob =
+    await getAnnaTtsAudio(
+      text,
+      options.speed ??
+        "normal",
+    );
 
   if (
     generation !==
@@ -93,103 +306,128 @@ function speakWithBrowser(
     return;
   }
 
-  window.speechSynthesis.cancel();
+  cleanupAudio();
 
-  const utterance =
-    new SpeechSynthesisUtterance(
-      text,
+  const objectUrl =
+    URL.createObjectURL(
+      audioBlob,
     );
 
-  utterance.lang =
-    "zh-CN";
+  const audio =
+    new Audio(
+      objectUrl,
+    );
 
-  utterance.rate =
-    options.rate ??
+  currentObjectUrl =
+    objectUrl;
+
+  currentAudio =
+    audio;
+
+  audio.volume =
+    options.volume ??
+    1;
+
+  await new Promise<void>(
     (
-      options.speed ===
-        "slow"
-        ? 0.78
-        : 0.9
-    );
+      resolve,
+      reject,
+    ) => {
+      audio.onplay =
+        () => {
+          if (
+            generation ===
+            playbackGeneration
+          ) {
+            options.onStart?.();
+          }
+        };
 
-  utterance.pitch =
-    options.pitch ?? 1;
+      audio.onended =
+        () => {
+          if (
+            generation ===
+            playbackGeneration
+          ) {
+            options.onEnd?.();
+          }
 
-  utterance.volume =
-    options.volume ?? 1;
+          cleanupAudio();
 
-  utterance.onstart =
-    () => {
-      if (
-        generation !==
-        playbackGeneration
-      ) {
-        return;
-      }
+          resolve();
+        };
 
-      options.onStart?.();
-    };
+      audio.onerror =
+        (
+          event,
+        ) => {
+          cleanupAudio();
 
-  utterance.onend =
-    () => {
-      if (
-        generation !==
-        playbackGeneration
-      ) {
-        return;
-      }
+          reject(
+            event,
+          );
+        };
 
-      options.onEnd?.();
-    };
+      audio.play().catch(
+        (
+          error,
+        ) => {
+          cleanupAudio();
 
-  utterance.onerror =
-    () => {
-      if (
-        generation !==
-        playbackGeneration
-      ) {
-        return;
-      }
-
-      options.onError?.();
-    };
-
-  const voices =
-    window.speechSynthesis
-      .getVoices();
-
-  const chineseVoice =
-    voices.find(
-      (voice) => {
-        const language =
-          voice.lang
-            .toLowerCase();
-
-        return (
-          language ===
-            "zh-cn" ||
-          language.startsWith(
-            "zh",
-          )
-        );
-      },
-    );
-
-  if (chineseVoice) {
-    utterance.voice =
-      chineseVoice;
-  }
-
-  window.speechSynthesis.speak(
-    utterance,
+          reject(
+            error,
+          );
+        },
+      );
+    },
   );
 }
 
-/**
- * V7:
- * 1. Self-hosted Piper Mandarin
- * 2. Browser speechSynthesis fallback
- */
+async function playOneChinese(
+  text: string,
+  options:
+    SpeakChineseOptions,
+  generation: number,
+): Promise<void> {
+  try {
+    await playPiperAudio(
+      text,
+      options,
+      generation,
+    );
+  } catch (
+    piperError
+  ) {
+    if (
+      generation !==
+      playbackGeneration
+    ) {
+      return;
+    }
+
+    console.warn(
+      "Piper TTS failed. Using browser Mandarin fallback.",
+      piperError,
+    );
+
+    try {
+      await playWithBrowserTts(
+        text,
+        options,
+        generation,
+      );
+    } catch (
+      browserError
+    ) {
+      options.onError?.(
+        browserError,
+      );
+
+      throw browserError;
+    }
+  }
+}
+
 export async function speakChinese(
   text: string,
   options:
@@ -208,137 +446,173 @@ export async function speakChinese(
   const generation =
     playbackGeneration;
 
-  const cleaned =
-    text.trim();
+  try {
+    await playOneChinese(
+      text.trim(),
+      options,
+      generation,
+    );
+  } catch (
+    error
+  ) {
+    console.error(
+      "Chinese speech failed:",
+      error,
+    );
+  }
+}
+
+async function runSpeechQueue(): Promise<void> {
+  if (
+    queueRunning
+  ) {
+    return;
+  }
+
+  queueRunning =
+    true;
+
+  const generation =
+    playbackGeneration;
 
   try {
-    const audioBlob =
-      await getAnnaTtsAudio(
-        cleaned,
-        options.speed ??
-          "normal",
-      );
-
-    if (
-      generation !==
-      playbackGeneration
-    ) {
-      return;
-    }
-
-    cleanupPiperAudio();
-
-    const objectUrl =
-      URL.createObjectURL(
-        audioBlob,
-      );
-
-    const audio =
-      new Audio(
-        objectUrl,
-      );
-
-    currentObjectUrl =
-      objectUrl;
-
-    currentAudio =
-      audio;
-
-    audio.volume =
-      options.volume ?? 1;
-
-    audio.onplay =
-      () => {
-        if (
-          generation !==
-          playbackGeneration
-        ) {
-          return;
-        }
-
-        options.onStart?.();
-      };
-
-    audio.onended =
-      () => {
-        if (
-          generation !==
-          playbackGeneration
-        ) {
-          return;
-        }
-
-        cleanupPiperAudio();
-
-        options.onEnd?.();
-      };
-
-    audio.onerror =
-      () => {
-        if (
-          generation !==
-          playbackGeneration
-        ) {
-          return;
-        }
-
-        cleanupPiperAudio();
-
-        console.warn(
-          "Piper audio playback failed. Falling back to browser TTS.",
-        );
-
-        speakWithBrowser(
-          cleaned,
-          options,
-          generation,
-        );
-      };
-
-    try {
-      await audio.play();
-    } catch (
-      playError
+    while (
+      speechQueue.length >
+      0
     ) {
       if (
         generation !==
         playbackGeneration
       ) {
-        return;
+        break;
       }
 
-      cleanupPiperAudio();
+      const item =
+        speechQueue.shift();
 
-      console.warn(
-        "Piper autoplay failed. Falling back to browser TTS.",
-        playError,
-      );
+      if (!item) {
+        continue;
+      }
 
-      speakWithBrowser(
-        cleaned,
-        options,
-        generation,
-      );
+      try {
+        await playOneChinese(
+          item.text,
+          {
+            speed:
+              item.options
+                .speed ??
+              "normal",
+
+            volume:
+              item.options
+                .volume ??
+              1,
+
+            onStart:
+              item.options
+                .onStart,
+
+            onError:
+              item.options
+                .onError,
+          },
+          generation,
+        );
+      } catch (
+        error
+      ) {
+        console.error(
+          "Queued Chinese sentence failed:",
+          error,
+        );
+
+        item.options
+          .onError?.(
+            error,
+          );
+      }
     }
-  } catch (
-    piperError
-  ) {
+  } finally {
+    queueRunning =
+      false;
+
     if (
-      generation !==
-      playbackGeneration
+      generation ===
+      playbackGeneration &&
+      speechQueue.length ===
+        0
     ) {
-      return;
+      const callback =
+        queueIdleCallback;
+
+      queueIdleCallback =
+        null;
+
+      callback?.();
     }
-
-    console.warn(
-      "Piper TTS unavailable. Falling back to browser TTS.",
-      piperError,
-    );
-
-    speakWithBrowser(
-      cleaned,
-      options,
-      generation,
-    );
   }
+}
+
+export function queueChineseSentence(
+  text: string,
+  options:
+    QueueChineseOptions = {},
+): void {
+  if (
+    typeof window ===
+      "undefined"
+  ) {
+    return;
+  }
+
+  const cleaned =
+    text.trim();
+
+  if (!cleaned) {
+    return;
+  }
+
+  /**
+   * Prevent duplicate sentence
+   * events from producing duplicate
+   * audio.
+   */
+  const duplicate =
+    speechQueue.some(
+      (
+        item,
+      ) =>
+        item.text ===
+        cleaned,
+    );
+
+  if (duplicate) {
+    return;
+  }
+
+  speechQueue.push(
+    {
+      text:
+        cleaned,
+
+      options,
+    },
+  );
+
+  if (
+    options.onQueueIdle
+  ) {
+    queueIdleCallback =
+      options.onQueueIdle;
+  }
+
+  void runSpeechQueue();
+}
+
+export function isSpeechQueueBusy(): boolean {
+  return (
+    queueRunning ||
+    speechQueue.length >
+      0
+  );
 }
