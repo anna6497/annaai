@@ -29,7 +29,7 @@ from services.llm import (
 )
 
 
-APP_VERSION = "7.1.0-piper-tts"
+APP_VERSION = "7.2.0-correction"
 
 Mode = Literal[
     "practice",
@@ -198,9 +198,20 @@ class TtsRequest(BaseModel):
     speed: TtsSpeed = "normal"
 
 
+class CorrectionResponse(BaseModel):
+    needed: bool = False
+    original: str = ""
+    corrected: str = ""
+    pinyin: str = ""
+
+
 class AnnaReplyResponse(BaseModel):
     hanzi: str
     pinyin: str
+
+    correction: CorrectionResponse = (
+        CorrectionResponse()
+    )
 
 
 class TextChatResponse(BaseModel):
@@ -369,6 +380,53 @@ def parse_form_history(
         )
 
     return result
+
+
+def build_correction_response(
+    reply: dict[str, Any],
+) -> CorrectionResponse:
+    raw = reply.get(
+        "correction"
+    )
+
+    if not isinstance(
+        raw,
+        dict,
+    ):
+        return CorrectionResponse()
+
+    return CorrectionResponse(
+        needed=bool(
+            raw.get(
+                "needed",
+                False,
+            )
+        ),
+
+        original=str(
+            raw.get(
+                "original",
+                "",
+            )
+            or ""
+        ).strip(),
+
+        corrected=str(
+            raw.get(
+                "corrected",
+                "",
+            )
+            or ""
+        ).strip(),
+
+        pinyin=str(
+            raw.get(
+                "pinyin",
+                "",
+            )
+            or ""
+        ).strip(),
+    )
 
 
 def get_audio_suffix(
@@ -924,6 +982,9 @@ def health() -> dict[
                 TTS_CACHE_DIR
             ),
 
+        "correction_enabled":
+            True,
+
         "allowed_origins":
             ALLOWED_ORIGINS,
     }
@@ -1078,6 +1139,12 @@ def text_chat(
         - started
     )
 
+    correction = (
+        build_correction_response(
+            reply
+        )
+    )
+
     return TextChatResponse(
         message=
             message,
@@ -1096,6 +1163,9 @@ def text_chat(
                     reply[
                         "pinyin"
                     ],
+
+                correction=
+                    correction,
             ),
 
         timings={
@@ -1283,6 +1353,12 @@ async def voice_chat(
             - request_started
         )
 
+        correction = (
+            build_correction_response(
+                reply
+            )
+        )
+
         print(
             "V7 VOICE TIMINGS:",
             {
@@ -1309,6 +1385,9 @@ async def voice_chat(
                         total_seconds,
                         3,
                     ),
+
+                "correction_needed":
+                    correction.needed,
             },
         )
 
@@ -1330,6 +1409,9 @@ async def voice_chat(
                         reply[
                             "pinyin"
                         ],
+
+                    correction=
+                        correction,
                 ),
 
             timings={
