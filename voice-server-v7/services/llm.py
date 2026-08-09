@@ -105,10 +105,122 @@ class StreamEvent(
 class OllamaServiceError(
     RuntimeError
 ):
-    """
-    Raised when Ollama cannot return
-    a valid Anna response.
-    """
+    """Raised when Ollama cannot return a valid Anna response."""
+
+
+# =========================================================
+# CONTINUATION INTENT
+# =========================================================
+
+CONTINUATION_PHRASES = {
+    "继续",
+    "继续说",
+    "继续说吧",
+    "继续讲",
+    "继续讲吧",
+    "继续讲故事",
+    "接着说",
+    "接着说吧",
+    "接着讲",
+    "接着讲吧",
+    "然后呢",
+    "后来呢",
+    "之后呢",
+    "再说一点",
+    "再讲一点",
+    "多说一点",
+    "说下去",
+    "讲下去",
+    "继续下去",
+    "再继续",
+}
+
+
+def _normalize_command_text(
+    text: str,
+) -> str:
+    cleaned = (
+        text.strip()
+        .lower()
+    )
+
+    cleaned = re.sub(
+        r"[。！？!?，,；;：:\s\"'“”‘’]",
+        "",
+        cleaned,
+    )
+
+    return cleaned
+
+
+def _is_continuation_request(
+    text: str,
+) -> bool:
+    normalized = (
+        _normalize_command_text(
+            text
+        )
+    )
+
+    if not normalized:
+        return False
+
+    normalized_phrases = {
+        _normalize_command_text(
+            phrase
+        )
+        for phrase in
+        CONTINUATION_PHRASES
+    }
+
+    if normalized in normalized_phrases:
+        return True
+
+    continuation_patterns = [
+        r"^继续.*$",
+        r"^接着.*$",
+        r"^然后呢$",
+        r"^后来呢$",
+        r"^之后呢$",
+        r"^再说.*$",
+        r"^再讲.*$",
+        r"^说下去$",
+        r"^讲下去$",
+    ]
+
+    return any(
+        re.match(
+            pattern,
+            normalized,
+        )
+        for pattern in
+        continuation_patterns
+    )
+
+
+def _latest_assistant_message(
+    history: list[
+        dict[str, str]
+    ],
+) -> str:
+    for item in reversed(
+        history
+    ):
+        if (
+            item.get("role")
+            == "assistant"
+        ):
+            content = str(
+                item.get(
+                    "content",
+                    "",
+                )
+            ).strip()
+
+            if content:
+                return content
+
+    return ""
 
 
 # =========================================================
@@ -125,159 +237,83 @@ You have TWO jobs:
 A. Continue the conversation naturally.
 B. Quietly check whether the user's latest Chinese sentence has a meaningful grammar, word-order, or word-choice problem.
 
-IMPORTANT LANGUAGE RULE:
+LANGUAGE RULE:
 
-Anna's hanzi response must contain NATURAL SIMPLIFIED CHINESE ONLY.
+Anna's hanzi response must contain natural Simplified Chinese only.
 
-Never put English words or Latin letters inside hanzi.
+Never use English words or Latin letters inside hanzi.
 
-Forbidden examples:
-- wanna
-- want
-- OK
-- okay
-- yeah
-- yep
-- maybe
-- sorry
-- nice
-- cool
-- hello
-- hi
-- bye
-- please
-- thanks
+Examples:
 
-Incorrect:
-{"hanzi":"你 wanna 去公园吗？"}
+Wrong:
+你 wanna 去公园吗？
 
 Correct:
-{"hanzi":"你想去公园吗？"}
+你想去公园吗？
 
-Incorrect:
-{"hanzi":"OK，我们走吧。"}
+Wrong:
+OK，我们走吧。
 
 Correct:
-{"hanzi":"好，我们走吧。"}
+好，我们走吧。
 
-If an English expression comes to mind, convert it into natural Mandarin before producing the answer.
+CORRECTION POLICY:
 
-IMPORTANT CORRECTION POLICY:
+Only mark correction.needed=true when the user's sentence has a meaningful learner error.
 
-Only mark correction.needed=true when the user's sentence has a meaningful problem that a Mandarin learner should fix.
-
-Examples of meaningful problems:
-- wrong Chinese word order
-- wrong grammar structure
+Examples:
+- wrong word order
+- wrong grammar
 - clearly wrong word choice
-- missing important grammatical words
-- a sentence that sounds clearly unnatural because of a learner error
+- missing an important grammar word
+- obviously unnatural learner Chinese
 
 Do NOT correct:
 - punctuation only
-- minor stylistic preferences
-- sentences that are already acceptable Chinese
-- a sentence merely because another native expression also exists
-- transcription differences that still form natural Chinese
+- minor style differences
+- already acceptable Chinese
+- transcription differences that remain natural
 
-When correction is needed:
-- preserve the user's intended meaning
-- provide ONE natural corrected Simplified Chinese sentence
-- do not explain grammar inside the reply
-- still continue the conversation naturally
+NORMAL CONVERSATION:
 
-When correction is not needed:
-- needed must be false
-- corrected must be an empty string
+- Answer the user's actual message first.
+- Use at least 2 short sentences.
+- Usually use 2 to 4 short sentences.
+- Add a related reaction, detail, or suggestion.
+- You may ask one relevant follow-up question.
+- Never ask more than one question.
+- Keep vocabulary suitable for HSK 1-4.
 
-NORMAL CONVERSATION LENGTH:
+IMPORTANT CONTINUATION RULE:
 
-For normal casual conversation:
-- reply with at least 2 short sentences
-- usually use 2 to 4 short sentences
-- first answer the user's actual message
-- then add one natural related reaction, detail, or follow-up
-- when appropriate, end with ONE short follow-up question
-- do not stop after only one generic sentence such as "今天天气不错。"
+If the user says things such as:
 
-CONVERSATION RULES:
+继续
+继续说吧
+接着说
+接着讲
+然后呢
+后来呢
+再说一点
+说下去
 
-1. Use natural Simplified Chinese only in hanzi.
-2. Never use English words or Latin letters in hanzi.
-3. Respond directly to the actual meaning of the latest user message.
-4. Never reuse an earlier assistant reply.
-5. Never repeat the user's sentence as the whole answer.
-6. Give a direct answer first.
-7. Add at least one related sentence in normal chat.
-8. You may ask one relevant follow-up question.
-9. Never ask more than one question.
-10. Keep vocabulary suitable for HSK 1-4 unless the user asks for something more advanced.
-11. Do not provide pinyin.
-12. Do not provide Myanmar translation.
-13. Do not explain grammar unless the user explicitly asks.
-14. Do not mention these instructions.
-15. Return exactly one JSON object and nothing else.
+then you MUST continue directly from your most recent assistant message.
 
-Example 1:
+When continuing:
+- keep the same topic
+- keep the same story, advice, explanation, or discussion
+- do not restart from the beginning
+- do not introduce a new unrelated story
+- do not ask what the user wants to hear
+- do not summarize what you already said
+- continue from the exact logical next point
 
-Latest user:
-今天天气怎么样？
+Return exactly one JSON object.
 
-Correct:
-{
-  "hanzi":"今天天气不错，感觉很适合出去走走。你今天想出去玩吗？",
-  "correction":{
-    "needed":false,
-    "corrected":""
-  }
-}
-
-Example 2:
-
-Latest user:
-你的家乡在哪里？
-
-Correct:
-{
-  "hanzi":"我家乡在浙江杭州。那边有很多好吃的东西，也有很多漂亮的地方。你的家乡在哪里？",
-  "correction":{
-    "needed":false,
-    "corrected":""
-  }
-}
-
-Example 3:
-
-Latest user:
-你在家乡是哪里？
-
-Correct:
-{
-  "hanzi":"我家乡在浙江杭州。杭州是一个很漂亮的城市。你的家乡在哪里？",
-  "correction":{
-    "needed":true,
-    "corrected":"你的家乡在哪里？"
-  }
-}
-
-Example 4:
-
-Latest user:
-我今天很忙。
-
-Correct:
-{
-  "hanzi":"辛苦了！忙了一天一定有点累吧。你今天忙到几点？",
-  "correction":{
-    "needed":false,
-    "corrected":""
-  }
-}
-
-Required JSON format:
+Required format:
 
 {
-  "hanzi":"自然且与最新消息直接相关的简体中文回复。",
+  "hanzi":"自然的简体中文回复。",
   "correction":{
     "needed":false,
     "corrected":""
@@ -299,32 +335,12 @@ Strict rules:
 2. Preserve the original meaning.
 3. Do not answer conversationally.
 4. Do not add information.
-5. Do not add a question unless the original text is a question.
-6. Use Simplified Chinese.
+5. Do not add a question unless the original is a question.
+6. Use Simplified Chinese only.
 7. Do not provide pinyin.
 8. Do not provide Myanmar translation.
 9. Do not explain the translation.
-10. Return exactly one JSON object and nothing else.
-
-Examples:
-
-User:
-နိုင်ငံကူးလက်မှတ်
-
-Assistant:
-{"hanzi":"护照"}
-
-User:
-မနက်ဖြန် ကျွန်မ အလုပ်သွားမယ်။
-
-Assistant:
-{"hanzi":"明天我要去上班。"}
-
-User:
-နင် ဘယ်လမှာ အလုပ်စမလဲ။
-
-Assistant:
-{"hanzi":"你几月份开始工作？"}
+10. Return exactly one JSON object.
 
 Required format:
 
@@ -339,35 +355,24 @@ Required format:
 RETRY_PRACTICE_PROMPT = """
 The previous answer was invalid.
 
-Generate a completely new response for the latest user message.
+Generate a new natural Simplified Chinese reply.
 
-Requirements:
+Rules:
 
-- Respond directly to the latest user message.
-- Do not reuse an earlier assistant sentence.
-- Do not repeat the user's sentence as the whole reply.
-- Use natural Simplified Chinese.
-- Do not use English words.
-- Do not output Latin letters A-Z or a-z inside hanzi.
-- Do not code-switch between Mandarin and English.
-- For normal conversation, produce at least 2 short sentences.
-- Usually use 2 to 4 short sentences.
-- Give a direct answer first.
-- Add one related reaction or detail.
-- Ask no more than one question.
-- Check the user's Chinese for a meaningful learner error.
-- Do not over-correct acceptable Chinese.
-- correction.needed must be a JSON boolean.
-- If correction is not needed, corrected must be "".
-- If correction is needed, corrected must contain exactly one natural corrected Simplified Chinese sentence.
-- Return exactly one JSON object.
-- Return no markdown.
-- Return no explanation.
+- Use Chinese only.
+- Do not use Latin letters.
+- Answer the latest message directly.
+- Normal chat should contain at least 2 short sentences.
+- Never ask more than one question.
+- Do not repeat an earlier Anna reply.
+- If the user asked to continue, continue from the latest assistant message.
+- Do not restart the topic.
+- Return JSON only.
 
 Required format:
 
 {
-  "hanzi":"新的自然中文回复。再补充一句相关内容。",
+  "hanzi":"新的自然中文回复。",
   "correction":{
     "needed":false,
     "corrected":""
@@ -377,17 +382,9 @@ Required format:
 
 
 RETRY_BUILDER_PROMPT = """
-The previous output was invalid.
-
 Translate only the latest Myanmar text into natural Simplified Chinese.
 
-Requirements:
-
-- Preserve the exact meaning.
-- Do not answer conversationally.
-- Do not add information.
-- Do not add explanation.
-- Return exactly one JSON object.
+Return exactly one JSON object.
 
 Required format:
 
@@ -402,253 +399,148 @@ Required format:
 STREAMING_PRACTICE_PROMPT = """
 You are Anna, a friendly and expressive Mandarin AI speaking partner.
 
-Your response is streamed LIVE to the user and spoken aloud by a Mandarin TTS engine.
+Your reply is streamed live and spoken aloud by Mandarin TTS.
 
-The latest user message is the highest priority.
+LANGUAGE:
 
-ABSOLUTE LANGUAGE RULE:
-
-Every word Anna speaks must be Mandarin Chinese written in Simplified Chinese characters.
-
-NEVER output English words.
-NEVER output Latin letters A-Z or a-z.
-NEVER mix Mandarin and English.
-NEVER code-switch.
-
-Forbidden examples:
-wanna
-want
-OK
-okay
-yeah
-yep
-maybe
-sorry
-nice
-cool
-hello
-hi
-bye
-please
-thanks
-
-If an English expression comes to mind, replace it with natural Mandarin Chinese BEFORE outputting it.
-
-Examples:
-
-Wrong:
-你 wanna 去公园吗？
-
-Correct:
-你想去公园吗？
-
-Wrong:
-OK，我们走吧。
-
-Correct:
-好，我们走吧。
-
-Wrong:
-Yeah，我觉得不错。
-
-Correct:
-对，我觉得不错。
-
-Wrong:
-Maybe 明天吧。
-
-Correct:
-也许明天吧。
-
-GENERAL RULES:
-
-1. Output Simplified Chinese only.
-2. Do not output JSON.
-3. Do not output pinyin.
-4. Do not output Myanmar translation.
-5. Do not output markdown.
-6. Do not output labels such as Anna, intent, emotion, or reply.
-7. Respond naturally to the actual meaning of the latest user message.
-8. Never repeat the user's sentence as the whole reply.
-9. Avoid repeating previous Anna replies.
-10. Use natural spoken Mandarin rather than stiff textbook Mandarin.
-11. Normally use vocabulary suitable for HSK 1-4.
-12. Start answering immediately.
-13. Do not announce what you are going to do before answering.
+- Output Simplified Chinese only.
+- Never output English.
+- Never output Latin letters.
+- Never mix Chinese and English.
+- Do not output JSON.
+- Do not output pinyin.
+- Do not output Myanmar translation.
+- Do not output markdown.
+- Do not output labels.
 
 NORMAL CHAT:
 
-- NEVER stop after one generic sentence.
-- Produce at least 2 short complete sentences.
-- Usually produce 2 to 4 short sentences.
-- Sentence 1: directly answer or react to the user's message.
-- Sentence 2: add a related detail, feeling, suggestion, or natural reaction.
-- Sentence 3 or 4: optional.
-- You may end with ONE relevant follow-up question.
+- Answer the user's actual meaning immediately.
+- Use at least 2 short sentences.
+- Usually use 2 to 4 short sentences.
+- Sentence 1 should directly answer or react.
+- Add a natural related detail or reaction.
+- You may ask one short follow-up question.
 - Never ask more than one question.
+- Keep vocabulary suitable for HSK 1-4.
 
-Example:
+CONTINUATION:
 
-User:
-今天天气怎么样？
+If the user says:
+继续
+继续说吧
+继续讲
+接着说
+接着讲
+然后呢
+后来呢
+之后呢
+再说一点
+再讲一点
+说下去
+讲下去
 
-Good:
-今天天气不错，感觉很舒服。很适合出去走走。你今天想出去玩吗？
+you MUST continue from your latest assistant response in conversation history.
 
-Bad:
-今天天气不错。
+When continuing:
+- continue the same story, advice, explanation, topic, or discussion
+- do not restart from the beginning
+- do not tell a new unrelated story
+- do not repeat the previous assistant message
+- do not ask "你想听什么？"
+- move directly to the next logical part
+- remember names, characters, events, and details already mentioned
 
 STORY:
 
-If the user asks for a story:
-- Tell an original story.
-- Start the actual story immediately.
-- Normally use 8 to 20 short sentences.
-- Keep sentences short for spoken TTS.
-- Keep vocabulary learner-friendly.
-- Make the story interesting and natural.
-- Do not unnecessarily summarize at the end.
+If the current topic is a story:
+- continue the existing story
+- preserve the same characters and events
+- add the next events naturally
+- normally add 4 to 10 short sentences when the user asks to continue
+- do not restart with a new "今天有一只..." story unless there was no previous story
 
 ADVICE:
 
-If the user asks for advice:
-- Give useful and thoughtful advice.
-- Normally use 3 to 8 short sentences.
-- Be practical and conversational.
-- Avoid sounding like a formal lecture.
+If the user asks to continue advice:
+- continue with the next useful suggestions
+- do not repeat earlier suggestions
 
 EXPLANATION:
 
-If the user asks for an explanation:
-- Explain clearly using short sentences.
-- Give a simple example when useful.
-- Use as many short sentences as reasonably needed.
+If the user asks to continue an explanation:
+- continue from the next point
+- do not repeat the beginning
 
 ORIGINAL SONG:
 
 If the user asks you to sing:
-- Create completely original short Chinese lyrics.
-- Never reproduce lyrics from an existing song.
-- Usually use 4 to 8 short lines.
-- Keep the lyrics simple, rhythmic, catchy, and learner-friendly.
-- You may use ♪ sparingly.
-- Return only original Chinese lyrics.
-- Do not claim it is an existing song.
+- create completely original Chinese lyrics
+- never reproduce existing song lyrics
+- keep it short and learner-friendly
 
-EMOTION / PERFORMANCE:
+LIVE TTS:
 
-friendly:
-- warm and natural
-
-playful:
-- light and fun
-
-teasing:
-- friendly playful teasing
-- never cruel or humiliating
-
-angry:
-- stronger wording
-- natural frustration
-- never abusive or threatening
-
-excited:
-- energetic wording and natural exclamation marks
-
-sad:
-- gentle and softer wording
-
-shouting:
-- emphatic wording
-- stronger punctuation when natural
-- do not spam punctuation
-
-storytelling:
-- expressive narrative style
-
-song:
-- short rhythmic original Chinese lyrics
-
-IMPORTANT FOR LIVE TTS:
-
-- Prefer short complete sentences.
-- Use Chinese punctuation correctly.
-- End sentences with 。！？ when appropriate.
-- Avoid giant paragraphs.
-- Start with the first useful sentence immediately.
-- Continue naturally after the first sentence instead of stopping too early.
+- use short complete sentences
+- use Chinese punctuation
+- start immediately
+- avoid giant paragraphs
 
 Return only the Chinese words Anna should say.
 """.strip()
 
 
 # =========================================================
-# SECOND-SENTENCE CONTINUATION PROMPT
+# CONTINUATION SYSTEM PROMPT
 # =========================================================
 
-CONTINUATION_PROMPT = """
-The previous Mandarin response stopped too early after only one short sentence.
+CONTINUATION_SYSTEM_PROMPT = """
+The user explicitly asked you to continue.
 
-Continue it naturally.
+This is NOT a request to start a new topic.
+
+Continue directly from the most recent assistant response.
 
 STRICT RULES:
 
-- Output Simplified Chinese only.
-- Do not repeat the previous sentence.
-- Do not use English or Latin letters.
-- Add 1 or 2 short natural sentences only.
-- Keep vocabulary suitable for HSK 1-4.
-- Continue the same topic.
-- You may ask ONE short follow-up question if appropriate.
-- Do not explain anything.
-- Do not output JSON.
-- Do not output pinyin.
-- Do not output labels.
-- Start directly with the continuation.
+1. Keep exactly the same topic.
+2. If it is a story, preserve the same characters, setting, and events.
+3. If it is advice, give the next advice points.
+4. If it is an explanation, continue the next logical part.
+5. Do not repeat the previous assistant response.
+6. Do not restart from the beginning.
+7. Do not create an unrelated example or story.
+8. Do not ask what the user wants to hear.
+9. Use Simplified Chinese only.
+10. Never use English or Latin letters.
+11. Continue naturally and immediately.
 """.strip()
 
 
 # =========================================================
-# DEFERRED CORRECTION PROMPT
+# DEFERRED CORRECTION
 # =========================================================
 
 CORRECTION_ONLY_PROMPT = """
-You are a Mandarin correction checker for a Chinese learner.
+You are a Mandarin correction checker.
 
-Your ONLY task is to check the user's latest Chinese sentence.
+Only check the user's latest Chinese sentence.
 
-Do not continue the conversation.
 Do not answer the user.
-Do not give advice.
+Do not continue the conversation.
 Do not explain grammar.
 
-Decide whether the user's Chinese contains a meaningful learner error.
-
-Set needed=true ONLY when there is a meaningful issue such as:
-- incorrect grammar
-- incorrect word order
-- clearly incorrect word choice
-- missing an important grammar word
-- a sentence that is clearly unnatural because of a learner mistake
-
-Set needed=false when:
-- the sentence is already acceptable natural Chinese
-- only punctuation is different
-- there is only a minor stylistic preference
-- another wording may sound slightly better but the user's sentence is still valid
-- a speech transcription variant is still understandable and acceptable
+Set needed=true only for a meaningful learner error.
 
 If needed=true:
-- corrected must be ONE natural Simplified Chinese correction
-- preserve the user's intended meaning
-- do not add extra information
+- return one natural corrected Simplified Chinese sentence
 
 If needed=false:
 - corrected must be ""
 
 Return exactly one JSON object.
 
-Required format:
+Format:
 
 {
   "needed":false,
@@ -718,19 +610,6 @@ def _contains_latin_letters(
     )
 
 
-def _find_latin_fragment(
-    text: str,
-) -> str:
-    match = LATIN_WORD_PATTERN.search(
-        text
-    )
-
-    if not match:
-        return ""
-
-    return match.group(0)
-
-
 def _to_simplified(
     text: str,
 ) -> str:
@@ -769,10 +648,6 @@ def _clean_reply_text(
 def _count_sentences(
     text: str,
 ) -> int:
-    """
-    Count complete Mandarin sentences.
-    """
-
     count = len(
         re.findall(
             r"[。！？!?]",
@@ -787,149 +662,6 @@ def _count_sentences(
         return 1
 
     return count
-
-
-def _looks_like_special_request(
-    text: str,
-) -> bool:
-    """
-    Story/advice/explanation/song requests
-    already have their own length rules,
-    so minimum-2 continuation guard should
-    not interfere with them.
-    """
-
-    lowered = text.lower()
-
-    chinese_keywords = [
-        "讲故事",
-        "说故事",
-        "故事",
-        "建议",
-        "给我建议",
-        "解释",
-        "说明",
-        "为什么",
-        "怎么做",
-        "唱歌",
-        "唱一首",
-        "写一首歌",
-        "歌词",
-    ]
-
-    english_keywords = [
-        "story",
-        "advice",
-        "explain",
-        "song",
-        "sing",
-    ]
-
-    return (
-        any(
-            keyword in text
-            for keyword
-            in chinese_keywords
-        )
-        or
-        any(
-            keyword in lowered
-            for keyword
-            in english_keywords
-        )
-    )
-
-
-# =========================================================
-# STREAM ENGLISH SANITIZER
-# =========================================================
-
-STREAM_ENGLISH_REPLACEMENTS: dict[
-    str,
-    str,
-] = {
-    "wanna": "想",
-    "want": "想",
-    "wants": "想",
-    "wanted": "想",
-    "ok": "好",
-    "okay": "好",
-    "yeah": "对",
-    "yep": "对",
-    "yes": "对",
-    "no": "不",
-    "maybe": "也许",
-    "perhaps": "也许",
-    "sorry": "对不起",
-    "nice": "不错",
-    "cool": "不错",
-    "great": "很好",
-    "good": "好",
-    "hello": "你好",
-    "hi": "你好",
-    "hey": "你好",
-    "bye": "再见",
-    "please": "请",
-    "thanks": "谢谢",
-    "thank": "谢谢",
-    "because": "因为",
-    "but": "但是",
-    "so": "所以",
-    "and": "和",
-    "really": "真的",
-    "sure": "当然",
-    "surely": "当然",
-}
-
-
-def _convert_stream_latin_word(
-    word: str,
-) -> str:
-    cleaned = (
-        word.strip()
-        .lower()
-    )
-
-    if not cleaned:
-        return ""
-
-    replacement = (
-        STREAM_ENGLISH_REPLACEMENTS
-        .get(cleaned)
-    )
-
-    if replacement:
-        logger.warning(
-            (
-                "STREAM_ENGLISH_REPLACED "
-                "word=%r replacement=%r"
-            ),
-            word,
-            replacement,
-        )
-
-        return replacement
-
-    logger.warning(
-        (
-            "STREAM_UNKNOWN_LATIN_BLOCKED "
-            "word=%r"
-        ),
-        word,
-    )
-
-    return "这个"
-
-
-def _flush_latin_buffer(
-    latin_buffer: str,
-) -> str:
-    if not latin_buffer:
-        return ""
-
-    return _convert_stream_latin_word(
-        latin_buffer
-    )
 
 
 # =========================================================
@@ -996,8 +728,11 @@ def _clean_history(
 
         cleaned.append(
             {
-                "role": role,
-                "content": content,
+                "role":
+                    role,
+
+                "content":
+                    content,
             }
         )
 
@@ -1177,118 +912,64 @@ def _normalize_pinyin(
 
 
 # =========================================================
-# QUESTION / DUPLICATE
+# ENGLISH SANITIZER
 # =========================================================
 
-def _question_count(
-    text: str,
-) -> int:
-    return (
-        text.count("？")
-        + text.count("?")
-    )
+STREAM_ENGLISH_REPLACEMENTS: dict[
+    str,
+    str,
+] = {
+    "wanna": "想",
+    "want": "想",
+    "ok": "好",
+    "okay": "好",
+    "yeah": "对",
+    "yes": "对",
+    "maybe": "也许",
+    "sorry": "对不起",
+    "nice": "不错",
+    "cool": "不错",
+    "good": "好",
+    "hello": "你好",
+    "hi": "你好",
+    "bye": "再见",
+    "please": "请",
+    "thanks": "谢谢",
+}
 
 
-def _limit_to_one_question(
-    text: str,
+def _convert_stream_latin_word(
+    word: str,
 ) -> str:
-    question_seen = False
-    result: list[str] = []
-
-    for character in text:
-        if character in {
-            "？",
-            "?",
-        }:
-            if not question_seen:
-                result.append(
-                    "？"
-                )
-                question_seen = True
-            else:
-                result.append(
-                    "。"
-                )
-        else:
-            result.append(
-                character
-            )
-
-    cleaned = "".join(
-        result
+    cleaned = (
+        word.strip()
+        .lower()
     )
 
-    cleaned = re.sub(
-        r"。{2,}",
-        "。",
-        cleaned,
-    )
+    if not cleaned:
+        return ""
 
-    cleaned = re.sub(
-        r"？。+",
-        "？",
-        cleaned,
-    )
-
-    cleaned = re.sub(
-        r"。？",
-        "？",
-        cleaned,
-    )
-
-    return cleaned.strip()
-
-
-def _is_repeated_reply(
-    hanzi: str,
-    previous_assistant_replies:
-        list[str],
-) -> bool:
-    current = (
-        _normalized_text(
-            hanzi
+    replacement = (
+        STREAM_ENGLISH_REPLACEMENTS
+        .get(
+            cleaned
         )
     )
 
-    if not current:
-        return True
+    if replacement:
+        return replacement
 
-    for previous in (
-        previous_assistant_replies
-    ):
-        previous_normalized = (
-            _normalized_text(
-                previous
-            )
-        )
+    logger.warning(
+        "Unknown Latin word blocked: %r",
+        word,
+    )
 
-        if not previous_normalized:
-            continue
+    return "这个"
 
-        if (
-            current
-            ==
-            previous_normalized
-        ):
-            return True
 
-        if (
-            len(current) >= 8
-            and len(
-                previous_normalized
-            ) >= 8
-            and (
-                current
-                in previous_normalized
-                or
-                previous_normalized
-                in current
-            )
-        ):
-            return True
-
-    return False
-
+# =========================================================
+# CORRECTION
+# =========================================================
 
 def _parse_boolean(
     value: Any,
@@ -1303,543 +984,22 @@ def _parse_boolean(
         value,
         str,
     ):
-        normalized = (
+        return (
             value.strip()
             .lower()
+            in {
+                "true",
+                "1",
+                "yes",
+            }
         )
-
-        return normalized in {
-            "true",
-            "1",
-            "yes",
-        }
-
-    if isinstance(
-        value,
-        int,
-    ):
-        return value != 0
 
     return False
 
 
-# =========================================================
-# CORRECTION
-# =========================================================
-
-def _extract_correction(
-    payload: dict[
-        str,
-        Any,
-    ],
-    original: str,
-) -> AnnaCorrection:
-    empty: AnnaCorrection = {
-        "needed": False,
-        "original": "",
-        "corrected": "",
-        "pinyin": "",
-    }
-
-    raw_correction = (
-        payload.get(
-            "correction"
-        )
-    )
-
-    if not isinstance(
-        raw_correction,
-        dict,
-    ):
-        return empty
-
-    needed = (
-        _parse_boolean(
-            raw_correction.get(
-                "needed",
-                False,
-            )
-        )
-    )
-
-    corrected = str(
-        raw_correction.get(
-            "corrected",
-            "",
-        )
-        or ""
-    ).strip()
-
-    if not needed:
-        return empty
-
-    corrected = (
-        _clean_reply_text(
-            corrected
-        )
-    )
-
-    corrected = (
-        _to_simplified(
-            corrected
-        )
-    )
-
-    if not corrected:
-        return empty
-
-    if not _contains_chinese(
-        corrected
-    ):
-        return empty
-
-    if (
-        _normalized_text(
-            corrected
-        )
-        ==
-        _normalized_text(
-            original
-        )
-    ):
-        return empty
-
-    return {
-        "needed":
-            True,
-
-        "original":
-            original.strip(),
-
-        "corrected":
-            corrected,
-
-        "pinyin":
-            _normalize_pinyin(
-                corrected
-            ),
-    }
-
-
-# =========================================================
-# NON-STREAM OLLAMA
-# =========================================================
-
-def _request_ollama(
-    messages: list[
-        dict[str, str]
-    ],
-    mode: Mode,
-) -> str:
-    payload = {
-        "model":
-            MODEL_NAME,
-
-        "messages":
-            messages,
-
-        "stream":
-            False,
-
-        "format":
-            "json",
-
-        "think":
-            False,
-
-        "keep_alive":
-            "30m",
-
-        "options": {
-            "temperature": (
-                0.45
-                if mode
-                == "practice"
-                else 0.0
-            ),
-
-            "top_p":
-                0.85,
-
-            "repeat_penalty":
-                1.15,
-
-            "num_ctx":
-                3072,
-
-            "num_predict":
-                320,
-
-            "seed":
-                -1,
-        },
-    }
-
-    try:
-        response = requests.post(
-            OLLAMA_CHAT_URL,
-            json=payload,
-            timeout=(
-                10,
-                REQUEST_TIMEOUT,
-            ),
-        )
-
-        response.raise_for_status()
-
-    except requests.ConnectionError as error:
-        raise OllamaServiceError(
-            "Cannot connect to Ollama."
-        ) from error
-
-    except requests.Timeout as error:
-        raise OllamaServiceError(
-            "Ollama response timed out."
-        ) from error
-
-    except requests.RequestException as error:
-        detail = (
-            error.response.text
-            if error.response
-            is not None
-            else str(error)
-        )
-
-        raise OllamaServiceError(
-            f"Ollama request failed: {detail}"
-        ) from error
-
-    try:
-        data = response.json()
-
-    except ValueError as error:
-        raise OllamaServiceError(
-            "Ollama returned invalid JSON."
-        ) from error
-
-    message = data.get(
-        "message"
-    )
-
-    if not isinstance(
-        message,
-        dict,
-    ):
-        raise OllamaServiceError(
-            "Ollama response has no message."
-        )
-
-    content = message.get(
-        "content"
-    )
-
-    if (
-        not isinstance(
-            content,
-            str,
-        )
-        or not content.strip()
-    ):
-        raise OllamaServiceError(
-            "Ollama response content is empty."
-        )
-
-    return content
-
-
-# =========================================================
-# STRUCTURED REPLY
-# =========================================================
-
-def generate_reply(
-    user_text: str,
-    mode: Mode =
-        "practice",
-    conversation_history: (
-        list[
-            dict[str, str]
-        ]
-        | None
-    ) = None,
-) -> AnnaReply:
-    cleaned_text = (
-        user_text.strip()
-    )
-
-    if not cleaned_text:
-        raise ValueError(
-            "User text cannot be empty."
-        )
-
-    system_prompt = (
-        PRACTICE_PROMPT
-        if mode == "practice"
-        else
-        SENTENCE_BUILDER_PROMPT
-    )
-
-    cleaned_history = (
-        _clean_history(
-            conversation_history
-        )
-    )
-
-    previous_assistant_replies = (
-        _previous_assistant_replies(
-            cleaned_history
-        )
-    )
-
-    base_messages: list[
-        dict[str, str]
-    ] = [
-        {
-            "role":
-                "system",
-            "content":
-                system_prompt,
-        }
-    ]
-
-    if mode == "practice":
-        base_messages.extend(
-            cleaned_history
-        )
-
-    base_messages.append(
-        {
-            "role":
-                "user",
-
-            "content":
-                cleaned_text,
-        }
-    )
-
-    last_error: (
-        Exception | None
-    ) = None
-
-    rejected_reply = ""
-
-    for attempt in range(
-        MAX_REPLY_ATTEMPTS
-    ):
-        messages = [
-            dict(item)
-            for item
-            in base_messages
-        ]
-
-        if attempt > 0:
-            messages.append(
-                {
-                    "role":
-                        "system",
-
-                    "content": (
-                        RETRY_PRACTICE_PROMPT
-                        if mode ==
-                        "practice"
-                        else
-                        RETRY_BUILDER_PROMPT
-                    ),
-                }
-            )
-
-        try:
-            raw_content = (
-                _request_ollama(
-                    messages,
-                    mode,
-                )
-            )
-
-            try:
-                payload = (
-                    _extract_json(
-                        raw_content
-                    )
-                )
-            except OllamaServiceError:
-                payload = {
-                    "hanzi":
-                        raw_content,
-                }
-
-            hanzi = str(
-                payload.get(
-                    "hanzi",
-                    "",
-                )
-            ).strip()
-
-            hanzi = (
-                _to_simplified(
-                    _clean_reply_text(
-                        hanzi
-                    )
-                )
-            )
-
-            if not hanzi:
-                raise OllamaServiceError(
-                    "Chinese reply is empty."
-                )
-
-            if not _contains_chinese(
-                hanzi
-            ):
-                rejected_reply = (
-                    hanzi
-                )
-
-                raise OllamaServiceError(
-                    "Reply contains no Chinese."
-                )
-
-            if (
-                mode == "practice"
-                and
-                _contains_latin_letters(
-                    hanzi
-                )
-            ):
-                rejected_reply = (
-                    hanzi
-                )
-
-                raise OllamaServiceError(
-                    "Reply contains Latin text."
-                )
-
-            if (
-                mode == "practice"
-                and
-                not _looks_like_special_request(
-                    cleaned_text
-                )
-                and
-                _count_sentences(
-                    hanzi
-                ) < 2
-            ):
-                rejected_reply = (
-                    hanzi
-                )
-
-                raise OllamaServiceError(
-                    (
-                        "Normal conversation "
-                        "reply is too short."
-                    )
-                )
-
-            correction: (
-                AnnaCorrection
-            ) = {
-                "needed": False,
-                "original": "",
-                "corrected": "",
-                "pinyin": "",
-            }
-
-            if mode == "practice":
-                if (
-                    _question_count(
-                        hanzi
-                    )
-                    > 1
-                ):
-                    hanzi = (
-                        _limit_to_one_question(
-                            hanzi
-                        )
-                    )
-
-                if (
-                    _normalized_text(
-                        hanzi
-                    )
-                    ==
-                    _normalized_text(
-                        cleaned_text
-                    )
-                ):
-                    rejected_reply = hanzi
-
-                    raise OllamaServiceError(
-                        "Anna repeated user text."
-                    )
-
-                if _is_repeated_reply(
-                    hanzi,
-                    previous_assistant_replies,
-                ):
-                    rejected_reply = hanzi
-
-                    raise OllamaServiceError(
-                        "Anna repeated an earlier reply."
-                    )
-
-                correction = (
-                    _extract_correction(
-                        payload,
-                        cleaned_text,
-                    )
-                )
-
-            return {
-                "hanzi":
-                    hanzi,
-
-                "pinyin":
-                    _normalize_pinyin(
-                        hanzi
-                    ),
-
-                "correction":
-                    correction,
-            }
-
-        except (
-            OllamaServiceError,
-            ValueError,
-        ) as error:
-            last_error = error
-
-            logger.warning(
-                (
-                    "OLLAMA_REPLY_REJECTED "
-                    "attempt=%d "
-                    "error=%s "
-                    "reply=%r"
-                ),
-                attempt + 1,
-                error,
-                rejected_reply[:200],
-            )
-
-    raise OllamaServiceError(
-        (
-            "Anna could not generate "
-            "a valid reply. "
-            f"Last error: {last_error}"
-        )
-    )
-
-
-# =========================================================
-# CORRECTION CHECK
-# =========================================================
-
 def check_user_correction(
     user_text: str,
 ) -> AnnaCorrection:
-    cleaned_text = (
-        user_text.strip()
-    )
-
     empty: AnnaCorrection = {
         "needed":
             False,
@@ -1854,7 +1014,18 @@ def check_user_correction(
             "",
     }
 
+    cleaned_text = (
+        user_text.strip()
+    )
+
     if not cleaned_text:
+        return empty
+
+    if (
+        _is_continuation_request(
+            cleaned_text
+        )
+    ):
         return empty
 
     if not _contains_chinese(
@@ -1944,10 +1115,12 @@ def check_user_correction(
     except Exception:
         return empty
 
-    needed = _parse_boolean(
-        parsed.get(
-            "needed",
-            False,
+    needed = (
+        _parse_boolean(
+            parsed.get(
+                "needed",
+                False,
+            )
         )
     )
 
@@ -2005,7 +1178,299 @@ def check_user_correction(
 
 
 # =========================================================
-# STREAM REQUEST HELPER
+# NON-STREAM REQUEST
+# =========================================================
+
+def _request_ollama(
+    messages: list[
+        dict[str, str]
+    ],
+    mode: Mode,
+) -> str:
+    payload = {
+        "model":
+            MODEL_NAME,
+
+        "messages":
+            messages,
+
+        "stream":
+            False,
+
+        "format":
+            "json",
+
+        "think":
+            False,
+
+        "keep_alive":
+            "30m",
+
+        "options": {
+            "temperature": (
+                0.45
+                if mode
+                == "practice"
+                else 0.0
+            ),
+
+            "top_p":
+                0.85,
+
+            "repeat_penalty":
+                1.15,
+
+            "num_ctx":
+                3072,
+
+            "num_predict":
+                320,
+        },
+    }
+
+    try:
+        response = requests.post(
+            OLLAMA_CHAT_URL,
+            json=payload,
+            timeout=(
+                10,
+                REQUEST_TIMEOUT,
+            ),
+        )
+
+        response.raise_for_status()
+
+    except requests.RequestException as error:
+        raise OllamaServiceError(
+            "Ollama request failed."
+        ) from error
+
+    data = response.json()
+
+    message = data.get(
+        "message"
+    )
+
+    if not isinstance(
+        message,
+        dict,
+    ):
+        raise OllamaServiceError(
+            "Ollama response has no message."
+        )
+
+    content = message.get(
+        "content"
+    )
+
+    if (
+        not isinstance(
+            content,
+            str,
+        )
+        or not content.strip()
+    ):
+        raise OllamaServiceError(
+            "Ollama response is empty."
+        )
+
+    return content
+
+
+# =========================================================
+# STRUCTURED REPLY
+# =========================================================
+
+def generate_reply(
+    user_text: str,
+    mode: Mode =
+        "practice",
+    conversation_history: (
+        list[
+            dict[str, str]
+        ]
+        | None
+    ) = None,
+) -> AnnaReply:
+    cleaned_text = (
+        user_text.strip()
+    )
+
+    if not cleaned_text:
+        raise ValueError(
+            "User text cannot be empty."
+        )
+
+    history = (
+        _clean_history(
+            conversation_history
+        )
+    )
+
+    continuation = (
+        mode == "practice"
+        and
+        _is_continuation_request(
+            cleaned_text
+        )
+    )
+
+    messages: list[
+        dict[str, str]
+    ] = [
+        {
+            "role":
+                "system",
+
+            "content": (
+                PRACTICE_PROMPT
+                if mode ==
+                "practice"
+                else
+                SENTENCE_BUILDER_PROMPT
+            ),
+        }
+    ]
+
+    messages.extend(
+        history
+    )
+
+    if continuation:
+        previous_assistant = (
+            _latest_assistant_message(
+                history
+            )
+        )
+
+        messages.append(
+            {
+                "role":
+                    "system",
+
+                "content":
+                    CONTINUATION_SYSTEM_PROMPT,
+            }
+        )
+
+        if previous_assistant:
+            messages.append(
+                {
+                    "role":
+                        "system",
+
+                    "content": (
+                        "Most recent Anna message:\n"
+                        f"{previous_assistant}\n\n"
+                        "Continue from this exact point."
+                    ),
+                }
+            )
+
+    messages.append(
+        {
+            "role":
+                "user",
+
+            "content":
+                cleaned_text,
+        }
+    )
+
+    raw = _request_ollama(
+        messages,
+        mode,
+    )
+
+    try:
+        payload = (
+            _extract_json(
+                raw
+            )
+        )
+    except OllamaServiceError:
+        payload = {
+            "hanzi":
+                raw,
+        }
+
+    hanzi = (
+        _to_simplified(
+            _clean_reply_text(
+                str(
+                    payload.get(
+                        "hanzi",
+                        "",
+                    )
+                )
+            )
+        )
+    )
+
+    if not hanzi:
+        raise OllamaServiceError(
+            "Chinese reply is empty."
+        )
+
+    if not _contains_chinese(
+        hanzi
+    ):
+        raise OllamaServiceError(
+            "Reply contains no Chinese."
+        )
+
+    if (
+        mode == "practice"
+        and
+        _contains_latin_letters(
+            hanzi
+        )
+    ):
+        raise OllamaServiceError(
+            "Reply contains Latin text."
+        )
+
+    correction: AnnaCorrection = {
+        "needed":
+            False,
+
+        "original":
+            "",
+
+        "corrected":
+            "",
+
+        "pinyin":
+            "",
+    }
+
+    if (
+        mode == "practice"
+        and
+        not continuation
+    ):
+        correction = (
+            check_user_correction(
+                cleaned_text
+            )
+        )
+
+    return {
+        "hanzi":
+            hanzi,
+
+        "pinyin":
+            _normalize_pinyin(
+                hanzi
+            ),
+
+        "correction":
+            correction,
+    }
+
+
+# =========================================================
+# STREAM REQUEST
 # =========================================================
 
 def _stream_ollama_text(
@@ -2041,16 +1506,11 @@ def _stream_ollama_text(
             "repeat_penalty":
                 1.12,
 
-            # Smaller context gives
-            # faster first-token response.
             "num_ctx":
                 3072,
 
             "num_predict":
                 num_predict,
-
-            "seed":
-                -1,
         },
     }
 
@@ -2080,6 +1540,7 @@ def _stream_ollama_text(
                     data = json.loads(
                         raw_line
                     )
+
                 except json.JSONDecodeError:
                     continue
 
@@ -2091,9 +1552,11 @@ def _stream_ollama_text(
                     message,
                     dict,
                 ):
-                    content = message.get(
-                        "content",
-                        "",
+                    content = (
+                        message.get(
+                            "content",
+                            "",
+                        )
                     )
 
                     if (
@@ -2113,15 +1576,12 @@ def _stream_ollama_text(
 
     except requests.RequestException as error:
         raise OllamaServiceError(
-            (
-                "Ollama streaming "
-                "request failed."
-            )
+            "Ollama streaming request failed."
         ) from error
 
 
 # =========================================================
-# TRUE LIVE STREAMING
+# TRUE LIVE STREAM
 # =========================================================
 
 def stream_reply_text(
@@ -2135,22 +1595,28 @@ def stream_reply_text(
 ) -> Iterator[
     StreamEvent
 ]:
-    cleaned_text = str(
-        user_text
-    ).strip()
+    cleaned_text = (
+        user_text.strip()
+    )
 
     if not cleaned_text:
         raise OllamaServiceError(
             "User message is empty."
         )
 
-    cleaned_history = (
+    history = (
         _clean_history(
             conversation_history
         )
     )
 
-    base_messages: list[
+    continuation = (
+        _is_continuation_request(
+            cleaned_text
+        )
+    )
+
+    messages: list[
         dict[str, str]
     ] = [
         {
@@ -2162,11 +1628,43 @@ def stream_reply_text(
         }
     ]
 
-    base_messages.extend(
-        cleaned_history
+    messages.extend(
+        history
     )
 
-    base_messages.append(
+    if continuation:
+        previous_assistant = (
+            _latest_assistant_message(
+                history
+            )
+        )
+
+        messages.append(
+            {
+                "role":
+                    "system",
+
+                "content":
+                    CONTINUATION_SYSTEM_PROMPT,
+            }
+        )
+
+        if previous_assistant:
+            messages.append(
+                {
+                    "role":
+                        "system",
+
+                    "content": (
+                        "The exact most recent Anna response was:\n\n"
+                        f"{previous_assistant}\n\n"
+                        "Continue directly from this exact response. "
+                        "Do not restart it."
+                    ),
+                }
+            )
+
+    messages.append(
         {
             "role":
                 "user",
@@ -2184,8 +1682,8 @@ def stream_reply_text(
     sentence_events = 0
 
 
-    def emit_clean_text(
-        clean_text: str,
+    def emit_text(
+        text: str,
     ) -> Iterator[
         StreamEvent
     ]:
@@ -2194,21 +1692,23 @@ def stream_reply_text(
         nonlocal token_events
         nonlocal sentence_events
 
-        if not clean_text:
-            return
-
         simplified = (
             TRADITIONAL_TO_SIMPLIFIED
             .convert(
-                clean_text
+                text
             )
         )
 
         if not simplified:
             return
 
-        full_text += simplified
-        sentence_buffer += simplified
+        full_text += (
+            simplified
+        )
+
+        sentence_buffer += (
+            simplified
+        )
 
         token_events += 1
 
@@ -2252,10 +1752,6 @@ def stream_reply_text(
                 _contains_chinese(
                     sentence
                 )
-                and
-                not _contains_latin_letters(
-                    sentence
-                )
             ):
                 sentence_events += 1
 
@@ -2268,79 +1764,56 @@ def stream_reply_text(
                 }
 
 
-    def process_raw_chunk(
-        raw_chunk: str,
-    ) -> Iterator[
-        StreamEvent
-    ]:
-        nonlocal latin_buffer
-
+    for raw_chunk in (
+        _stream_ollama_text(
+            messages,
+            num_predict=(
+                700
+                if continuation
+                else 1000
+            ),
+            temperature=0.52,
+        )
+    ):
         output_buffer = ""
 
         for character in raw_chunk:
-
             if (
                 character.isascii()
                 and
-                (
-                    character.isalpha()
-                    or
-                    character in {
-                        "'",
-                        "-",
-                        "’",
-                    }
-                )
+                character.isalpha()
             ):
-                latin_buffer += character
+                latin_buffer += (
+                    character
+                )
+
                 continue
 
             if latin_buffer:
-                replacement = (
-                    _flush_latin_buffer(
+                output_buffer += (
+                    _convert_stream_latin_word(
                         latin_buffer
                     )
                 )
 
                 latin_buffer = ""
 
-                output_buffer += (
-                    replacement
-                )
-
-            output_buffer += character
+            output_buffer += (
+                character
+            )
 
         if output_buffer:
             for event in (
-                emit_clean_text(
+                emit_text(
                     output_buffer
                 )
             ):
                 yield event
 
 
-    # =====================================================
-    # FIRST STREAM
-    # =====================================================
-
-    for raw_chunk in (
-        _stream_ollama_text(
-            base_messages,
-            num_predict=1000,
-            temperature=0.55,
-        )
-    ):
-        for event in (
-            process_raw_chunk(
-                raw_chunk
-            )
-        ):
-            yield event
-
-
     if latin_buffer:
         replacement = (
-            _flush_latin_buffer(
+            _convert_stream_latin_word(
                 latin_buffer
             )
         )
@@ -2349,102 +1822,12 @@ def stream_reply_text(
 
         if replacement:
             for event in (
-                emit_clean_text(
+                emit_text(
                     replacement
                 )
             ):
                 yield event
 
-
-    # =====================================================
-    # MINIMUM 2-SENTENCE GUARD
-    # =====================================================
-
-    special_request = (
-        _looks_like_special_request(
-            cleaned_text
-        )
-    )
-
-    first_sentence_count = (
-        _count_sentences(
-            full_text
-        )
-    )
-
-    if (
-        not special_request
-        and
-        first_sentence_count < 2
-    ):
-        logger.info(
-            (
-                "ANNA_STREAM_TOO_SHORT "
-                "sentences=%d "
-                "text=%r"
-            ),
-            first_sentence_count,
-            full_text[:200],
-        )
-
-        continuation_messages = [
-            {
-                "role":
-                    "system",
-
-                "content":
-                    CONTINUATION_PROMPT,
-            },
-
-            {
-                "role":
-                    "user",
-
-                "content": (
-                    "User message:\n"
-                    f"{cleaned_text}\n\n"
-                    "Anna already said:\n"
-                    f"{full_text}\n\n"
-                    "Continue naturally now."
-                ),
-            },
-        ]
-
-        for raw_chunk in (
-            _stream_ollama_text(
-                continuation_messages,
-                num_predict=180,
-                temperature=0.50,
-            )
-        ):
-            for event in (
-                process_raw_chunk(
-                    raw_chunk
-                )
-            ):
-                yield event
-
-        if latin_buffer:
-            replacement = (
-                _flush_latin_buffer(
-                    latin_buffer
-                )
-            )
-
-            latin_buffer = ""
-
-            if replacement:
-                for event in (
-                    emit_clean_text(
-                        replacement
-                    )
-                ):
-                    yield event
-
-
-    # =====================================================
-    # FINAL CLEANUP
-    # =====================================================
 
     final_text = (
         _to_simplified(
@@ -2463,26 +1846,16 @@ def stream_reply_text(
         final_text
     ):
         raise OllamaServiceError(
-            (
-                "Streaming reply "
-                "contains no Chinese."
-            )
+            "Streaming reply contains no Chinese."
         )
 
     if _contains_latin_letters(
         final_text
     ):
         raise OllamaServiceError(
-            (
-                "Streaming reply "
-                "contains Latin text."
-            )
+            "Streaming reply contains Latin text."
         )
 
-
-    # =====================================================
-    # FLUSH LAST SENTENCE
-    # =====================================================
 
     remaining_sentence = (
         sentence_buffer.strip()
@@ -2492,10 +1865,6 @@ def stream_reply_text(
         remaining_sentence
         and
         _contains_chinese(
-            remaining_sentence
-        )
-        and
-        not _contains_latin_letters(
             remaining_sentence
         )
     ):
@@ -2510,10 +1879,6 @@ def stream_reply_text(
         }
 
 
-    # =====================================================
-    # DONE
-    # =====================================================
-
     final_pinyin = (
         _normalize_pinyin(
             final_text
@@ -2523,16 +1888,14 @@ def stream_reply_text(
     logger.info(
         (
             "OLLAMA_STREAM_DONE "
+            "continuation=%s "
             "characters=%d "
-            "sentences=%d "
             "token_events=%d "
             "sentence_events=%d "
             "hanzi=%r"
         ),
+        continuation,
         len(
-            final_text
-        ),
-        _count_sentences(
             final_text
         ),
         token_events,
