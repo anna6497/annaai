@@ -31,7 +31,6 @@ from services.llm import (
     check_user_correction,
     generate_reply,
     stream_reply_text,
-    warm_ollama_model,
 )
 
 
@@ -351,13 +350,6 @@ def warmup_v7_models() -> None:
             repr(error),
         )
 
-    try:
-        warm_ollama_model()
-    except Exception as error:
-        print(
-            "V7 Ollama warmup failed:",
-            repr(error),
-        )
 
 
 # =========================================================
