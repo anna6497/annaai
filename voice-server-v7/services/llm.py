@@ -200,7 +200,7 @@ CONVERSATION RULES:
 6. Give one short reaction, answer, or related comment.
 7. Usually keep the conversation moving with one natural follow-up question when appropriate.
 8. Never ask more than one question.
-9. For normal conversation, use 1 to 3 short sentences.
+9. For normal conversation, usually use 2 to 4 short sentences; do not stop at one generic sentence when a natural continuation is possible.
 10. Keep vocabulary suitable for HSK 1-4 unless the user asks for something more advanced.
 11. Do not provide pinyin.
 12. Do not provide Myanmar translation.
@@ -354,7 +354,7 @@ Requirements:
 - Do not use English words.
 - Do not output Latin letters A-Z or a-z inside hanzi.
 - Do not code-switch between Mandarin and English.
-- For normal chat, use 1 to 3 short sentences.
+- For normal chat, usually use 2 to 4 short sentences and avoid one-sentence generic replies.
 - Ask no more than one question.
 - Check the user's Chinese for a meaningful learner error.
 - Do not over-correct acceptable Chinese.
@@ -479,7 +479,10 @@ GENERAL RULES:
 
 NORMAL CHAT:
 
-- Usually 1 to 3 short sentences.
+- For normal conversation, usually use 2 to 4 short sentences.
+- Do not stop after only one generic sentence when a natural continuation is possible.
+- Give a useful reaction or answer first, then add one related detail or one natural follow-up question.
+- A very short greeting such as “你好” may use 1 to 2 sentences.
 - Keep the conversation flowing naturally.
 - You may ask one relevant follow-up question.
 - Do not ask more than one question.
@@ -637,6 +640,55 @@ def check_ollama_connection() -> bool:
 
     except requests.RequestException:
         return False
+
+
+
+def warm_ollama_model() -> bool:
+    """
+    Load the configured Ollama model into memory and keep it
+    warm. This is intentionally tiny and runs only at service
+    startup.
+    """
+    payload = {
+        "model": MODEL_NAME,
+        "messages": [
+            {
+                "role": "user",
+                "content": "只回答：好。",
+            }
+        ],
+        "stream": False,
+        "think": False,
+        "keep_alive": "30m",
+        "options": {
+            "temperature": 0,
+            "num_ctx": 1024,
+            "num_predict": 4,
+        },
+    }
+
+    started = __import__("time").perf_counter()
+
+    try:
+        response = requests.post(
+            OLLAMA_CHAT_URL,
+            json=payload,
+            timeout=(10, REQUEST_TIMEOUT),
+        )
+        response.raise_for_status()
+    except requests.RequestException as error:
+        logger.warning(
+            "OLLAMA_WARMUP_FAILED error=%s",
+            error,
+        )
+        return False
+
+    logger.info(
+        "OLLAMA_WARMUP_OK model=%s seconds=%.3f",
+        MODEL_NAME,
+        __import__("time").perf_counter() - started,
+    )
+    return True
 
 
 # =========================================================
@@ -1399,7 +1451,7 @@ def _request_ollama(
                 1.18,
 
             "num_ctx":
-                4096,
+                3072,
 
             "num_predict":
                 230,
@@ -2251,7 +2303,7 @@ def stream_reply_text(
                 1.12,
 
             "num_ctx":
-                4096,
+                3072,
 
             "num_predict":
                 1200,
@@ -2335,7 +2387,7 @@ def stream_reply_text(
 
         while True:
             match = re.search(
-                r"[。！？!?]",
+                r"[。！？!?；;]|(?<=.{8})[，,]",
                 sentence_buffer,
             )
 

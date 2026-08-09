@@ -112,7 +112,7 @@ const MAX_AUDIO_CACHE_ITEMS =
  * + next 2/3 sentences preparing.
  */
 const MAX_PREFETCH_ITEMS =
-  3;
+  2;
 
 
 /**
@@ -690,27 +690,17 @@ async function playOneChinese(
       return;
     }
 
-    console.warn(
-      "Piper TTS failed. Using browser Mandarin fallback.",
+    console.error(
+      "Anna Piper Mandarin TTS failed:",
       piperError,
     );
 
-    try {
-      await playWithBrowserTts(
-        text,
-        options,
-        generation,
+    options
+      .onError?.(
+        piperError,
       );
-    } catch (
-      browserError
-    ) {
-      options
-        .onError?.(
-          browserError,
-        );
 
-      throw browserError;
-    }
+    throw piperError;
   }
 }
 
@@ -937,33 +927,22 @@ async function playQueueItem(
   }
 
   /**
-   * Piper failed:
-   * use browser Mandarin only
-   * for this sentence.
+   * Piper-only policy:
+   * never switch to the operating system/browser voice,
+   * because that can produce a non-Mandarin voice.
    */
-  await playWithBrowserTts(
-    item.text,
-    {
-      speed:
-        item.options
-          .speed ??
-        "normal",
+  const piperError =
+    item.audioError ??
+    new Error(
+      "Anna Piper Mandarin TTS audio was not available.",
+    );
 
-      volume:
-        item.options
-          .volume ??
-        1,
+  item.options
+    .onError?.(
+      piperError,
+    );
 
-      onStart:
-        item.options
-          .onStart,
-
-      onError:
-        item.options
-          .onError,
-    },
-    generation,
-  );
+  throw piperError;
 }
 
 

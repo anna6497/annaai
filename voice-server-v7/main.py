@@ -31,10 +31,11 @@ from services.llm import (
     check_user_correction,
     generate_reply,
     stream_reply_text,
+    warm_ollama_model,
 )
 
 
-APP_VERSION = "7.3.2-live-streaming-correction"
+APP_VERSION = "7.4.0-fast-mandarin-live"
 
 Mode = Literal[
     "practice",
@@ -322,6 +323,41 @@ def get_whisper_model() -> WhisperModel:
         )
 
     return whisper_model
+
+
+
+@app.on_event("startup")
+def warmup_v7_models() -> None:
+    """
+    Warm the local STT and LLM models when the V7
+    service starts so the first real user request
+    does not pay the full cold-start cost.
+    """
+    started = time.perf_counter()
+
+    try:
+        get_whisper_model()
+        print(
+            "V7 Whisper warm:",
+            round(
+                time.perf_counter() - started,
+                3,
+            ),
+            "seconds",
+        )
+    except Exception as error:
+        print(
+            "V7 Whisper warmup failed:",
+            repr(error),
+        )
+
+    try:
+        warm_ollama_model()
+    except Exception as error:
+        print(
+            "V7 Ollama warmup failed:",
+            repr(error),
+        )
 
 
 # =========================================================
@@ -746,9 +782,9 @@ def transcribe_chinese(
 
             task="transcribe",
 
-            beam_size=3,
+            beam_size=1,
 
-            best_of=3,
+            best_of=1,
 
             temperature=0,
 
@@ -756,10 +792,10 @@ def transcribe_chinese(
 
             vad_parameters={
                 "min_silence_duration_ms":
-                    350,
+                    220,
 
                 "speech_pad_ms":
-                    150,
+                    80,
             },
 
             condition_on_previous_text=False,
@@ -917,7 +953,7 @@ def create_tts_cache_key(
     speed: TtsSpeed,
 ) -> str:
     payload = (
-        "piper-huayan-v1:"
+        "piper-huayan-v2-mandarin:"
         f"{speed}:"
         f"{text.strip()}"
     )
@@ -1260,6 +1296,12 @@ def health() -> dict[
 
         "correction_mode":
             "deferred",
+
+        "tts_engine":
+            "piper-zh-CN-huayan-only",
+
+        "fast_stt":
+            True,
 
         "streaming_enabled":
             True,
