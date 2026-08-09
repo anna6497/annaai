@@ -2,6 +2,7 @@ import {
   getAnnaTtsAudio,
 } from "@/lib/ai/api";
 
+
 export type SpeakChineseOptions = {
   rate?: number;
   pitch?: number;
@@ -19,6 +20,7 @@ export type SpeakChineseOptions = {
   ) => void;
 };
 
+
 export type QueueChineseOptions = {
   speed?:
     | "normal"
@@ -35,34 +37,143 @@ export type QueueChineseOptions = {
   ) => void;
 };
 
+
 type QueueItem = {
+  id: number;
+
   text: string;
 
   options:
     QueueChineseOptions;
+
+  generation: number;
+
+  audioPromise:
+    Promise<Blob | null>;
+
+  audioBlob:
+    Blob | null;
+
+  audioError:
+    unknown | null;
 };
+
 
 let currentAudio:
   HTMLAudioElement | null =
-    null;
+  null;
 
 let currentObjectUrl:
   string | null =
-    null;
+  null;
 
 let playbackGeneration =
   0;
 
+let queueItemId =
+  0;
+
 const speechQueue:
   QueueItem[] =
-    [];
+  [];
 
 let queueRunning =
   false;
 
 let queueIdleCallback:
   (() => void) | null =
-    null;
+  null;
+
+
+/**
+ * Keep a small in-memory cache.
+ *
+ * Backend already has WAV cache,
+ * but this avoids another browser
+ * request for recently used text.
+ */
+const audioBlobCache =
+  new Map<
+    string,
+    Blob
+  >();
+
+const MAX_AUDIO_CACHE_ITEMS =
+  30;
+
+
+/**
+ * How many future sentences
+ * may generate simultaneously.
+ *
+ * 3 works well for CPU Piper:
+ *
+ * current sentence playing
+ * + next 2/3 sentences preparing.
+ */
+const MAX_PREFETCH_ITEMS =
+  3;
+
+
+/**
+ * Prevent browser cache from
+ * growing forever.
+ */
+function saveAudioToMemoryCache(
+  key: string,
+  blob: Blob,
+): void {
+  if (
+    audioBlobCache.has(
+      key,
+    )
+  ) {
+    audioBlobCache.delete(
+      key,
+    );
+  }
+
+  audioBlobCache.set(
+    key,
+    blob,
+  );
+
+  while (
+    audioBlobCache.size >
+    MAX_AUDIO_CACHE_ITEMS
+  ) {
+    const oldestKey =
+      audioBlobCache
+        .keys()
+        .next()
+        .value;
+
+    if (
+      typeof oldestKey !==
+      "string"
+    ) {
+      break;
+    }
+
+    audioBlobCache.delete(
+      oldestKey,
+    );
+  }
+}
+
+
+function getAudioCacheKey(
+  text: string,
+  speed:
+    | "normal"
+    | "slow",
+): string {
+  return (
+    `${speed}:` +
+    text.trim()
+  );
+}
+
 
 function cleanupAudio(): void {
   if (currentAudio) {
@@ -96,6 +207,7 @@ function cleanupAudio(): void {
   }
 }
 
+
 function cancelBrowserSpeech(): void {
   if (
     typeof window ===
@@ -104,10 +216,18 @@ function cancelBrowserSpeech(): void {
     return;
   }
 
-  window.speechSynthesis
+  window
+    .speechSynthesis
     .cancel();
 }
 
+
+/**
+ * Important:
+ *
+ * Clearing the queue invalidates
+ * existing prefetch promises too.
+ */
 export function clearSpeechQueue(): void {
   speechQueue.splice(
     0,
@@ -120,6 +240,7 @@ export function clearSpeechQueue(): void {
   queueIdleCallback =
     null;
 }
+
 
 export function stopSpeaking(): void {
   if (
@@ -139,6 +260,7 @@ export function stopSpeaking(): void {
   cancelBrowserSpeech();
 }
 
+
 function findChineseVoice():
   SpeechSynthesisVoice |
   undefined {
@@ -150,7 +272,8 @@ function findChineseVoice():
   }
 
   const voices =
-    window.speechSynthesis
+    window
+      .speechSynthesis
       .getVoices();
 
   return voices.find(
@@ -172,6 +295,10 @@ function findChineseVoice():
   );
 }
 
+
+/**
+ * Browser Mandarin fallback.
+ */
 function playWithBrowserTts(
   text: string,
   options:
@@ -231,7 +358,9 @@ function playWithBrowserTts(
       const chineseVoice =
         findChineseVoice();
 
-      if (chineseVoice) {
+      if (
+        chineseVoice
+      ) {
         utterance.voice =
           chineseVoice;
       }
@@ -242,7 +371,8 @@ function playWithBrowserTts(
             generation ===
             playbackGeneration
           ) {
-            options.onStart?.();
+            options
+              .onStart?.();
           }
         };
 
@@ -252,7 +382,8 @@ function playWithBrowserTts(
             generation ===
             playbackGeneration
           ) {
-            options.onEnd?.();
+            options
+              .onEnd?.();
           }
 
           resolve();
@@ -266,9 +397,10 @@ function playWithBrowserTts(
             generation ===
             playbackGeneration
           ) {
-            options.onError?.(
-              event,
-            );
+            options
+              .onError?.(
+                event,
+              );
           }
 
           reject(
@@ -278,7 +410,8 @@ function playWithBrowserTts(
           );
         };
 
-      window.speechSynthesis
+      window
+        .speechSynthesis
         .speak(
           utterance,
         );
@@ -286,19 +419,89 @@ function playWithBrowserTts(
   );
 }
 
-async function playPiperAudio(
+
+/**
+ * Fetch/generate Piper WAV.
+ *
+ * This function does NOT play audio.
+ * That distinction is what allows
+ * prefetching while another sentence
+ * is already playing.
+ */
+async function fetchPiperAudio(
   text: string,
+  speed:
+    | "normal"
+    | "slow",
+  generation: number,
+): Promise<Blob | null> {
+  if (
+    generation !==
+    playbackGeneration
+  ) {
+    return null;
+  }
+
+  const key =
+    getAudioCacheKey(
+      text,
+      speed,
+    );
+
+  const cached =
+    audioBlobCache.get(
+      key,
+    );
+
+  if (cached) {
+    return cached;
+  }
+
+  try {
+    const blob =
+      await getAnnaTtsAudio(
+        text,
+        speed,
+      );
+
+    if (
+      generation !==
+      playbackGeneration
+    ) {
+      return null;
+    }
+
+    saveAudioToMemoryCache(
+      key,
+      blob,
+    );
+
+    return blob;
+  } catch (
+    error
+  ) {
+    console.warn(
+      "Piper audio prefetch failed:",
+      text,
+      error,
+    );
+
+    throw error;
+  }
+}
+
+
+/**
+ * Play an already prepared Blob.
+ *
+ * There is no network request here.
+ */
+async function playPreparedAudio(
+  audioBlob: Blob,
   options:
     SpeakChineseOptions,
   generation: number,
 ): Promise<void> {
-  const audioBlob =
-    await getAnnaTtsAudio(
-      text,
-      options.speed ??
-        "normal",
-    );
-
   if (
     generation !==
     playbackGeneration
@@ -324,22 +527,67 @@ async function playPiperAudio(
   currentAudio =
     audio;
 
+  audio.preload =
+    "auto";
+
   audio.volume =
     options.volume ??
     1;
+
+  /**
+   * Explicitly ask the browser
+   * to load/decode the WAV.
+   */
+  audio.load();
 
   await new Promise<void>(
     (
       resolve,
       reject,
     ) => {
+      let settled =
+        false;
+
+      const finish =
+        () => {
+          if (settled) {
+            return;
+          }
+
+          settled =
+            true;
+
+          cleanupAudio();
+
+          resolve();
+        };
+
+      const fail =
+        (
+          error: unknown,
+        ) => {
+          if (settled) {
+            return;
+          }
+
+          settled =
+            true;
+
+          cleanupAudio();
+
+          reject(
+            error,
+          );
+        };
+
       audio.onplay =
         () => {
           if (
             generation ===
             playbackGeneration
           ) {
-            options.onStart?.();
+            options
+              .onStart?.();
           }
         };
 
@@ -349,39 +597,76 @@ async function playPiperAudio(
             generation ===
             playbackGeneration
           ) {
-            options.onEnd?.();
+            options
+              .onEnd?.();
           }
 
-          cleanupAudio();
-
-          resolve();
+          finish();
         };
 
       audio.onerror =
         (
           event,
         ) => {
-          cleanupAudio();
-
-          reject(
+          fail(
             event,
           );
         };
 
-      audio.play().catch(
-        (
-          error,
-        ) => {
-          cleanupAudio();
-
-          reject(
+      audio
+        .play()
+        .catch(
+          (
             error,
-          );
-        },
-      );
+          ) => {
+            fail(
+              error,
+            );
+          },
+        );
     },
   );
 }
+
+
+/**
+ * Normal one-shot Piper playback.
+ *
+ * Used by replay buttons and
+ * Sentence Builder.
+ */
+async function playPiperAudio(
+  text: string,
+  options:
+    SpeakChineseOptions,
+  generation: number,
+): Promise<void> {
+  const speed =
+    options.speed ??
+    "normal";
+
+  const audioBlob =
+    await fetchPiperAudio(
+      text,
+      speed,
+      generation,
+    );
+
+  if (
+    !audioBlob ||
+    generation !==
+      playbackGeneration
+  ) {
+    return;
+  }
+
+  await playPreparedAudio(
+    audioBlob,
+    options,
+    generation,
+  );
+}
+
 
 async function playOneChinese(
   text: string,
@@ -419,14 +704,16 @@ async function playOneChinese(
     } catch (
       browserError
     ) {
-      options.onError?.(
-        browserError,
-      );
+      options
+        .onError?.(
+          browserError,
+        );
 
       throw browserError;
     }
   }
 }
+
 
 export async function speakChinese(
   text: string,
@@ -462,7 +749,235 @@ export async function speakChinese(
   }
 }
 
-async function runSpeechQueue(): Promise<void> {
+
+/**
+ * Begin preparing a queue item
+ * immediately.
+ *
+ * This is the key improvement.
+ */
+function createQueueItem(
+  text: string,
+  options:
+    QueueChineseOptions,
+  generation: number,
+): QueueItem {
+  const speed =
+    options.speed ??
+    "normal";
+
+  const item:
+    QueueItem = {
+      id:
+        ++queueItemId,
+
+      text,
+
+      options,
+
+      generation,
+
+      audioPromise:
+        Promise.resolve(
+          null,
+        ),
+
+      audioBlob:
+        null,
+
+      audioError:
+        null,
+    };
+
+  item.audioPromise =
+    fetchPiperAudio(
+      text,
+      speed,
+      generation,
+    )
+      .then(
+        (
+          blob,
+        ) => {
+          if (
+            generation ===
+            playbackGeneration
+          ) {
+            item.audioBlob =
+              blob;
+          }
+
+          return blob;
+        },
+      )
+      .catch(
+        (
+          error,
+        ) => {
+          item.audioError =
+            error;
+
+          return null;
+        },
+      );
+
+  return item;
+}
+
+
+/**
+ * Ensure several future sentences
+ * are generating at the same time.
+ */
+function prefetchUpcomingItems(): void {
+  if (
+    typeof window ===
+    "undefined"
+  ) {
+    return;
+  }
+
+  const generation =
+    playbackGeneration;
+
+  const items =
+    speechQueue.slice(
+      0,
+      MAX_PREFETCH_ITEMS,
+    );
+
+  for (
+    const item
+    of items
+  ) {
+    if (
+      item.generation !==
+      generation
+    ) {
+      continue;
+    }
+
+    /**
+     * createQueueItem() already
+     * starts the promise.
+     *
+     * Referencing it here documents
+     * that these requests should remain
+     * active while playback continues.
+     */
+    void item.audioPromise;
+  }
+}
+
+
+/**
+ * Play a prefetched queue item.
+ */
+async function playQueueItem(
+  item: QueueItem,
+  generation: number,
+): Promise<void> {
+  if (
+    generation !==
+    playbackGeneration
+  ) {
+    return;
+  }
+
+  let audioBlob =
+    item.audioBlob;
+
+  if (!audioBlob) {
+    audioBlob =
+      await item.audioPromise;
+  }
+
+  if (
+    generation !==
+    playbackGeneration
+  ) {
+    return;
+  }
+
+  if (audioBlob) {
+    try {
+      await playPreparedAudio(
+        audioBlob,
+        {
+          speed:
+            item.options
+              .speed ??
+            "normal",
+
+          volume:
+            item.options
+              .volume ??
+            1,
+
+          onStart:
+            item.options
+              .onStart,
+
+          onError:
+            item.options
+              .onError,
+        },
+        generation,
+      );
+
+      return;
+    } catch (
+      playbackError
+    ) {
+      console.warn(
+        "Prepared Piper audio playback failed:",
+        playbackError,
+      );
+    }
+  }
+
+  /**
+   * Piper failed:
+   * use browser Mandarin only
+   * for this sentence.
+   */
+  await playWithBrowserTts(
+    item.text,
+    {
+      speed:
+        item.options
+          .speed ??
+        "normal",
+
+      volume:
+        item.options
+          .volume ??
+        1,
+
+      onStart:
+        item.options
+          .onStart,
+
+      onError:
+        item.options
+          .onError,
+    },
+    generation,
+  );
+}
+
+
+/**
+ * Continuous playback queue.
+ *
+ * Important:
+ *
+ * Sentence 2/3 TTS requests have
+ * already started before Sentence 1
+ * playback finishes.
+ */
+async function runSpeechQueue():
+  Promise<void> {
   if (
     queueRunning
   ) {
@@ -477,15 +992,20 @@ async function runSpeechQueue(): Promise<void> {
 
   try {
     while (
-      speechQueue.length >
-      0
+      generation ===
+        playbackGeneration
     ) {
       if (
-        generation !==
-        playbackGeneration
+        speechQueue.length ===
+        0
       ) {
         break;
       }
+
+      /**
+       * Keep future audio warm.
+       */
+      prefetchUpcomingItems();
 
       const item =
         speechQueue.shift();
@@ -494,28 +1014,24 @@ async function runSpeechQueue(): Promise<void> {
         continue;
       }
 
+      if (
+        item.generation !==
+        generation
+      ) {
+        continue;
+      }
+
+      /**
+       * After shifting current item,
+       * immediately make sure all
+       * remaining future items continue
+       * downloading/generating.
+       */
+      prefetchUpcomingItems();
+
       try {
-        await playOneChinese(
-          item.text,
-          {
-            speed:
-              item.options
-                .speed ??
-              "normal",
-
-            volume:
-              item.options
-                .volume ??
-              1,
-
-            onStart:
-              item.options
-                .onStart,
-
-            onError:
-              item.options
-                .onError,
-          },
+        await playQueueItem(
+          item,
           generation,
         );
       } catch (
@@ -538,7 +1054,7 @@ async function runSpeechQueue(): Promise<void> {
 
     if (
       generation ===
-      playbackGeneration &&
+        playbackGeneration &&
       speechQueue.length ===
         0
     ) {
@@ -550,8 +1066,25 @@ async function runSpeechQueue(): Promise<void> {
 
       callback?.();
     }
+
+    /**
+     * Race protection:
+     *
+     * A new sentence may have arrived
+     * exactly while queueRunning was
+     * being changed to false.
+     */
+    if (
+      generation ===
+        playbackGeneration &&
+      speechQueue.length >
+        0
+    ) {
+      void runSpeechQueue();
+    }
   }
 }
+
 
 export function queueChineseSentence(
   text: string,
@@ -560,7 +1093,7 @@ export function queueChineseSentence(
 ): void {
   if (
     typeof window ===
-      "undefined"
+    "undefined"
   ) {
     return;
   }
@@ -573,9 +1106,8 @@ export function queueChineseSentence(
   }
 
   /**
-   * Prevent duplicate sentence
-   * events from producing duplicate
-   * audio.
+   * Prevent duplicate queued
+   * sentence events.
    */
   const duplicate =
     speechQueue.some(
@@ -590,13 +1122,27 @@ export function queueChineseSentence(
     return;
   }
 
-  speechQueue.push(
-    {
-      text:
-        cleaned,
+  const generation =
+    playbackGeneration;
 
+  /**
+   * IMPORTANT:
+   *
+   * createQueueItem() starts the
+   * Piper request NOW.
+   *
+   * It does not wait for previous
+   * audio to finish.
+   */
+  const item =
+    createQueueItem(
+      cleaned,
       options,
-    },
+      generation,
+    );
+
+  speechQueue.push(
+    item,
   );
 
   if (
@@ -606,10 +1152,17 @@ export function queueChineseSentence(
       options.onQueueIdle;
   }
 
+  /**
+   * Start/preload future sentences.
+   */
+  prefetchUpcomingItems();
+
   void runSpeechQueue();
 }
 
-export function isSpeechQueueBusy(): boolean {
+
+export function isSpeechQueueBusy():
+  boolean {
   return (
     queueRunning ||
     speechQueue.length >
