@@ -4,7 +4,8 @@ import {
   getAiSpeakingAccess,
 } from "@/lib/ai-speaking-access";
 
-export const dynamic = "force-dynamic";
+export const dynamic =
+  "force-dynamic";
 
 export async function GET() {
   try {
