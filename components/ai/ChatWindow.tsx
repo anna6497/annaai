@@ -1936,584 +1936,388 @@ export default function ChatWindow() {
 
 
   return (
-    <main className="min-h-screen bg-[#12001f] px-4 py-4 text-white sm:px-6">
-      <section className="mx-auto max-w-3xl overflow-hidden rounded-[32px] border border-purple-500/40 bg-[#26053b] shadow-2xl">
-
-        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-purple-400/20 px-6 py-5">
-
+    <main className="min-h-screen bg-[#09030f] px-4 pb-28 pt-5 text-white sm:px-6">
+      <section className="mx-auto w-full max-w-2xl">
+        {/* Header */}
+        <header className="flex items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2">
-              <p className="text-xs font-bold tracking-[0.22em] text-purple-200">
-                ANNA AI
-              </p>
-
-              <span className="rounded-full border border-fuchsia-300/20 bg-fuchsia-400/10 px-2 py-1 text-[10px] font-black tracking-wider text-fuchsia-200">
-                V7 LIVE PREVIEW
-              </span>
-            </div>
-
-            <h1 className="mt-1 text-2xl font-bold">
-              {mode ===
-              "practice"
-                ? "Chinese Practice"
-                : "Sentence Builder"}
+            <h1 className="text-[25px] font-extrabold tracking-tight text-white">
+              AI Speaking
             </h1>
-
-            <p className="mt-1 text-xs text-white/35">
-              Memory:{" "}
-              {memoryCount} /{" "}
-              {MAX_MEMORY_MESSAGES}
-            </p>
-          </div>
-
-
-          <div className="flex flex-wrap gap-2 text-sm">
 
             <button
               type="button"
-              onClick={() =>
-                void refreshHealth()
-              }
-              className="rounded-full border border-purple-300/20 bg-white/5 px-4 py-2 transition hover:bg-white/10"
+              onClick={() => void refreshHealth()}
+              className="mt-1 inline-flex items-center gap-2 text-left"
             >
               <span
-                className={`mr-2 inline-block h-2 w-2 rounded-full ${
-                  status ===
-                  "connected"
+                className={`h-2 w-2 rounded-full ${
+                  status === "connected"
                     ? "bg-emerald-400"
-                    : status ===
-                        "checking"
+                    : status === "checking"
                       ? "animate-pulse bg-amber-300"
                       : "bg-red-400"
                 }`}
               />
 
-              {status ===
-              "connected"
-                ? "Connected"
-                : status ===
-                    "checking"
-                  ? "Checking"
-                  : "Offline"}
+              <span className="text-xs text-[#8e8098]">
+                {status === "connected"
+                  ? "Anna V7"
+                  : status === "checking"
+                    ? "Checking Anna V7..."
+                    : "Anna V7 Offline"}
+              </span>
             </button>
-
-
-            <button
-              type="button"
-              onClick={
-                handleSpeakerToggle
-              }
-              className="rounded-full border border-purple-300/20 bg-white/5 px-4 py-2 transition hover:bg-white/10"
-            >
-              {speakerEnabled
-                ? "🔊 Speaker"
-                : "🔇 Muted"}
-            </button>
-
-
-            <button
-              type="button"
-              disabled={
-                isRecording ||
-                isProcessing
-              }
-              onClick={
-                newConversation
-              }
-              className="rounded-full border border-purple-300/20 bg-white/5 px-4 py-2 transition hover:bg-white/10 disabled:opacity-40"
-            >
-              New
-            </button>
-
           </div>
+
+          <button
+            type="button"
+            onClick={newConversation}
+            disabled={isRecording || isProcessing}
+            className="inline-flex h-10 items-center gap-1.5 rounded-[13px] border border-[#432453] bg-[#251330] px-3.5 text-[13px] font-semibold text-white disabled:opacity-40"
+          >
+            <span className="text-lg leading-none">＋</span>
+            New
+          </button>
         </header>
 
-
-        <div className="space-y-5 p-6">
-
-          <div className="grid grid-cols-2 rounded-2xl border border-purple-400/25 bg-black/10 p-1">
-
-            <button
-              type="button"
-              disabled={
-                isRecording ||
-                isProcessing ||
-                conversationState ===
-                  "speaking"
-              }
-              onClick={() =>
-                switchMode(
-                  "practice",
-                )
-              }
-              className={`rounded-xl px-4 py-3 text-sm font-bold transition ${
-                mode ===
-                "practice"
-                  ? "bg-gradient-to-r from-fuchsia-600 to-purple-700 shadow-lg"
-                  : "text-purple-200 hover:bg-white/5"
-              } disabled:opacity-50`}
-            >
-              🎤 Chinese Practice
-            </button>
-
-
-            <button
-              type="button"
-              disabled={
-                isRecording ||
-                isProcessing ||
-                conversationState ===
-                  "speaking"
-              }
-              onClick={() =>
-                switchMode(
-                  "sentence_builder",
-                )
-              }
-              className={`rounded-xl px-4 py-3 text-sm font-bold transition ${
-                mode ===
-                "sentence_builder"
-                  ? "bg-gradient-to-r from-fuchsia-600 to-purple-700 shadow-lg"
-                  : "text-purple-200 hover:bg-white/5"
-              } disabled:opacity-50`}
-            >
-              ✍️ Sentence Builder
-            </button>
-
-          </div>
-
-
-          {mode ===
-          "sentence_builder" ? (
-
-            <form
-              onSubmit={
-                handleBuilderSubmit
-              }
-              className="space-y-3"
-            >
-
-              <label
-                htmlFor="builder-input"
-                className="block text-xs font-bold tracking-[0.18em] text-purple-200"
-              >
-                မြန်မာ → တရုတ်
-              </label>
-
-
-              <textarea
-                id="builder-input"
-                value={
-                  builderInput
-                }
-                onChange={(
-                  event,
-                ) =>
-                  setBuilderInput(
-                    event.target
-                      .value,
-                  )
-                }
-                placeholder="ဥပမာ — မနက်ဖြန် ကျွန်မ အလုပ်သွားမယ်။"
-                rows={4}
-                disabled={
-                  isProcessing
-                }
-                className="w-full resize-none rounded-[24px] border border-purple-400/40 bg-purple-950/40 px-5 py-4 text-base leading-7 text-white outline-none placeholder:text-purple-300/55 focus:border-fuchsia-400 disabled:opacity-60"
-              />
-
-
-              <button
-                type="submit"
-                disabled={
-                  isProcessing ||
-                  status !==
-                    "connected"
-                }
-                className="w-full rounded-2xl bg-gradient-to-r from-fuchsia-600 to-purple-700 px-5 py-4 font-bold shadow-lg transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {isProcessing
-                  ? "Chinese sentence ဖွဲ့နေပါတယ်..."
-                  : "တရုတ်စာကြောင်း ဖွဲ့မယ်"}
-              </button>
-
-            </form>
-
-          ) : (
-
-            <section className="min-h-28 rounded-[28px] border border-purple-400/40 bg-purple-900/30">
-
-              <div className="flex items-center justify-between border-b border-purple-400/20 px-5 py-3">
-
-                <span className="text-xs font-bold tracking-[0.2em] text-purple-200">
-                  YOU SAID
-                </span>
-
-
-                {conversationState ===
-                "listening" ? (
-
-                  <span className="flex items-center gap-2 text-xs font-bold text-red-200">
-
-                    <span className="h-2 w-2 animate-pulse rounded-full bg-red-400" />
-
-                    LISTENING
-
-                  </span>
-
-                ) : null}
-
-              </div>
-
-
-              <div className="px-5 py-6 text-2xl font-bold leading-relaxed">
-                {transcript ||
-                  (
-                    conversationState ===
-                    "listening"
-                      ? "正在听你说话..."
-                      : "စကားပြောပြီးရင် ဒီနေရာမှာ ပေါ်လာပါမယ်။"
-                  )}
-              </div>
-
-            </section>
-
-          )}
-
-
-          {mode ===
-            "sentence_builder" &&
-          transcript ? (
-
-            <section className="rounded-[24px] border border-purple-400/25 bg-purple-900/20">
-
-              <div className="border-b border-purple-400/15 px-5 py-3 text-xs font-bold tracking-[0.18em] text-purple-200">
-                မူရင်းမြန်မာစာ
-              </div>
-
-              <div className="px-5 py-4 text-base leading-7">
-                {transcript}
-              </div>
-
-            </section>
-
-          ) : null}
-
-
-          {showCorrection &&
-          correction ? (
-
-            <section className="overflow-hidden rounded-[26px] border border-emerald-400/35 bg-emerald-500/[0.08]">
-
-              <div className="flex items-center justify-between gap-4 border-b border-emerald-400/20 px-5 py-4">
-
-                <div>
-                  <p className="text-xs font-black tracking-[0.18em] text-emerald-200">
-                    ✨ MORE NATURAL
-                  </p>
-
-                  <p className="mt-1 text-xs text-emerald-100/60">
-                    ဒီလိုပြောရင် ပိုသဘာဝကျပါတယ်
-                  </p>
-                </div>
-
-
-                <button
-                  type="button"
-                  disabled={
-                    isRecording ||
-                    isProcessing
-                  }
-                  onClick={
-                    handleCorrectionReplay
-                  }
-                  className="rounded-full border border-emerald-300/30 bg-emerald-300/10 p-3 text-xl disabled:opacity-40"
-                >
-                  🔊
-                </button>
-
-              </div>
-
-
-              {correction.original ? (
-
-                <div className="border-b border-emerald-400/15 px-5 py-4">
-
-                  <p className="text-[11px] font-bold tracking-[0.16em] text-emerald-200/60">
-                    YOU SAID
-                  </p>
-
-                  <p className="mt-2 text-lg text-white/50 line-through decoration-red-400/70">
-                    {correction.original}
-                  </p>
-
-                </div>
-
-              ) : null}
-
-
-              <div className="border-b border-emerald-400/15 px-5 py-5">
-
-                <p className="text-[11px] font-bold tracking-[0.16em] text-emerald-200">
-                  更自然的说法
-                </p>
-
-                <p className="mt-3 text-2xl font-bold leading-relaxed text-emerald-50">
-                  {correction.corrected}
-                </p>
-
-              </div>
-
-
-              {correction.pinyin ? (
-
-                <div className="px-5 py-4">
-
-                  <p className="text-[11px] font-bold tracking-[0.16em] text-emerald-200/70">
-                    拼音 · PINYIN
-                  </p>
-
-                  <p className="mt-2 text-base font-semibold leading-relaxed text-emerald-50/90">
-                    {correction.pinyin}
-                  </p>
-
-                </div>
-
-              ) : null}
-
-            </section>
-
-          ) : null}
-
-
-          <section
-            className={`overflow-hidden rounded-[28px] border bg-[#180128] transition ${
-              conversationState ===
-              "speaking"
-                ? "border-fuchsia-400/50 shadow-[0_0_35px_rgba(217,70,239,0.16)]"
-                : conversationState ===
-                    "streaming"
-                  ? "border-violet-400/50"
-                  : "border-purple-400/20"
+        {/* Anna avatar / status */}
+        <section className="mt-8 flex flex-col items-center">
+          <div
+            className={`flex h-28 w-28 items-center justify-center rounded-full border-2 transition-all ${
+              conversationState === "listening"
+                ? "border-rose-500 bg-rose-500/10 shadow-[0_0_40px_rgba(244,63,94,0.25)]"
+                : conversationState === "speaking"
+                  ? "border-fuchsia-500 bg-fuchsia-500/10 shadow-[0_0_45px_rgba(217,70,239,0.30)]"
+                  : "border-transparent bg-purple-500/10"
             }`}
           >
+            <div className="h-[84px] w-[84px] overflow-hidden rounded-full bg-[#a855f7]">
+              <img
+                src="/images/anna-avatar.png"
+                alt="Anna"
+                className="h-full w-full object-cover"
+              />
+            </div>
+          </div>
 
-            <div className="flex items-center justify-between border-b border-purple-400/20 px-5 py-4">
+          <h2 className="mt-3 text-xl font-bold text-white">
+            Anna
+          </h2>
 
+          <p className="mt-1 text-center text-[13px] text-[#8f8099]">
+            {statusText}
+          </p>
+
+          <p className="mt-1 text-[10px] text-[#65586e]">
+            Memory: {memoryCount} / {MAX_MEMORY_MESSAGES}
+          </p>
+        </section>
+
+        {/* Keep Sentence Builder available without changing V7 speaking logic */}
+        <div className="mt-5 grid grid-cols-2 rounded-2xl border border-[#2f1b3a] bg-[#12091c] p-1">
+          <button
+            type="button"
+            disabled={
+              isRecording ||
+              isProcessing ||
+              conversationState === "speaking"
+            }
+            onClick={() => switchMode("practice")}
+            className={`rounded-xl px-3 py-2.5 text-xs font-bold transition ${
+              mode === "practice"
+                ? "bg-[#281237] text-fuchsia-200"
+                : "text-[#796b82]"
+            } disabled:opacity-40`}
+          >
+            🎤 Speaking
+          </button>
+
+          <button
+            type="button"
+            disabled={
+              isRecording ||
+              isProcessing ||
+              conversationState === "speaking"
+            }
+            onClick={() => switchMode("sentence_builder")}
+            className={`rounded-xl px-3 py-2.5 text-xs font-bold transition ${
+              mode === "sentence_builder"
+                ? "bg-[#281237] text-fuchsia-200"
+                : "text-[#796b82]"
+            } disabled:opacity-40`}
+          >
+            ✍️ Sentence Builder
+          </button>
+        </div>
+
+        {mode === "sentence_builder" ? (
+          <form
+            onSubmit={handleBuilderSubmit}
+            className="mt-4 rounded-[20px] border border-[#2f1b3a] bg-[#130a1b] p-4"
+          >
+            <label
+              htmlFor="builder-input"
+              className="text-[10px] font-black tracking-[0.14em] text-fuchsia-300"
+            >
+              MYANMAR → CHINESE
+            </label>
+
+            <textarea
+              id="builder-input"
+              value={builderInput}
+              onChange={(event) => setBuilderInput(event.target.value)}
+              placeholder="ဥပမာ — မနက်ဖြန် ကျွန်မ အလုပ်သွားမယ်။"
+              rows={4}
+              disabled={isProcessing}
+              className="mt-3 w-full resize-none rounded-2xl border border-[#432453] bg-[#0d0612] px-4 py-3 text-sm leading-6 text-white outline-none placeholder:text-[#6e6077] focus:border-fuchsia-500 disabled:opacity-50"
+            />
+
+            <button
+              type="submit"
+              disabled={isProcessing || status !== "connected"}
+              className="mt-3 h-12 w-full rounded-2xl bg-fuchsia-600 px-4 text-sm font-black text-white disabled:opacity-40"
+            >
+              {isProcessing
+                ? "Chinese sentence ဖွဲ့နေပါတယ်..."
+                : "တရုတ်စာကြောင်း ဖွဲ့မယ်"}
+            </button>
+          </form>
+        ) : null}
+
+        {/* User transcript */}
+        {mode === "practice" && (transcript || conversationState === "listening") ? (
+          <section className="mt-4 rounded-[18px] border border-[#47235a] bg-[#251034] p-[17px]">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-[11px] font-extrabold tracking-[0.14em] text-[#d8b4fe]">
+                YOU SAID
+              </p>
+
+              {conversationState === "listening" ? (
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-rose-200">
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-rose-400" />
+                  LISTENING
+                </span>
+              ) : null}
+            </div>
+
+            <p className="mt-3 text-[19px] font-semibold leading-7 text-white">
+              {transcript ||
+                (conversationState === "listening"
+                  ? "正在听你说话..."
+                  : "")}
+            </p>
+          </section>
+        ) : null}
+
+        {mode === "sentence_builder" && transcript ? (
+          <section className="mt-4 rounded-[18px] border border-[#47235a] bg-[#251034] p-[17px]">
+            <p className="text-[11px] font-extrabold tracking-[0.14em] text-[#d8b4fe]">
+              မူရင်းမြန်မာစာ
+            </p>
+
+            <p className="mt-3 text-base leading-7 text-white">
+              {transcript}
+            </p>
+          </section>
+        ) : null}
+
+        {/* More Natural correction + slow TTS */}
+        {showCorrection && correction ? (
+          <section className="mt-4 rounded-[18px] border border-emerald-400/35 bg-emerald-500/[0.08] p-[17px]">
+            <div className="flex items-center justify-between gap-3">
               <div>
-
-                <p className="text-xs font-bold tracking-[0.2em] text-purple-200">
-                  {mode ===
-                  "practice"
-                    ? "ANNA REPLY"
-                    : "CHINESE SENTENCE"}
+                <p className="text-xs font-black tracking-[0.14em] text-emerald-300">
+                  ✨ MORE NATURAL
                 </p>
 
-                <p className="mt-1 text-sm font-semibold">
-                  中文 · 拼音
+                <p className="mt-1 text-[10px] text-emerald-200/60">
+                  ဒီလိုပြောရင် ပိုသဘာဝကျပါတယ်
                 </p>
-
               </div>
-
 
               <button
                 type="button"
-                disabled={
-                  !reply?.hanzi ||
-                  isRecording ||
-                  isProcessing
-                }
-                onClick={
-                  handleReplyReplay
-                }
-                className="rounded-full border border-purple-300/20 bg-white/5 p-3 text-xl disabled:opacity-40"
+                onClick={handleCorrectionReplay}
+                disabled={isRecording || isProcessing}
+                aria-label="Listen to corrected sentence"
+                className="grid h-[38px] w-[38px] place-items-center rounded-full bg-emerald-400/10 text-lg text-emerald-100 disabled:opacity-40"
               >
                 🔊
               </button>
-
             </div>
 
-
-            {conversationState ===
-            "processing" ? (
-
-              <div className="border-b border-purple-400/20 px-5 py-4 text-violet-200">
-                Anna is understanding...
-              </div>
-
-            ) : null}
-
-
-            {conversationState ===
-            "streaming" ? (
-
-              <div className="border-b border-violet-400/20 bg-violet-400/[0.05] px-5 py-3 text-sm text-violet-200">
-
-                <span className="mr-2 inline-block h-2 w-2 animate-pulse rounded-full bg-violet-400" />
-
-                Anna is replying live...
-
-              </div>
-
-            ) : null}
-
-
-            {conversationState ===
-            "speaking" ? (
-
-              <div className="border-b border-fuchsia-400/20 bg-fuchsia-400/[0.05] px-5 py-3 text-sm text-fuchsia-200">
-
-                <span className="mr-2 inline-block h-2 w-2 animate-pulse rounded-full bg-fuchsia-400" />
-
-                Anna is speaking...
-
-              </div>
-
-            ) : null}
-
-
-            <div className="min-h-32 border-b border-purple-400/20 px-5 py-5">
-
-              <p className="text-xs font-bold tracking-[0.16em] text-purple-300">
-                中文 · HANZI
-              </p>
-
-
-              <p className="mt-4 whitespace-pre-wrap text-2xl font-bold leading-relaxed">
-
-                {reply?.hanzi ||
-                  (
-                    conversationState ===
-                      "streaming" ||
-                    conversationState ===
-                      "processing"
-                      ? ""
-                      : mode ===
-                          "practice"
-                        ? "Anna 的回复会显示在这里。"
-                        : "Chinese sentence will appear here."
-                  )}
-
-
-                {(
-                  conversationState ===
-                    "streaming" ||
-                  conversationState ===
-                    "speaking"
-                ) ? (
-
-                  <span className="ml-1 animate-pulse text-fuchsia-300">
-                    ▌
-                  </span>
-
-                ) : null}
-
-              </p>
-
-            </div>
-
-
-            <div className="px-5 py-5">
-
-              <p className="text-xs font-bold tracking-[0.16em] text-purple-300">
-                拼音 · PINYIN
-              </p>
-
-
-              <p className="mt-4 whitespace-pre-wrap text-lg font-semibold leading-relaxed">
-
-                {reply?.pinyin ||
-                  (
-                    conversationState ===
-                      "streaming" ||
-                    conversationState ===
-                      "speaking" ||
-                    conversationState ===
-                      "processing"
-                      ? "Hanzi ပြီးရင် Pinyin ပေါ်လာပါမယ်..."
-                      : "Pinyin will appear here."
-                  )}
-
-              </p>
-
-            </div>
-
-          </section>
-
-
-          {error ? (
-
-            <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-4 text-sm text-red-100">
-              ⚠️ {error}
-            </div>
-
-          ) : null}
-
-
-          {mode ===
-          "practice" ? (
-
-            <div className="flex flex-col items-center border-t border-purple-300/20 pt-7">
-
-              <div className="relative">
-
-                {conversationState ===
-                "listening" ? (
-
-                  <span className="absolute inset-[-12px] animate-ping rounded-full border border-red-300/30" />
-
-                ) : null}
-
-
-                <button
-                  type="button"
-                  onClick={
-                    isRecording
-                      ? stopRecording
-                      : () =>
-                          void startRecording()
-                  }
-                  disabled={
-                    isProcessing ||
-                    status !==
-                      "connected" ||
-                    conversationState ===
-                      "speaking"
-                  }
-                  className={`relative grid h-32 w-32 place-items-center rounded-full border-[3px] text-5xl shadow-[0_0_35px_rgba(192,38,255,0.45)] transition active:scale-95 ${
-                    isRecording
-                      ? "border-red-200 bg-red-500"
-                      : "border-purple-200 bg-gradient-to-b from-fuchsia-500 to-purple-700"
-                  } disabled:opacity-50`}
-                >
-                  {isRecording
-                    ? "■"
-                    : "🎤"}
-                </button>
-
-              </div>
-
-
-              <p className="mt-5 text-sm font-medium text-purple-100">
-                {statusText}
-              </p>
-
-
-              {conversationState ===
-              "listening" ? (
-
-                <p className="mt-2 text-xs text-white/40">
-                  Tap again when you finish speaking.
+            {correction.original ? (
+              <div className="mt-4">
+                <p className="text-[10px] font-bold tracking-[0.12em] text-emerald-300/70">
+                  YOU SAID
                 </p>
 
-              ) : null}
+                <p className="mt-1.5 text-base text-[#9b8ca4] line-through decoration-rose-400/70">
+                  {correction.original}
+                </p>
+              </div>
+            ) : null}
 
+            <div className="mt-4">
+              <p className="text-[10px] font-bold tracking-[0.12em] text-emerald-300">
+                更自然的说法
+              </p>
+
+              <p className="mt-2 text-xl font-bold leading-7 text-emerald-50">
+                {correction.corrected}
+              </p>
             </div>
 
+            {correction.pinyin ? (
+              <p className="mt-2 text-[13px] leading-5 text-emerald-200/85">
+                {correction.pinyin}
+              </p>
+            ) : null}
+          </section>
+        ) : null}
+
+        {/* Anna reply */}
+        <section
+          className={`mt-4 rounded-[20px] border bg-[#130a1b] p-[18px] transition ${
+            conversationState === "speaking"
+              ? "border-fuchsia-500/45 shadow-[0_0_35px_rgba(217,70,239,0.12)]"
+              : conversationState === "streaming"
+                ? "border-violet-500/45"
+                : "border-[#2f1b3a]"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-extrabold tracking-[0.14em] text-[#d8b4fe]">
+              {mode === "practice" ? "ANNA REPLY" : "CHINESE SENTENCE"}
+            </p>
+
+            <button
+              type="button"
+              onClick={handleReplyReplay}
+              disabled={!reply?.hanzi || isRecording || isProcessing}
+              aria-label="Replay Anna reply"
+              className="grid h-[38px] w-[38px] place-items-center rounded-full bg-[#261432] text-lg disabled:opacity-35"
+            >
+              🔊
+            </button>
+          </div>
+
+          {conversationState === "processing" ? (
+            <div className="mt-4 flex items-center gap-2 text-[13px] text-[#b89bc6]">
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/15 border-t-fuchsia-400" />
+              Anna is understanding...
+            </div>
           ) : null}
 
-        </div>
+          <p className="mt-4 text-[11px] font-bold tracking-[0.12em] text-[#c084fc]">
+            中文 · HANZI
+          </p>
 
+          <p className="mt-2 whitespace-pre-wrap text-[21px] font-bold leading-8 text-white">
+            {reply?.hanzi ||
+              (conversationState === "processing" ||
+              conversationState === "streaming"
+                ? ""
+                : mode === "practice"
+                  ? "你好！今天想聊什么？"
+                  : "Chinese sentence will appear here.")}
+
+            {conversationState === "streaming" ||
+            conversationState === "speaking" ? (
+              <span className="ml-1 animate-pulse text-fuchsia-300">
+                ▌
+              </span>
+            ) : null}
+          </p>
+
+          <div className="my-[18px] h-px bg-[#2f1b3a]" />
+
+          <p className="text-[11px] font-bold tracking-[0.12em] text-[#c084fc]">
+            拼音 · PINYIN
+          </p>
+
+          <p className="mt-2 whitespace-pre-wrap text-sm leading-[22px] text-[#c1afcc]">
+            {reply?.pinyin ||
+              (conversationState === "processing" ||
+              conversationState === "streaming" ||
+              conversationState === "speaking"
+                ? "Hanzi ပြီးရင် Pinyin ပေါ်လာပါမယ်..."
+                : mode === "practice"
+                  ? "Nǐ hǎo! Jīntiān xiǎng liáo shénme?"
+                  : "")}
+          </p>
+        </section>
+
+        {error ? (
+          <div className="mt-4 rounded-[14px] border border-red-500/30 bg-red-500/10 p-3 text-[13px] text-red-200">
+            ⚠️ {error}
+          </div>
+        ) : null}
+
+        {/* Mobile-style speaking controls */}
+        {mode === "practice" ? (
+          <>
+            <div className="mt-7 flex items-center justify-center gap-6">
+              <button
+                type="button"
+                onClick={handleSpeakerToggle}
+                aria-label={speakerEnabled ? "Mute speaker" : "Enable speaker"}
+                className={`grid h-[52px] w-[52px] place-items-center rounded-full border border-[#382342] bg-[#21132a] text-[22px] ${
+                  speakerEnabled ? "" : "opacity-45"
+                }`}
+              >
+                {speakerEnabled ? "🔊" : "🔇"}
+              </button>
+
+              <button
+                type="button"
+                onClick={
+                  isRecording
+                    ? stopRecording
+                    : () => void startRecording()
+                }
+                disabled={
+                  !isRecording &&
+                  (isProcessing ||
+                    status !== "connected" ||
+                    conversationState === "streaming" ||
+                    conversationState === "speaking")
+                }
+                aria-label={isRecording ? "Stop recording" : "Start recording"}
+                className={`grid h-[78px] w-[78px] place-items-center rounded-full text-[34px] text-white shadow-[0_0_30px_rgba(168,85,247,0.28)] transition active:scale-95 ${
+                  isRecording
+                    ? "bg-red-500"
+                    : "bg-[#a855f7]"
+                } disabled:opacity-50`}
+              >
+                {isProcessing ? (
+                  <span className="h-7 w-7 animate-spin rounded-full border-3 border-white/30 border-t-white" />
+                ) : isRecording ? (
+                  "■"
+                ) : (
+                  "🎤"
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={newConversation}
+                disabled={isRecording || isProcessing}
+                aria-label="New conversation"
+                className="grid h-[52px] w-[52px] place-items-center rounded-full border border-[#382342] bg-[#21132a] text-[22px] disabled:opacity-40"
+              >
+                ↻
+              </button>
+            </div>
+
+            <p className="mt-3 text-center text-[11px] text-[#786a81]">
+              {isRecording
+                ? "Tap again when you finish speaking"
+                : "Tap the microphone and speak Mandarin"}
+            </p>
+          </>
+        ) : null}
       </section>
     </main>
   );

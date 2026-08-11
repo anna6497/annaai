@@ -18,7 +18,6 @@ const NAV_ITEMS: NavItem[] = [
     matches: (pathname) =>
       pathname === "/app-home",
   },
-
   {
     label: "HSK",
     href: "/hsk",
@@ -26,15 +25,16 @@ const NAV_ITEMS: NavItem[] = [
     matches: (pathname) =>
       pathname.startsWith("/hsk"),
   },
-
   {
     label: "Speaking",
     href: "/dashboard/ai/talk",
     icon: "●",
     matches: (pathname) =>
-      pathname === "/dashboard/ai/talk",
+      pathname === "/dashboard/ai/talk" ||
+      pathname.startsWith(
+        "/dashboard/ai/sentence-builder",
+      ),
   },
-
   {
     label: "Laoshi",
     href: "/dashboard/ai/laoshi",
@@ -53,13 +53,15 @@ const NAV_ITEMS: NavItem[] = [
         "/dashboard/ai/grammar",
       ),
   },
-
   {
     label: "Account",
     href: "/dashboard",
     icon: "人",
     matches: (pathname) =>
-    pathname === "/dashboard",
+      pathname === "/dashboard" ||
+      pathname.startsWith(
+        "/dashboard/payments",
+      ),
   },
 ];
 
@@ -70,12 +72,7 @@ function shouldShowNavigation(
     pathname === "/" ||
     pathname === "/login" ||
     pathname === "/register" ||
-    pathname === "/maintenance"
-  ) {
-    return false;
-  }
-
-  if (
+    pathname === "/maintenance" ||
     pathname.startsWith("/admin")
   ) {
     return false;
@@ -89,25 +86,18 @@ function shouldShowNavigation(
 }
 
 export default function PwaBottomNav() {
-  const pathname =
-    usePathname();
+  const pathname = usePathname();
 
-  if (
-    !shouldShowNavigation(
-      pathname,
-    )
-  ) {
+  if (!shouldShowNavigation(pathname)) {
     return null;
   }
 
   return (
     <>
+      {/* Prevent page content from hiding behind nav */}
       <div
         aria-hidden="true"
-        className="
-          h-[84px]
-          md:hidden
-        "
+        className="h-[92px]"
       />
 
       <nav
@@ -120,85 +110,67 @@ export default function PwaBottomNav() {
           border-t
           border-[#2b1838]
           bg-[#12091c]/95
-          pb-[max(9px,env(safe-area-inset-bottom))]
           pt-2
           backdrop-blur-xl
-          md:hidden
+          pb-[max(10px,env(safe-area-inset-bottom))]
         "
       >
         <div
           className="
             mx-auto
             grid
+            w-full
             max-w-lg
             grid-cols-5
             px-2
           "
         >
-          {NAV_ITEMS.map(
-            (item) => {
-              const active =
-                item.matches(
-                  pathname,
-                );
+          {NAV_ITEMS.map((item) => {
+            const active =
+              item.matches(pathname);
 
-              return (
-                <Link
-                  key={
-                    item.label
-                  }
-                  href={
-                    item.href
-                  }
-                  className="
-                    flex
-                    min-h-[58px]
-                    flex-col
-                    items-center
-                    justify-center
-                    gap-1
-                    rounded-xl
-                    px-1
-                    text-center
-                    transition
-                    active:scale-95
-                  "
+            return (
+              <Link
+                key={item.label}
+                href={item.href}
+                className="
+                  flex
+                  min-h-[58px]
+                  flex-col
+                  items-center
+                  justify-center
+                  gap-1
+                  rounded-xl
+                  px-1
+                  text-center
+                  transition
+                  active:scale-95
+                "
+              >
+                <span
+                  className={[
+                    "flex h-7 w-7 items-center justify-center rounded-lg text-[18px] font-black transition",
+                    active
+                      ? "bg-fuchsia-500/15 text-fuchsia-400"
+                      : "text-[#796b82]",
+                  ].join(" ")}
                 >
-                  <span
-                    className={[
-                      "flex h-7 w-7 items-center justify-center rounded-lg text-[18px] font-black transition",
+                  {item.icon}
+                </span>
 
-                      active
-                        ? "bg-fuchsia-500/15 text-fuchsia-400"
-                        : "text-[#796b82]",
-                    ].join(
-                      " ",
-                    )}
-                  >
-                    {
-                      item.icon
-                    }
-                  </span>
-
-                  <span
-                    className={[
-                      "text-[10px] font-semibold transition",
-
-                      active
-                        ? "text-fuchsia-400"
-                        : "text-[#796b82]",
-                    ].join(
-                      " ",
-                    )}
-                  >
-                    {
-                      item.label
-                    }
-                  </span>
-                </Link>
-              );
-            },
-          )}
+                <span
+                  className={[
+                    "text-[10px] font-semibold transition",
+                    active
+                      ? "text-fuchsia-400"
+                      : "text-[#796b82]",
+                  ].join(" ")}
+                >
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
         </div>
       </nav>
     </>

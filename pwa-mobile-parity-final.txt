@@ -1,0 +1,7102 @@
+
+
+
+==============================
+FILE: C:\Users\HMT\anna-ai\components\ai\ChatWindow.tsx
+==============================
+
+"use client";
+
+import {
+  FormEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+
+import {
+  checkVoiceServer,
+  sendAudio,
+  sendTextMessage,
+  streamVoiceAudio,
+} from "@/lib/ai/api";
+
+import {
+  MAX_RECORDING_SECONDS,
+} from "@/lib/ai/constants";
+
+import {
+  clearSpeechQueue,
+  queueChineseSentence,
+  speakChinese,
+  stopSpeaking,
+} from "@/lib/ai/speech";
+
+import type {
+  AiPracticeMode,
+  AnnaCorrection,
+  AnnaReply,
+  ConversationHistoryMessage,
+} from "@/types/ai";
+
+
+type Status =
+  | "checking"
+  | "connected"
+  | "offline";
+
+
+type ConversationState =
+  | "ready"
+  | "listening"
+  | "processing"
+  | "streaming"
+  | "speaking"
+  | "error";
+
+
+const MEMORY_STORAGE_KEY =
+  "anna-ai-conversation-memory-v1";
+
+const MAX_MEMORY_MESSAGES =
+  40;
+
+
+/**
+ * Hanzi typing speed.
+ *
+ * 45ms = about 22 characters / second.
+ *
+ * Change this later if you want
+ * Anna typing slower/faster.
+ */
+const HANZI_CHARACTER_DELAY_MS =
+  45;
+
+
+const EMPTY_CORRECTION:
+  AnnaCorrection = {
+    needed: false,
+    original: "",
+    corrected: "",
+    pinyin: "",
+  };
+
+
+function loadSavedMemory():
+  ConversationHistoryMessage[] {
+  if (
+    typeof window ===
+    "undefined"
+  ) {
+    return [];
+  }
+
+  try {
+    const raw =
+      window.localStorage
+        .getItem(
+          MEMORY_STORAGE_KEY,
+        );
+
+    if (!raw) {
+      return [];
+    }
+
+    const parsed: unknown =
+      JSON.parse(
+        raw,
+      );
+
+    if (
+      !Array.isArray(
+        parsed,
+      )
+    ) {
+      return [];
+    }
+
+    return parsed
+      .filter(
+        (
+          item,
+        ): item is ConversationHistoryMessage =>
+          typeof item ===
+            "object" &&
+          item !== null &&
+          "role" in item &&
+          "content" in item &&
+          (
+            (
+              item as
+                ConversationHistoryMessage
+            ).role ===
+              "user" ||
+            (
+              item as
+                ConversationHistoryMessage
+            ).role ===
+              "assistant"
+          ) &&
+          typeof (
+            item as
+              ConversationHistoryMessage
+          ).content ===
+            "string" &&
+          (
+            item as
+              ConversationHistoryMessage
+          ).content
+            .trim()
+            .length > 0,
+      )
+      .slice(
+        -MAX_MEMORY_MESSAGES,
+      );
+  } catch (
+    error
+  ) {
+    console.error(
+      "Unable to load conversation memory:",
+      error,
+    );
+
+    return [];
+  }
+}
+
+
+function saveMemory(
+  messages:
+    ConversationHistoryMessage[],
+): void {
+  if (
+    typeof window ===
+    "undefined"
+  ) {
+    return;
+  }
+
+  try {
+    window.localStorage
+      .setItem(
+        MEMORY_STORAGE_KEY,
+
+        JSON.stringify(
+          messages.slice(
+            -MAX_MEMORY_MESSAGES,
+          ),
+        ),
+      );
+  } catch (
+    error
+  ) {
+    console.error(
+      "Unable to save conversation memory:",
+      error,
+    );
+  }
+}
+
+
+function clearSavedMemory(): void {
+  if (
+    typeof window ===
+    "undefined"
+  ) {
+    return;
+  }
+
+  try {
+    window.localStorage
+      .removeItem(
+        MEMORY_STORAGE_KEY,
+      );
+  } catch (
+    error
+  ) {
+    console.error(
+      "Unable to clear conversation memory:",
+      error,
+    );
+  }
+}
+
+
+function getConversationStatusText(
+  conversationState:
+    ConversationState,
+  seconds: number,
+): string {
+  switch (
+    conversationState
+  ) {
+    case "listening":
+      return (
+        `Listening... ${seconds}s / ` +
+        `${MAX_RECORDING_SECONDS}s`
+      );
+
+    case "processing":
+      return "Anna is understanding...";
+
+    case "streaming":
+      return "Anna is replying live...";
+
+    case "speaking":
+      return "Anna is speaking...";
+
+    case "error":
+      return "Something went wrong. Please try again.";
+
+    case "ready":
+    default:
+      return "Your turn — tap the microphone";
+  }
+}
+
+
+export default function ChatWindow() {
+  const [
+    mode,
+    setMode,
+  ] =
+    useState<AiPracticeMode>(
+      "practice",
+    );
+
+  const [
+    status,
+    setStatus,
+  ] =
+    useState<Status>(
+      "checking",
+    );
+
+  const [
+    conversationState,
+    setConversationState,
+  ] =
+    useState<ConversationState>(
+      "ready",
+    );
+
+  const [
+    isRecording,
+    setIsRecording,
+  ] =
+    useState(
+      false,
+    );
+
+  const [
+    isProcessing,
+    setIsProcessing,
+  ] =
+    useState(
+      false,
+    );
+
+  const [
+    speakerEnabled,
+    setSpeakerEnabled,
+  ] =
+    useState(
+      true,
+    );
+
+  const [
+    transcript,
+    setTranscript,
+  ] =
+    useState("");
+
+  const [
+    builderInput,
+    setBuilderInput,
+  ] =
+    useState("");
+
+  const [
+    reply,
+    setReply,
+  ] =
+    useState<
+      AnnaReply | null
+    >(null);
+
+  const [
+    error,
+    setError,
+  ] =
+    useState("");
+
+  const [
+    seconds,
+    setSeconds,
+  ] =
+    useState(0);
+
+  const [
+    memoryCount,
+    setMemoryCount,
+  ] =
+    useState(0);
+
+
+  const mediaRecorderRef =
+    useRef<
+      MediaRecorder | null
+    >(null);
+
+  const microphoneStreamRef =
+    useRef<
+      MediaStream | null
+    >(null);
+
+  const audioChunksRef =
+    useRef<
+      Blob[]
+    >([]);
+
+  const recordingTimerRef =
+    useRef<
+      number | null
+    >(null);
+
+  const historyRef =
+    useRef<
+      ConversationHistoryMessage[]
+    >([]);
+
+
+  /**
+   * Live Hanzi typing refs.
+   */
+  const hanziQueueRef =
+    useRef<
+      string[]
+    >([]);
+
+  const hanziTimerRef =
+    useRef<
+      number | null
+    >(null);
+
+  const displayedHanziRef =
+    useRef("");
+
+  const finalHanziRef =
+    useRef("");
+
+  const pendingPinyinRef =
+    useRef("");
+
+  const streamDoneRef =
+    useRef(
+      false,
+    );
+
+
+  const refreshHealth =
+    useCallback(
+      async () => {
+        setStatus(
+          "checking",
+        );
+
+        const online =
+          await checkVoiceServer();
+
+        setStatus(
+          online
+            ? "connected"
+            : "offline",
+        );
+      },
+      [],
+    );
+
+
+  const stopRecordingTimer =
+    useCallback(
+      () => {
+        if (
+          recordingTimerRef
+            .current !==
+          null
+        ) {
+          window.clearInterval(
+            recordingTimerRef
+              .current,
+          );
+
+          recordingTimerRef
+            .current =
+            null;
+        }
+      },
+      [],
+    );
+
+
+  const stopMicrophoneStream =
+    useCallback(
+      () => {
+        microphoneStreamRef
+          .current
+          ?.getTracks()
+          .forEach(
+            (
+              track,
+            ) => {
+              track.stop();
+            },
+          );
+
+        microphoneStreamRef
+          .current =
+          null;
+      },
+      [],
+    );
+
+
+  const stopHanziTyping =
+    useCallback(
+      () => {
+        if (
+          hanziTimerRef.current !==
+          null
+        ) {
+          window.clearInterval(
+            hanziTimerRef.current,
+          );
+
+          hanziTimerRef.current =
+            null;
+        }
+
+        hanziQueueRef.current =
+          [];
+      },
+      [],
+    );
+
+
+  /**
+   * Character-by-character Hanzi renderer.
+   *
+   * Backend may send 1, 3, or even
+   * 20 characters in one token.
+   *
+   * We split every token into characters
+   * and display only one per timer tick.
+   */
+  const startHanziTyping =
+    useCallback(
+      () => {
+        if (
+          hanziTimerRef.current !==
+          null
+        ) {
+          return;
+        }
+
+        hanziTimerRef.current =
+          window.setInterval(
+            () => {
+              const nextCharacter =
+                hanziQueueRef
+                  .current
+                  .shift();
+
+              if (
+                nextCharacter !==
+                undefined
+              ) {
+                displayedHanziRef
+                  .current +=
+                  nextCharacter;
+
+                setReply(
+                  (
+                    current,
+                  ) => ({
+                    hanzi:
+                      displayedHanziRef
+                        .current,
+
+                    pinyin:
+                      current
+                        ?.pinyin ??
+                      "",
+
+                    correction:
+                      current
+                        ?.correction ??
+                      EMPTY_CORRECTION,
+                  }),
+                );
+
+                return;
+              }
+
+              /**
+               * Queue is empty.
+               *
+               * If backend has finished,
+               * make sure no final character
+               * was missed.
+               */
+              if (
+                streamDoneRef.current &&
+                finalHanziRef.current
+              ) {
+                const displayed =
+                  displayedHanziRef
+                    .current;
+
+                const finalText =
+                  finalHanziRef
+                    .current;
+
+                if (
+                  finalText.startsWith(
+                    displayed,
+                  ) &&
+                  finalText.length >
+                    displayed.length
+                ) {
+                  const missingText =
+                    finalText.slice(
+                      displayed.length,
+                    );
+
+                  hanziQueueRef
+                    .current
+                    .push(
+                      ...Array.from(
+                        missingText,
+                      ),
+                    );
+
+                  return;
+                }
+
+                if (
+                  displayed !==
+                  finalText &&
+                  !finalText.startsWith(
+                    displayed,
+                  )
+                ) {
+                  displayedHanziRef
+                    .current =
+                    finalText;
+                }
+              }
+
+              if (
+                hanziTimerRef.current !==
+                null
+              ) {
+                window.clearInterval(
+                  hanziTimerRef
+                    .current,
+                );
+
+                hanziTimerRef
+                  .current =
+                  null;
+              }
+
+              /**
+               * Pinyin appears only
+               * AFTER Hanzi typing finishes.
+               */
+              if (
+                streamDoneRef.current
+              ) {
+                setReply(
+                  (
+                    current,
+                  ) => ({
+                    hanzi:
+                      displayedHanziRef
+                        .current ||
+                      finalHanziRef
+                        .current,
+
+                    pinyin:
+                      pendingPinyinRef
+                        .current,
+
+                    correction:
+                      current
+                        ?.correction ??
+                      EMPTY_CORRECTION,
+                  }),
+                );
+
+                if (
+                  !speakerEnabled
+                ) {
+                  setConversationState(
+                    "ready",
+                  );
+                }
+              }
+            },
+            HANZI_CHARACTER_DELAY_MS,
+          );
+      },
+      [
+        speakerEnabled,
+      ],
+    );
+
+
+  const queueLiveHanzi =
+    useCallback(
+      (
+        text: string,
+      ) => {
+        if (!text) {
+          return;
+        }
+
+        hanziQueueRef
+          .current
+          .push(
+            ...Array.from(
+              text,
+            ),
+          );
+
+        startHanziTyping();
+      },
+      [
+        startHanziTyping,
+      ],
+    );
+
+
+  const resetStreamingState =
+    useCallback(
+      () => {
+        stopHanziTyping();
+
+        displayedHanziRef.current =
+          "";
+
+        finalHanziRef.current =
+          "";
+
+        pendingPinyinRef.current =
+          "";
+
+        streamDoneRef.current =
+          false;
+      },
+      [
+        stopHanziTyping,
+      ],
+    );
+
+
+  const resetCurrentResult =
+    useCallback(
+      () => {
+        stopSpeaking();
+
+        clearSpeechQueue();
+
+        resetStreamingState();
+
+        setTranscript("");
+
+        setReply(
+          null,
+        );
+
+        setError("");
+
+        setSeconds(
+          0,
+        );
+
+        setConversationState(
+          "ready",
+        );
+      },
+      [
+        resetStreamingState,
+      ],
+    );
+
+
+  useEffect(
+    () => {
+      const memory =
+        loadSavedMemory();
+
+      historyRef.current =
+        memory;
+
+      setMemoryCount(
+        memory.length,
+      );
+
+      void refreshHealth();
+
+      return () => {
+        stopSpeaking();
+
+        clearSpeechQueue();
+
+        stopRecordingTimer();
+
+        stopMicrophoneStream();
+
+        stopHanziTyping();
+      };
+    },
+    [
+      refreshHealth,
+      stopHanziTyping,
+      stopMicrophoneStream,
+      stopRecordingTimer,
+    ],
+  );
+
+
+  const switchMode = (
+    nextMode:
+      AiPracticeMode,
+  ) => {
+    if (
+      isRecording ||
+      isProcessing ||
+      conversationState ===
+        "speaking"
+    ) {
+      return;
+    }
+
+    setMode(
+      nextMode,
+    );
+
+    resetCurrentResult();
+  };
+
+
+  const stopRecording =
+    useCallback(
+      () => {
+        const recorder =
+          mediaRecorderRef
+            .current;
+
+        if (
+          recorder &&
+          recorder.state !==
+            "inactive"
+        ) {
+          recorder.stop();
+        }
+      },
+      [],
+    );
+
+
+  useEffect(
+    () => {
+      if (
+        isRecording &&
+        seconds >=
+          MAX_RECORDING_SECONDS
+      ) {
+        stopRecording();
+      }
+    },
+    [
+      isRecording,
+      seconds,
+      stopRecording,
+    ],
+  );
+
+
+  const playChinese =
+    useCallback(
+      (
+        hanzi: string,
+        speed:
+          | "normal"
+          | "slow" =
+          "normal",
+      ) => {
+        if (
+          !speakerEnabled ||
+          !hanzi.trim()
+        ) {
+          setConversationState(
+            "ready",
+          );
+
+          return;
+        }
+
+        void speakChinese(
+          hanzi,
+          {
+            speed,
+
+            volume:
+              1,
+
+            onStart: () => {
+              setConversationState(
+                "speaking",
+              );
+            },
+
+            onEnd: () => {
+              setConversationState(
+                "ready",
+              );
+            },
+
+            onError: () => {
+              setConversationState(
+                "ready",
+              );
+            },
+          },
+        );
+      },
+      [
+        speakerEnabled,
+      ],
+    );
+
+
+  const saveConversationTurn =
+    useCallback(
+      (
+        userText: string,
+        annaText: string,
+      ) => {
+        const cleanedUser =
+          userText.trim();
+
+        const cleanedAnna =
+          annaText.trim();
+
+        if (
+          !cleanedUser ||
+          !cleanedAnna
+        ) {
+          return;
+        }
+
+        const newMessages:
+          ConversationHistoryMessage[] =
+          [
+            {
+              role:
+                "user",
+
+              content:
+                cleanedUser,
+            },
+
+            {
+              role:
+                "assistant",
+
+              content:
+                cleanedAnna,
+            },
+          ];
+
+        const updatedHistory =
+          [
+            ...historyRef.current,
+            ...newMessages,
+          ].slice(
+            -MAX_MEMORY_MESSAGES,
+          );
+
+        historyRef.current =
+          updatedHistory;
+
+        saveMemory(
+          updatedHistory,
+        );
+
+        setMemoryCount(
+          updatedHistory.length,
+        );
+      },
+      [],
+    );
+
+
+  const processFallbackVoice =
+    useCallback(
+      async (
+        audioBlob: Blob,
+      ) => {
+        const result =
+          await sendAudio(
+            audioBlob,
+            historyRef.current,
+          );
+
+        const cleanedTranscript =
+          result.transcript
+            .trim();
+
+        setTranscript(
+          cleanedTranscript,
+        );
+
+        setReply(
+          result.reply,
+        );
+
+        saveConversationTurn(
+          cleanedTranscript,
+          result.reply.hanzi,
+        );
+
+        setError("");
+
+        if (
+          speakerEnabled
+        ) {
+          playChinese(
+            result.reply.hanzi,
+          );
+        } else {
+          setConversationState(
+            "ready",
+          );
+        }
+      },
+      [
+        playChinese,
+        saveConversationTurn,
+        speakerEnabled,
+      ],
+    );
+
+
+  const processStreamingVoice =
+    useCallback(
+      async (
+        audioBlob: Blob,
+      ): Promise<boolean> => {
+        let streamedTranscript =
+          "";
+
+        let finalHanzi =
+          "";
+
+        resetStreamingState();
+
+        setReply(
+          {
+            hanzi:
+              "",
+
+            pinyin:
+              "",
+
+            correction:
+              EMPTY_CORRECTION,
+          },
+        );
+
+        const supported =
+          await streamVoiceAudio(
+            audioBlob,
+
+            historyRef.current,
+
+            (
+              event,
+            ) => {
+              if (
+                event.type ===
+                "start"
+              ) {
+                setConversationState(
+                  "processing",
+                );
+
+                return;
+              }
+
+
+              if (
+                event.type ===
+                "transcript"
+              ) {
+                streamedTranscript =
+                  event.transcript
+                    .trim();
+
+                setTranscript(
+                  streamedTranscript,
+                );
+
+                setConversationState(
+                  "streaming",
+                );
+
+                return;
+              }
+
+
+              /**
+               * CRITICAL FIX:
+               *
+               * DO NOT call:
+               *
+               * setReply(current => current + event.text)
+               *
+               * because React/browser can batch it.
+               *
+               * Instead add characters to
+               * our animation queue.
+               */
+              if (
+                event.type ===
+                "token"
+              ) {
+                queueLiveHanzi(
+                  event.text,
+                );
+
+                setConversationState(
+                  (
+                    current,
+                  ) =>
+                    current ===
+                      "speaking"
+                      ? current
+                      : "streaming",
+                );
+
+                return;
+              }
+
+
+              /**
+               * Sentence complete.
+               *
+               * TTS can start while the next
+               * Hanzi is still being generated.
+               */
+              if (
+                event.type ===
+                "sentence"
+              ) {
+                if (
+                  speakerEnabled
+                ) {
+                  queueChineseSentence(
+                    event.sentence,
+                    {
+                      speed:
+                        "normal",
+
+                      volume:
+                        1,
+
+                      onStart:
+                        () => {
+                          setConversationState(
+                            "speaking",
+                          );
+                        },
+
+                      onQueueIdle:
+                        () => {
+                          if (
+                            streamDoneRef
+                              .current &&
+                            hanziQueueRef
+                              .current
+                              .length ===
+                              0 &&
+                            hanziTimerRef
+                              .current ===
+                              null
+                          ) {
+                            setConversationState(
+                              "ready",
+                            );
+                          } else {
+                            setConversationState(
+                              "streaming",
+                            );
+                          }
+                        },
+
+                      onError:
+                        (
+                          queueError,
+                        ) => {
+                          console.warn(
+                            "Streaming sentence audio error:",
+                            queueError,
+                          );
+                        },
+                    },
+                  );
+                }
+
+                return;
+              }
+
+
+              /**
+               * Backend final result.
+               *
+               * IMPORTANT:
+               * We store final text in refs.
+               * We do NOT put full Hanzi into state.
+               *
+               * Otherwise the whole sentence
+               * would suddenly appear.
+               */
+              if (
+                event.type ===
+                "done"
+              ) {
+                finalHanzi =
+                  event.hanzi
+                    .trim();
+
+                finalHanziRef
+                  .current =
+                  finalHanzi;
+
+                pendingPinyinRef
+                  .current =
+                  event.pinyin
+                    .trim();
+
+                streamDoneRef
+                  .current =
+                  true;
+
+                /**
+                 * Ensure all final characters
+                 * exist in animation queue.
+                 */
+                const projectedText =
+                  (
+                    displayedHanziRef
+                      .current +
+                    hanziQueueRef
+                      .current
+                      .join("")
+                  );
+
+                if (
+                  finalHanzi.startsWith(
+                    projectedText,
+                  ) &&
+                  finalHanzi.length >
+                    projectedText.length
+                ) {
+                  const missing =
+                    finalHanzi.slice(
+                      projectedText.length,
+                    );
+
+                  hanziQueueRef
+                    .current
+                    .push(
+                      ...Array.from(
+                        missing,
+                      ),
+                    );
+
+                  startHanziTyping();
+                }
+
+                return;
+              }
+
+
+              /**
+               * Deferred More Natural.
+               */
+              if (
+                event.type ===
+                "correction"
+              ) {
+                setReply(
+                  (
+                    current,
+                  ) => ({
+                    hanzi:
+                      current
+                        ?.hanzi ??
+                      displayedHanziRef
+                        .current,
+
+                    pinyin:
+                      current
+                        ?.pinyin ??
+                      "",
+
+                    correction:
+                      event.correction,
+                  }),
+                );
+
+                return;
+              }
+
+
+              if (
+                event.type ===
+                "complete"
+              ) {
+                streamDoneRef
+                  .current =
+                  true;
+
+                /**
+                 * If backend reply happened
+                 * to contain zero token events,
+                 * still animate final text.
+                 */
+                if (
+                  finalHanzi &&
+                  !displayedHanziRef
+                    .current &&
+                  hanziQueueRef
+                    .current
+                    .length ===
+                    0
+                ) {
+                  hanziQueueRef
+                    .current
+                    .push(
+                      ...Array.from(
+                        finalHanzi,
+                      ),
+                    );
+
+                  startHanziTyping();
+                }
+
+                return;
+              }
+
+
+              if (
+                event.type ===
+                "error"
+              ) {
+                throw new Error(
+                  event.error,
+                );
+              }
+            },
+          );
+
+
+        if (!supported) {
+          resetStreamingState();
+
+          return false;
+        }
+
+
+        if (
+          streamedTranscript &&
+          finalHanzi
+        ) {
+          saveConversationTurn(
+            streamedTranscript,
+            finalHanzi,
+          );
+        }
+
+
+        return true;
+      },
+      [
+        queueLiveHanzi,
+        resetStreamingState,
+        saveConversationTurn,
+        speakerEnabled,
+        startHanziTyping,
+      ],
+    );
+
+
+  const startRecording =
+    useCallback(
+      async () => {
+        if (
+          mode !==
+            "practice" ||
+          isRecording ||
+          isProcessing ||
+          conversationState ===
+            "speaking"
+        ) {
+          return;
+        }
+
+        stopSpeaking();
+
+        clearSpeechQueue();
+
+        resetStreamingState();
+
+        setError("");
+
+        setTranscript("");
+
+        setReply(
+          null,
+        );
+
+        setSeconds(
+          0,
+        );
+
+        setConversationState(
+          "listening",
+        );
+
+
+        try {
+          if (
+            !navigator
+              .mediaDevices
+              ?.getUserMedia
+          ) {
+            throw new Error(
+              "Microphone is not supported by this browser.",
+            );
+          }
+
+
+          if (
+            typeof MediaRecorder ===
+            "undefined"
+          ) {
+            throw new Error(
+              "Audio recording is not supported by this browser.",
+            );
+          }
+
+
+          const stream =
+            await navigator
+              .mediaDevices
+              .getUserMedia(
+                {
+                  audio: {
+                    echoCancellation:
+                      true,
+
+                    noiseSuppression:
+                      true,
+
+                    autoGainControl:
+                      true,
+                  },
+                },
+              );
+
+
+          microphoneStreamRef
+            .current =
+            stream;
+
+
+          const preferredTypes =
+            [
+              "audio/webm;codecs=opus",
+              "audio/webm",
+              "audio/mp4",
+              "audio/ogg;codecs=opus",
+            ];
+
+
+          const mimeType =
+            preferredTypes.find(
+              (
+                type,
+              ) =>
+                MediaRecorder
+                  .isTypeSupported(
+                    type,
+                  ),
+            );
+
+
+          const recorder =
+            mimeType
+              ? new MediaRecorder(
+                  stream,
+                  {
+                    mimeType,
+                  },
+                )
+              : new MediaRecorder(
+                  stream,
+                );
+
+
+          mediaRecorderRef.current =
+            recorder;
+
+          audioChunksRef.current =
+            [];
+
+
+          recorder.ondataavailable =
+            (
+              event,
+            ) => {
+              if (
+                event.data.size >
+                0
+              ) {
+                audioChunksRef
+                  .current
+                  .push(
+                    event.data,
+                  );
+              }
+            };
+
+
+          recorder.onerror =
+            (
+              recorderError,
+            ) => {
+              console.error(
+                "MediaRecorder error:",
+                recorderError,
+              );
+
+              stopRecordingTimer();
+
+              stopMicrophoneStream();
+
+              setIsRecording(
+                false,
+              );
+
+              setConversationState(
+                "error",
+              );
+
+              setError(
+                "Microphone recording failed. Please try again.",
+              );
+            };
+
+
+          recorder.onstop =
+            async () => {
+              stopRecordingTimer();
+
+              stopMicrophoneStream();
+
+              setIsRecording(
+                false,
+              );
+
+
+              const audioBlob =
+                new Blob(
+                  audioChunksRef
+                    .current,
+                  {
+                    type:
+                      recorder.mimeType ||
+                      "audio/webm",
+                  },
+                );
+
+
+              audioChunksRef.current =
+                [];
+
+
+              if (
+                audioBlob.size ===
+                0
+              ) {
+                setConversationState(
+                  "error",
+                );
+
+                setError(
+                  "Recorded audio is empty. Please record again.",
+                );
+
+                return;
+              }
+
+
+              setConversationState(
+                "processing",
+              );
+
+              setIsProcessing(
+                true,
+              );
+
+
+              try {
+                const streamed =
+                  await processStreamingVoice(
+                    audioBlob,
+                  );
+
+
+                if (!streamed) {
+                  await processFallbackVoice(
+                    audioBlob,
+                  );
+                }
+
+
+                setError("");
+              } catch (
+                caughtError
+              ) {
+                console.error(
+                  "Voice conversation failed:",
+                  caughtError,
+                );
+
+                stopSpeaking();
+
+                clearSpeechQueue();
+
+                stopHanziTyping();
+
+                setConversationState(
+                  "error",
+                );
+
+                setError(
+                  caughtError instanceof
+                    Error
+                    ? caughtError.message
+                    : "Voice processing failed. Please try again.",
+                );
+              } finally {
+                setIsProcessing(
+                  false,
+                );
+              }
+            };
+
+
+          recorder.start(
+            200,
+          );
+
+
+          setIsRecording(
+            true,
+          );
+
+          setConversationState(
+            "listening",
+          );
+
+
+          recordingTimerRef
+            .current =
+            window.setInterval(
+              () => {
+                setSeconds(
+                  (
+                    current,
+                  ) =>
+                    current +
+                    1,
+                );
+              },
+              1000,
+            );
+        } catch (
+          caughtError
+        ) {
+          console.error(
+            "Unable to start recording:",
+            caughtError,
+          );
+
+          stopRecordingTimer();
+
+          stopMicrophoneStream();
+
+          setIsRecording(
+            false,
+          );
+
+          setConversationState(
+            "error",
+          );
+
+
+          if (
+            caughtError instanceof
+              DOMException &&
+            caughtError.name ===
+              "NotAllowedError"
+          ) {
+            setError(
+              "Microphone permission မရပါ။ Browser permission ကို Allow လုပ်ပါ။",
+            );
+
+            return;
+          }
+
+
+          if (
+            caughtError instanceof
+              DOMException &&
+            caughtError.name ===
+              "NotFoundError"
+          ) {
+            setError(
+              "Microphone မတွေ့ပါ။ Microphone connection ကိုစစ်ပါ။",
+            );
+
+            return;
+          }
+
+
+          setError(
+            caughtError instanceof
+              Error
+              ? caughtError.message
+              : "Microphone ကိုဖွင့်၍မရပါ။",
+          );
+        }
+      },
+      [
+        conversationState,
+        isProcessing,
+        isRecording,
+        mode,
+        processFallbackVoice,
+        processStreamingVoice,
+        resetStreamingState,
+        stopHanziTyping,
+        stopMicrophoneStream,
+        stopRecordingTimer,
+      ],
+    );
+
+
+  const handleBuilderSubmit =
+    async (
+      event:
+        FormEvent<HTMLFormElement>,
+    ) => {
+      event.preventDefault();
+
+      if (
+        mode !==
+          "sentence_builder" ||
+        isProcessing
+      ) {
+        return;
+      }
+
+
+      const cleaned =
+        builderInput.trim();
+
+
+      if (!cleaned) {
+        setError(
+          "မြန်မာစာကြောင်းကို အရင်ရေးပါ။",
+        );
+
+        return;
+      }
+
+
+      stopSpeaking();
+
+      setError("");
+
+      setReply(
+        null,
+      );
+
+      setTranscript(
+        cleaned,
+      );
+
+      setConversationState(
+        "processing",
+      );
+
+      setIsProcessing(
+        true,
+      );
+
+
+      try {
+        const result =
+          await sendTextMessage(
+            cleaned,
+            "sentence_builder",
+            [],
+          );
+
+
+        setReply(
+          result.reply,
+        );
+
+
+        if (
+          speakerEnabled
+        ) {
+          playChinese(
+            result.reply.hanzi,
+          );
+        } else {
+          setConversationState(
+            "ready",
+          );
+        }
+      } catch (
+        caughtError
+      ) {
+        console.error(
+          "Sentence Builder failed:",
+          caughtError,
+        );
+
+        setConversationState(
+          "error",
+        );
+
+        setError(
+          caughtError instanceof
+            Error
+            ? caughtError.message
+            : "Sentence Builder error occurred.",
+        );
+      } finally {
+        setIsProcessing(
+          false,
+        );
+      }
+    };
+
+
+  const newConversation =
+    () => {
+      stopSpeaking();
+
+      clearSpeechQueue();
+
+      resetStreamingState();
+
+      historyRef.current =
+        [];
+
+      clearSavedMemory();
+
+      setMemoryCount(
+        0,
+      );
+
+      setBuilderInput("");
+
+      resetCurrentResult();
+    };
+
+
+  const handleSpeakerToggle =
+    () => {
+      const nextEnabled =
+        !speakerEnabled;
+
+      setSpeakerEnabled(
+        nextEnabled,
+      );
+
+
+      if (
+        !nextEnabled
+      ) {
+        stopSpeaking();
+
+        clearSpeechQueue();
+
+
+        if (
+          conversationState ===
+            "speaking"
+        ) {
+          setConversationState(
+            streamDoneRef.current
+              ? "ready"
+              : "streaming",
+          );
+        }
+      }
+    };
+
+
+  const handleReplyReplay =
+    () => {
+      const finalText =
+        finalHanziRef.current ||
+        reply?.hanzi ||
+        "";
+
+
+      if (
+        !finalText ||
+        isRecording ||
+        isProcessing
+      ) {
+        return;
+      }
+
+
+      playChinese(
+        finalText,
+      );
+    };
+
+
+  const handleCorrectionReplay =
+    () => {
+      const correction =
+        reply?.correction;
+
+
+      if (
+        !correction
+          ?.needed ||
+        !correction
+          .corrected ||
+        isRecording ||
+        isProcessing
+      ) {
+        return;
+      }
+
+
+      playChinese(
+        correction.corrected,
+        "slow",
+      );
+    };
+
+
+  const statusText =
+    getConversationStatusText(
+      conversationState,
+      seconds,
+    );
+
+
+  const correction =
+    reply?.correction;
+
+
+  const showCorrection =
+    mode ===
+      "practice" &&
+    correction
+      ?.needed ===
+      true &&
+    Boolean(
+      correction
+        .corrected
+        .trim(),
+    );
+
+
+  return (
+    <main className="min-h-screen bg-[#12001f] px-4 py-4 text-white sm:px-6">
+      <section className="mx-auto max-w-3xl overflow-hidden rounded-[32px] border border-purple-500/40 bg-[#26053b] shadow-2xl">
+
+        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-purple-400/20 px-6 py-5">
+
+          <div>
+            <div className="flex items-center gap-2">
+              <p className="text-xs font-bold tracking-[0.22em] text-purple-200">
+                ANNA AI
+              </p>
+
+              <span className="rounded-full border border-fuchsia-300/20 bg-fuchsia-400/10 px-2 py-1 text-[10px] font-black tracking-wider text-fuchsia-200">
+                V7 LIVE PREVIEW
+              </span>
+            </div>
+
+            <h1 className="mt-1 text-2xl font-bold">
+              {mode ===
+              "practice"
+                ? "Chinese Practice"
+                : "Sentence Builder"}
+            </h1>
+
+            <p className="mt-1 text-xs text-white/35">
+              Memory:{" "}
+              {memoryCount} /{" "}
+              {MAX_MEMORY_MESSAGES}
+            </p>
+          </div>
+
+
+          <div className="flex flex-wrap gap-2 text-sm">
+
+            <button
+              type="button"
+              onClick={() =>
+                void refreshHealth()
+              }
+              className="rounded-full border border-purple-300/20 bg-white/5 px-4 py-2 transition hover:bg-white/10"
+            >
+              <span
+                className={`mr-2 inline-block h-2 w-2 rounded-full ${
+                  status ===
+                  "connected"
+                    ? "bg-emerald-400"
+                    : status ===
+                        "checking"
+                      ? "animate-pulse bg-amber-300"
+                      : "bg-red-400"
+                }`}
+              />
+
+              {status ===
+              "connected"
+                ? "Connected"
+                : status ===
+                    "checking"
+                  ? "Checking"
+                  : "Offline"}
+            </button>
+
+
+            <button
+              type="button"
+              onClick={
+                handleSpeakerToggle
+              }
+              className="rounded-full border border-purple-300/20 bg-white/5 px-4 py-2 transition hover:bg-white/10"
+            >
+              {speakerEnabled
+                ? "🔊 Speaker"
+                : "🔇 Muted"}
+            </button>
+
+
+            <button
+              type="button"
+              disabled={
+                isRecording ||
+                isProcessing
+              }
+              onClick={
+                newConversation
+              }
+              className="rounded-full border border-purple-300/20 bg-white/5 px-4 py-2 transition hover:bg-white/10 disabled:opacity-40"
+            >
+              New
+            </button>
+
+          </div>
+        </header>
+
+
+        <div className="space-y-5 p-6">
+
+          <div className="grid grid-cols-2 rounded-2xl border border-purple-400/25 bg-black/10 p-1">
+
+            <button
+              type="button"
+              disabled={
+                isRecording ||
+                isProcessing ||
+                conversationState ===
+                  "speaking"
+              }
+              onClick={() =>
+                switchMode(
+                  "practice",
+                )
+              }
+              className={`rounded-xl px-4 py-3 text-sm font-bold transition ${
+                mode ===
+                "practice"
+                  ? "bg-gradient-to-r from-fuchsia-600 to-purple-700 shadow-lg"
+                  : "text-purple-200 hover:bg-white/5"
+              } disabled:opacity-50`}
+            >
+              🎤 Chinese Practice
+            </button>
+
+
+            <button
+              type="button"
+              disabled={
+                isRecording ||
+                isProcessing ||
+                conversationState ===
+                  "speaking"
+              }
+              onClick={() =>
+                switchMode(
+                  "sentence_builder",
+                )
+              }
+              className={`rounded-xl px-4 py-3 text-sm font-bold transition ${
+                mode ===
+                "sentence_builder"
+                  ? "bg-gradient-to-r from-fuchsia-600 to-purple-700 shadow-lg"
+                  : "text-purple-200 hover:bg-white/5"
+              } disabled:opacity-50`}
+            >
+              ✍️ Sentence Builder
+            </button>
+
+          </div>
+
+
+          {mode ===
+          "sentence_builder" ? (
+
+            <form
+              onSubmit={
+                handleBuilderSubmit
+              }
+              className="space-y-3"
+            >
+
+              <label
+                htmlFor="builder-input"
+                className="block text-xs font-bold tracking-[0.18em] text-purple-200"
+              >
+                မြန်မာ → တရုတ်
+              </label>
+
+
+              <textarea
+                id="builder-input"
+                value={
+                  builderInput
+                }
+                onChange={(
+                  event,
+                ) =>
+                  setBuilderInput(
+                    event.target
+                      .value,
+                  )
+                }
+                placeholder="ဥပမာ — မနက်ဖြန် ကျွန်မ အလုပ်သွားမယ်။"
+                rows={4}
+                disabled={
+                  isProcessing
+                }
+                className="w-full resize-none rounded-[24px] border border-purple-400/40 bg-purple-950/40 px-5 py-4 text-base leading-7 text-white outline-none placeholder:text-purple-300/55 focus:border-fuchsia-400 disabled:opacity-60"
+              />
+
+
+              <button
+                type="submit"
+                disabled={
+                  isProcessing ||
+                  status !==
+                    "connected"
+                }
+                className="w-full rounded-2xl bg-gradient-to-r from-fuchsia-600 to-purple-700 px-5 py-4 font-bold shadow-lg transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isProcessing
+                  ? "Chinese sentence ဖွဲ့နေပါတယ်..."
+                  : "တရုတ်စာကြောင်း ဖွဲ့မယ်"}
+              </button>
+
+            </form>
+
+          ) : (
+
+            <section className="min-h-28 rounded-[28px] border border-purple-400/40 bg-purple-900/30">
+
+              <div className="flex items-center justify-between border-b border-purple-400/20 px-5 py-3">
+
+                <span className="text-xs font-bold tracking-[0.2em] text-purple-200">
+                  YOU SAID
+                </span>
+
+
+                {conversationState ===
+                "listening" ? (
+
+                  <span className="flex items-center gap-2 text-xs font-bold text-red-200">
+
+                    <span className="h-2 w-2 animate-pulse rounded-full bg-red-400" />
+
+                    LISTENING
+
+                  </span>
+
+                ) : null}
+
+              </div>
+
+
+              <div className="px-5 py-6 text-2xl font-bold leading-relaxed">
+                {transcript ||
+                  (
+                    conversationState ===
+                    "listening"
+                      ? "正在听你说话..."
+                      : "စကားပြောပြီးရင် ဒီနေရာမှာ ပေါ်လာပါမယ်။"
+                  )}
+              </div>
+
+            </section>
+
+          )}
+
+
+          {mode ===
+            "sentence_builder" &&
+          transcript ? (
+
+            <section className="rounded-[24px] border border-purple-400/25 bg-purple-900/20">
+
+              <div className="border-b border-purple-400/15 px-5 py-3 text-xs font-bold tracking-[0.18em] text-purple-200">
+                မူရင်းမြန်မာစာ
+              </div>
+
+              <div className="px-5 py-4 text-base leading-7">
+                {transcript}
+              </div>
+
+            </section>
+
+          ) : null}
+
+
+          {showCorrection &&
+          correction ? (
+
+            <section className="overflow-hidden rounded-[26px] border border-emerald-400/35 bg-emerald-500/[0.08]">
+
+              <div className="flex items-center justify-between gap-4 border-b border-emerald-400/20 px-5 py-4">
+
+                <div>
+                  <p className="text-xs font-black tracking-[0.18em] text-emerald-200">
+                    ✨ MORE NATURAL
+                  </p>
+
+                  <p className="mt-1 text-xs text-emerald-100/60">
+                    ဒီလိုပြောရင် ပိုသဘာဝကျပါတယ်
+                  </p>
+                </div>
+
+
+                <button
+                  type="button"
+                  disabled={
+                    isRecording ||
+                    isProcessing
+                  }
+                  onClick={
+                    handleCorrectionReplay
+                  }
+                  className="rounded-full border border-emerald-300/30 bg-emerald-300/10 p-3 text-xl disabled:opacity-40"
+                >
+                  🔊
+                </button>
+
+              </div>
+
+
+              {correction.original ? (
+
+                <div className="border-b border-emerald-400/15 px-5 py-4">
+
+                  <p className="text-[11px] font-bold tracking-[0.16em] text-emerald-200/60">
+                    YOU SAID
+                  </p>
+
+                  <p className="mt-2 text-lg text-white/50 line-through decoration-red-400/70">
+                    {correction.original}
+                  </p>
+
+                </div>
+
+              ) : null}
+
+
+              <div className="border-b border-emerald-400/15 px-5 py-5">
+
+                <p className="text-[11px] font-bold tracking-[0.16em] text-emerald-200">
+                  更自然的说法
+                </p>
+
+                <p className="mt-3 text-2xl font-bold leading-relaxed text-emerald-50">
+                  {correction.corrected}
+                </p>
+
+              </div>
+
+
+              {correction.pinyin ? (
+
+                <div className="px-5 py-4">
+
+                  <p className="text-[11px] font-bold tracking-[0.16em] text-emerald-200/70">
+                    拼音 · PINYIN
+                  </p>
+
+                  <p className="mt-2 text-base font-semibold leading-relaxed text-emerald-50/90">
+                    {correction.pinyin}
+                  </p>
+
+                </div>
+
+              ) : null}
+
+            </section>
+
+          ) : null}
+
+
+          <section
+            className={`overflow-hidden rounded-[28px] border bg-[#180128] transition ${
+              conversationState ===
+              "speaking"
+                ? "border-fuchsia-400/50 shadow-[0_0_35px_rgba(217,70,239,0.16)]"
+                : conversationState ===
+                    "streaming"
+                  ? "border-violet-400/50"
+                  : "border-purple-400/20"
+            }`}
+          >
+
+            <div className="flex items-center justify-between border-b border-purple-400/20 px-5 py-4">
+
+              <div>
+
+                <p className="text-xs font-bold tracking-[0.2em] text-purple-200">
+                  {mode ===
+                  "practice"
+                    ? "ANNA REPLY"
+                    : "CHINESE SENTENCE"}
+                </p>
+
+                <p className="mt-1 text-sm font-semibold">
+                  中文 · 拼音
+                </p>
+
+              </div>
+
+
+              <button
+                type="button"
+                disabled={
+                  !reply?.hanzi ||
+                  isRecording ||
+                  isProcessing
+                }
+                onClick={
+                  handleReplyReplay
+                }
+                className="rounded-full border border-purple-300/20 bg-white/5 p-3 text-xl disabled:opacity-40"
+              >
+                🔊
+              </button>
+
+            </div>
+
+
+            {conversationState ===
+            "processing" ? (
+
+              <div className="border-b border-purple-400/20 px-5 py-4 text-violet-200">
+                Anna is understanding...
+              </div>
+
+            ) : null}
+
+
+            {conversationState ===
+            "streaming" ? (
+
+              <div className="border-b border-violet-400/20 bg-violet-400/[0.05] px-5 py-3 text-sm text-violet-200">
+
+                <span className="mr-2 inline-block h-2 w-2 animate-pulse rounded-full bg-violet-400" />
+
+                Anna is replying live...
+
+              </div>
+
+            ) : null}
+
+
+            {conversationState ===
+            "speaking" ? (
+
+              <div className="border-b border-fuchsia-400/20 bg-fuchsia-400/[0.05] px-5 py-3 text-sm text-fuchsia-200">
+
+                <span className="mr-2 inline-block h-2 w-2 animate-pulse rounded-full bg-fuchsia-400" />
+
+                Anna is speaking...
+
+              </div>
+
+            ) : null}
+
+
+            <div className="min-h-32 border-b border-purple-400/20 px-5 py-5">
+
+              <p className="text-xs font-bold tracking-[0.16em] text-purple-300">
+                中文 · HANZI
+              </p>
+
+
+              <p className="mt-4 whitespace-pre-wrap text-2xl font-bold leading-relaxed">
+
+                {reply?.hanzi ||
+                  (
+                    conversationState ===
+                      "streaming" ||
+                    conversationState ===
+                      "processing"
+                      ? ""
+                      : mode ===
+                          "practice"
+                        ? "Anna 的回复会显示在这里。"
+                        : "Chinese sentence will appear here."
+                  )}
+
+
+                {(
+                  conversationState ===
+                    "streaming" ||
+                  conversationState ===
+                    "speaking"
+                ) ? (
+
+                  <span className="ml-1 animate-pulse text-fuchsia-300">
+                    ▌
+                  </span>
+
+                ) : null}
+
+              </p>
+
+            </div>
+
+
+            <div className="px-5 py-5">
+
+              <p className="text-xs font-bold tracking-[0.16em] text-purple-300">
+                拼音 · PINYIN
+              </p>
+
+
+              <p className="mt-4 whitespace-pre-wrap text-lg font-semibold leading-relaxed">
+
+                {reply?.pinyin ||
+                  (
+                    conversationState ===
+                      "streaming" ||
+                    conversationState ===
+                      "speaking" ||
+                    conversationState ===
+                      "processing"
+                      ? "Hanzi ပြီးရင် Pinyin ပေါ်လာပါမယ်..."
+                      : "Pinyin will appear here."
+                  )}
+
+              </p>
+
+            </div>
+
+          </section>
+
+
+          {error ? (
+
+            <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-4 text-sm text-red-100">
+              ⚠️ {error}
+            </div>
+
+          ) : null}
+
+
+          {mode ===
+          "practice" ? (
+
+            <div className="flex flex-col items-center border-t border-purple-300/20 pt-7">
+
+              <div className="relative">
+
+                {conversationState ===
+                "listening" ? (
+
+                  <span className="absolute inset-[-12px] animate-ping rounded-full border border-red-300/30" />
+
+                ) : null}
+
+
+                <button
+                  type="button"
+                  onClick={
+                    isRecording
+                      ? stopRecording
+                      : () =>
+                          void startRecording()
+                  }
+                  disabled={
+                    isProcessing ||
+                    status !==
+                      "connected" ||
+                    conversationState ===
+                      "speaking"
+                  }
+                  className={`relative grid h-32 w-32 place-items-center rounded-full border-[3px] text-5xl shadow-[0_0_35px_rgba(192,38,255,0.45)] transition active:scale-95 ${
+                    isRecording
+                      ? "border-red-200 bg-red-500"
+                      : "border-purple-200 bg-gradient-to-b from-fuchsia-500 to-purple-700"
+                  } disabled:opacity-50`}
+                >
+                  {isRecording
+                    ? "■"
+                    : "🎤"}
+                </button>
+
+              </div>
+
+
+              <p className="mt-5 text-sm font-medium text-purple-100">
+                {statusText}
+              </p>
+
+
+              {conversationState ===
+              "listening" ? (
+
+                <p className="mt-2 text-xs text-white/40">
+                  Tap again when you finish speaking.
+                </p>
+
+              ) : null}
+
+            </div>
+
+          ) : null}
+
+        </div>
+
+      </section>
+    </main>
+  );
+}
+
+
+==============================
+FILE: C:\Users\HMT\anna-ai\lib\ai\api.ts
+==============================
+
+import type {
+  AiPracticeMode,
+  AnnaCorrection,
+  AnnaReply,
+  ConversationHistoryMessage,
+  TextChatResponse,
+  VoiceChatResponse,
+  VoiceServerHealth,
+} from "@/types/ai";
+
+import {
+  getVoiceServerUrl,
+} from "@/lib/ai/constants";
+
+
+interface ServerError {
+  detail?: string;
+  error?: string;
+}
+
+
+export type TtsSpeed =
+  | "normal"
+  | "slow";
+
+
+export type VoiceStreamEvent =
+  | {
+      type: "start";
+    }
+  | {
+      type: "transcript";
+      transcript: string;
+
+      timings?: {
+        audio?: number;
+        stt?: number;
+      };
+    }
+  | {
+      type: "token";
+      text: string;
+    }
+  | {
+      type: "sentence";
+      sentence: string;
+    }
+  | {
+      type: "done";
+      hanzi: string;
+      pinyin: string;
+    }
+  | {
+      type: "correction";
+      correction: AnnaCorrection;
+    }
+  | {
+      type: "complete";
+      seconds?: number;
+      audio_seconds?: number;
+      stt_seconds?: number;
+      llm_seconds?: number;
+      correction_seconds?: number;
+      sentences?: number;
+      token_events?: number;
+    }
+  | {
+      type: "error";
+      error: string;
+    };
+
+
+export type TextStreamEvent =
+  | {
+      type: "start";
+      message?: string;
+    }
+  | {
+      type: "token";
+      text: string;
+    }
+  | {
+      type: "sentence";
+      sentence: string;
+    }
+  | {
+      type: "done";
+      hanzi: string;
+      pinyin: string;
+    }
+  | {
+      type: "correction";
+      correction: AnnaCorrection;
+    }
+  | {
+      type: "complete";
+      seconds?: number;
+      correction_seconds?: number;
+      sentences?: number;
+      token_events?: number;
+    }
+  | {
+      type: "error";
+      error: string;
+    };
+
+
+const VOICE_TIMEOUT_MS =
+  90_000;
+
+const TEXT_TIMEOUT_MS =
+  60_000;
+
+const HEALTH_TIMEOUT_MS =
+  8_000;
+
+const TTS_TIMEOUT_MS =
+  30_000;
+
+
+async function fetchWithTimeout(
+  input: RequestInfo | URL,
+  init: RequestInit,
+  timeoutMs: number,
+): Promise<Response> {
+  const controller =
+    new AbortController();
+
+  const timer =
+    globalThis.setTimeout(
+      () => {
+        controller.abort();
+      },
+      timeoutMs,
+    );
+
+  try {
+    return await fetch(
+      input,
+      {
+        ...init,
+
+        signal:
+          controller.signal,
+
+        cache:
+          "no-store",
+      },
+    );
+  } finally {
+    globalThis.clearTimeout(
+      timer,
+    );
+  }
+}
+
+
+async function readJson<T>(
+  response: Response,
+): Promise<T | null> {
+  try {
+    return (
+      await response.json()
+    ) as T;
+  } catch {
+    return null;
+  }
+}
+
+
+function isAnnaCorrection(
+  value: unknown,
+): value is AnnaCorrection {
+  if (
+    !value ||
+    typeof value !==
+      "object"
+  ) {
+    return false;
+  }
+
+  const correction =
+    value as
+      Partial<AnnaCorrection>;
+
+  return (
+    typeof correction.needed ===
+      "boolean" &&
+    typeof correction.original ===
+      "string" &&
+    typeof correction.corrected ===
+      "string" &&
+    typeof correction.pinyin ===
+      "string"
+  );
+}
+
+
+function isAnnaReply(
+  value: unknown,
+): value is AnnaReply {
+  if (
+    !value ||
+    typeof value !==
+      "object"
+  ) {
+    return false;
+  }
+
+  const reply =
+    value as
+      Partial<AnnaReply>;
+
+  if (
+    typeof reply.hanzi !==
+      "string" ||
+    !reply.hanzi.trim() ||
+    typeof reply.pinyin !==
+      "string" ||
+    !reply.pinyin.trim()
+  ) {
+    return false;
+  }
+
+  if (
+    reply.correction !==
+      undefined &&
+    !isAnnaCorrection(
+      reply.correction,
+    )
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+
+function getErrorMessage(
+  data: ServerError | null,
+  fallback: string,
+): string {
+  if (
+    typeof data?.detail ===
+      "string" &&
+    data.detail.trim()
+  ) {
+    return data.detail.trim();
+  }
+
+  if (
+    typeof data?.error ===
+      "string" &&
+    data.error.trim()
+  ) {
+    return data.error.trim();
+  }
+
+  return fallback;
+}
+
+
+function getFilename(
+  mimeType: string,
+): string {
+  if (
+    mimeType.includes(
+      "ogg",
+    )
+  ) {
+    return "recording.ogg";
+  }
+
+  if (
+    mimeType.includes(
+      "mp4",
+    )
+  ) {
+    return "recording.mp4";
+  }
+
+  if (
+    mimeType.includes(
+      "wav",
+    )
+  ) {
+    return "recording.wav";
+  }
+
+  return "recording.webm";
+}
+
+
+function isTimeoutError(
+  error: unknown,
+): boolean {
+  return (
+    error instanceof
+      DOMException &&
+    error.name ===
+      "AbortError"
+  );
+}
+
+
+function normalizeVoiceError(
+  error: unknown,
+): Error {
+  if (
+    isTimeoutError(
+      error,
+    )
+  ) {
+    return new Error(
+      "Voice processing အချိန်ကြာလွန်းပါတယ်။ စာကြောင်းတိုတိုနဲ့ ပြန်စမ်းပါ။",
+    );
+  }
+
+  if (
+    error instanceof
+      TypeError &&
+    error.message
+      .toLowerCase()
+      .includes(
+        "fetch",
+      )
+  ) {
+    return new Error(
+      "Anna AI Voice Server ကို ချိတ်ဆက်၍မရပါ။ Network ကိုစစ်ပြီး ပြန်စမ်းပါ။",
+    );
+  }
+
+  if (
+    error instanceof Error
+  ) {
+    return error;
+  }
+
+  return new Error(
+    "Voice processing error ဖြစ်နေပါတယ်။",
+  );
+}
+
+
+/**
+ * Build another V7 endpoint
+ * from the already configured
+ * /v7/health endpoint.
+ */
+function getV7SiblingUrl(
+  pathname: string,
+): string {
+  const healthUrl =
+    getVoiceServerUrl(
+      "/health",
+    );
+
+  const cleanPath =
+    pathname.startsWith("/")
+      ? pathname
+      : `/${pathname}`;
+
+  if (
+    healthUrl.endsWith(
+      "/health",
+    )
+  ) {
+    return (
+      healthUrl.slice(
+        0,
+        -"/health".length,
+      ) +
+      cleanPath
+    );
+  }
+
+  return (
+    healthUrl +
+    cleanPath
+  );
+}
+
+
+/**
+ * Read NDJSON without waiting
+ * for the complete response.
+ */
+async function consumeNdjsonStream<T>(
+  response: Response,
+  onEvent: (
+    event: T,
+  ) => void,
+): Promise<void> {
+  if (!response.body) {
+    throw new Error(
+      "Streaming response body is missing.",
+    );
+  }
+
+  const reader =
+    response.body
+      .getReader();
+
+  const decoder =
+    new TextDecoder(
+      "utf-8",
+    );
+
+  let buffer = "";
+
+  while (true) {
+    const {
+      done,
+      value,
+    } =
+      await reader.read();
+
+    if (done) {
+      break;
+    }
+
+    buffer +=
+      decoder.decode(
+        value,
+        {
+          stream: true,
+        },
+      );
+
+    const lines =
+      buffer.split(
+        "\n",
+      );
+
+    buffer =
+      lines.pop() ??
+      "";
+
+    for (
+      const rawLine
+      of lines
+    ) {
+      const line =
+        rawLine.trim();
+
+      if (!line) {
+        continue;
+      }
+
+      try {
+        const event =
+          JSON.parse(
+            line,
+          ) as T;
+
+        onEvent(
+          event,
+        );
+      } catch (
+        error
+      ) {
+        console.warn(
+          "Invalid NDJSON line:",
+          line,
+          error,
+        );
+      }
+    }
+  }
+
+  buffer +=
+    decoder.decode();
+
+  const remaining =
+    buffer.trim();
+
+  if (!remaining) {
+    return;
+  }
+
+  try {
+    const event =
+      JSON.parse(
+        remaining,
+      ) as T;
+
+    onEvent(
+      event,
+    );
+  } catch (
+    error
+  ) {
+    console.warn(
+      "Invalid final NDJSON line:",
+      remaining,
+      error,
+    );
+  }
+}
+
+
+export async function sendAudio(
+  audio: Blob,
+  history:
+    ConversationHistoryMessage[],
+): Promise<VoiceChatResponse> {
+  const formData =
+    new FormData();
+
+  formData.append(
+    "audio",
+    audio,
+    getFilename(
+      audio.type,
+    ),
+  );
+
+  formData.append(
+    "mode",
+    "practice",
+  );
+
+  formData.append(
+    "history",
+    JSON.stringify(
+      history,
+    ),
+  );
+
+  let response: Response;
+
+  try {
+    response =
+      await fetchWithTimeout(
+        getVoiceServerUrl(
+          "/voice-chat",
+        ),
+        {
+          method:
+            "POST",
+
+          body:
+            formData,
+        },
+        VOICE_TIMEOUT_MS,
+      );
+  } catch (
+    error
+  ) {
+    throw normalizeVoiceError(
+      error,
+    );
+  }
+
+  const data =
+    await readJson<
+      VoiceChatResponse |
+      ServerError
+    >(response);
+
+  if (!response.ok) {
+    throw new Error(
+      getErrorMessage(
+        data as
+          ServerError | null,
+
+        `Voice processing failed (${response.status}).`,
+      ),
+    );
+  }
+
+  if (
+    !data ||
+    !(
+      "transcript"
+      in data
+    ) ||
+    !(
+      "reply"
+      in data
+    ) ||
+    typeof data.transcript !==
+      "string" ||
+    !data.transcript.trim() ||
+    !isAnnaReply(
+      data.reply,
+    )
+  ) {
+    throw new Error(
+      "Voice server returned an invalid response.",
+    );
+  }
+
+  return data;
+}
+
+
+export async function streamVoiceAudio(
+  audio: Blob,
+  history:
+    ConversationHistoryMessage[],
+  onEvent: (
+    event:
+      VoiceStreamEvent,
+  ) => void,
+): Promise<boolean> {
+  const formData =
+    new FormData();
+
+  formData.append(
+    "audio",
+    audio,
+    getFilename(
+      audio.type,
+    ),
+  );
+
+  formData.append(
+    "history",
+    JSON.stringify(
+      history,
+    ),
+  );
+
+  let response: Response;
+
+  try {
+    response =
+      await fetch(
+        getV7SiblingUrl(
+          "/voice-stream",
+        ),
+        {
+          method:
+            "POST",
+
+          body:
+            formData,
+
+          cache:
+            "no-store",
+
+          headers: {
+            Accept:
+              "application/x-ndjson",
+          },
+        },
+      );
+  } catch (
+    error
+  ) {
+    console.warn(
+      "Voice stream connection failed:",
+      error,
+    );
+
+    return false;
+  }
+
+  if (
+    response.status ===
+      404 ||
+    response.status ===
+      405
+  ) {
+    return false;
+  }
+
+  if (!response.ok) {
+    const data =
+      await readJson<
+        ServerError
+      >(response);
+
+    throw new Error(
+      getErrorMessage(
+        data,
+
+        `Voice streaming failed (${response.status}).`,
+      ),
+    );
+  }
+
+  await consumeNdjsonStream<
+    VoiceStreamEvent
+  >(
+    response,
+    (
+      event,
+    ) => {
+      if (
+        event.type ===
+        "error"
+      ) {
+        throw new Error(
+          event.error,
+        );
+      }
+
+      onEvent(
+        event,
+      );
+    },
+  );
+
+  return true;
+}
+
+
+export async function streamTextChat(
+  message: string,
+  history:
+    ConversationHistoryMessage[],
+  onEvent: (
+    event:
+      TextStreamEvent,
+  ) => void,
+): Promise<void> {
+  const cleaned =
+    message.trim();
+
+  if (!cleaned) {
+    throw new Error(
+      "Message cannot be empty.",
+    );
+  }
+
+  const response =
+    await fetch(
+      getV7SiblingUrl(
+        "/stream-chat",
+      ),
+      {
+        method:
+          "POST",
+
+        headers: {
+          "Content-Type":
+            "application/json",
+
+          Accept:
+            "application/x-ndjson",
+        },
+
+        body:
+          JSON.stringify(
+            {
+              message:
+                cleaned,
+
+              history,
+            },
+          ),
+
+        cache:
+          "no-store",
+      },
+    );
+
+  if (!response.ok) {
+    const data =
+      await readJson<
+        ServerError
+      >(response);
+
+    throw new Error(
+      getErrorMessage(
+        data,
+
+        `Stream chat failed (${response.status}).`,
+      ),
+    );
+  }
+
+  await consumeNdjsonStream<
+    TextStreamEvent
+  >(
+    response,
+    (
+      event,
+    ) => {
+      if (
+        event.type ===
+        "error"
+      ) {
+        throw new Error(
+          event.error,
+        );
+      }
+
+      onEvent(
+        event,
+      );
+    },
+  );
+}
+
+
+export async function sendTextMessage(
+  message: string,
+  mode: AiPracticeMode,
+  history:
+    ConversationHistoryMessage[] =
+      [],
+): Promise<TextChatResponse> {
+  const cleaned =
+    message.trim();
+
+  if (!cleaned) {
+    throw new Error(
+      mode ===
+        "sentence_builder"
+        ? "မြန်မာစာကြောင်းကို အရင်ရေးပါ။"
+        : "Message cannot be empty.",
+    );
+  }
+
+  let response: Response;
+
+  try {
+    response =
+      await fetchWithTimeout(
+        getVoiceServerUrl(
+          "/text-chat",
+        ),
+        {
+          method:
+            "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+
+          body:
+            JSON.stringify({
+              message:
+                cleaned,
+
+              mode,
+
+              history,
+            }),
+        },
+        TEXT_TIMEOUT_MS,
+      );
+  } catch (
+    error
+  ) {
+    if (
+      isTimeoutError(
+        error,
+      )
+    ) {
+      throw new Error(
+        "Anna reply အချိန်ကြာလွန်းပါတယ်။ ပြန်စမ်းပါ။",
+      );
+    }
+
+    throw new Error(
+      "Anna AI Voice Server ကို ချိတ်ဆက်၍မရပါ။",
+    );
+  }
+
+  const data =
+    await readJson<
+      TextChatResponse |
+      ServerError
+    >(response);
+
+  if (!response.ok) {
+    throw new Error(
+      getErrorMessage(
+        data as
+          ServerError | null,
+
+        `Text chat failed (${response.status}).`,
+      ),
+    );
+  }
+
+  if (
+    !data ||
+    !(
+      "message"
+      in data
+    ) ||
+    !(
+      "reply"
+      in data
+    ) ||
+    !isAnnaReply(
+      data.reply,
+    )
+  ) {
+    throw new Error(
+      "Text chat server returned an invalid response.",
+    );
+  }
+
+  return data;
+}
+
+
+export async function getAnnaTtsAudio(
+  text: string,
+  speed: TtsSpeed =
+    "normal",
+): Promise<Blob> {
+  const cleaned =
+    text.trim();
+
+  if (!cleaned) {
+    throw new Error(
+      "TTS text cannot be empty.",
+    );
+  }
+
+  let response: Response;
+
+  try {
+    response =
+      await fetchWithTimeout(
+        getVoiceServerUrl(
+          "/tts",
+        ),
+        {
+          method:
+            "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json",
+
+            Accept:
+              "audio/wav",
+          },
+
+          body:
+            JSON.stringify({
+              text:
+                cleaned,
+
+              speed,
+            }),
+        },
+        TTS_TIMEOUT_MS,
+      );
+  } catch (
+    error
+  ) {
+    if (
+      isTimeoutError(
+        error,
+      )
+    ) {
+      throw new Error(
+        "Anna TTS timed out.",
+      );
+    }
+
+    throw new Error(
+      "Anna Piper TTS server could not be reached.",
+    );
+  }
+
+  if (!response.ok) {
+    const data =
+      await readJson<
+        ServerError
+      >(response);
+
+    throw new Error(
+      getErrorMessage(
+        data,
+
+        `TTS failed (${response.status}).`,
+      ),
+    );
+  }
+
+  const audioBlob =
+    await response.blob();
+
+  if (
+    audioBlob.size <
+      1000
+  ) {
+    throw new Error(
+      "TTS returned invalid audio.",
+    );
+  }
+
+  return audioBlob;
+}
+
+
+export async function checkVoiceServer(): Promise<boolean> {
+  try {
+    const response =
+      await fetchWithTimeout(
+        getVoiceServerUrl(
+          "/health",
+        ),
+        {
+          method:
+            "GET",
+
+          headers: {
+            Accept:
+              "application/json",
+          },
+        },
+        HEALTH_TIMEOUT_MS,
+      );
+
+    if (!response.ok) {
+      return false;
+    }
+
+    const data =
+      await readJson<
+        VoiceServerHealth
+      >(response);
+
+    return (
+      data?.status ===
+        "ok" ||
+      data?.status ===
+        "degraded"
+    );
+  } catch (
+    error
+  ) {
+    console.error(
+      "Voice health check failed:",
+      error,
+    );
+
+    return false;
+  }
+}
+
+
+==============================
+FILE: C:\Users\HMT\anna-ai\lib\ai\speech.ts
+==============================
+
+import {
+  getAnnaTtsAudio,
+} from "@/lib/ai/api";
+
+
+export type SpeakChineseOptions = {
+  rate?: number;
+  pitch?: number;
+  volume?: number;
+
+  speed?:
+    | "normal"
+    | "slow";
+
+  onStart?: () => void;
+  onEnd?: () => void;
+
+  onError?: (
+    error?: unknown,
+  ) => void;
+};
+
+
+export type QueueChineseOptions = {
+  speed?:
+    | "normal"
+    | "slow";
+
+  volume?: number;
+
+  onStart?: () => void;
+
+  onQueueIdle?: () => void;
+
+  onError?: (
+    error?: unknown,
+  ) => void;
+};
+
+
+type QueueItem = {
+  id: number;
+
+  text: string;
+
+  options:
+    QueueChineseOptions;
+
+  generation: number;
+
+  audioPromise:
+    Promise<Blob | null>;
+
+  audioBlob:
+    Blob | null;
+
+  audioError:
+    unknown | null;
+};
+
+
+let currentAudio:
+  HTMLAudioElement | null =
+  null;
+
+let currentObjectUrl:
+  string | null =
+  null;
+
+let playbackGeneration =
+  0;
+
+let queueItemId =
+  0;
+
+const speechQueue:
+  QueueItem[] =
+  [];
+
+let queueRunning =
+  false;
+
+let queueIdleCallback:
+  (() => void) | null =
+  null;
+
+
+/**
+ * Keep a small in-memory cache.
+ *
+ * Backend already has WAV cache,
+ * but this avoids another browser
+ * request for recently used text.
+ */
+const audioBlobCache =
+  new Map<
+    string,
+    Blob
+  >();
+
+const MAX_AUDIO_CACHE_ITEMS =
+  30;
+
+
+/**
+ * How many future sentences
+ * may generate simultaneously.
+ *
+ * 3 works well for CPU Piper:
+ *
+ * current sentence playing
+ * + next 2/3 sentences preparing.
+ */
+const MAX_PREFETCH_ITEMS =
+  2;
+
+
+/**
+ * Prevent browser cache from
+ * growing forever.
+ */
+function saveAudioToMemoryCache(
+  key: string,
+  blob: Blob,
+): void {
+  if (
+    audioBlobCache.has(
+      key,
+    )
+  ) {
+    audioBlobCache.delete(
+      key,
+    );
+  }
+
+  audioBlobCache.set(
+    key,
+    blob,
+  );
+
+  while (
+    audioBlobCache.size >
+    MAX_AUDIO_CACHE_ITEMS
+  ) {
+    const oldestKey =
+      audioBlobCache
+        .keys()
+        .next()
+        .value;
+
+    if (
+      typeof oldestKey !==
+      "string"
+    ) {
+      break;
+    }
+
+    audioBlobCache.delete(
+      oldestKey,
+    );
+  }
+}
+
+
+function getAudioCacheKey(
+  text: string,
+  speed:
+    | "normal"
+    | "slow",
+): string {
+  return (
+    `${speed}:` +
+    text.trim()
+  );
+}
+
+
+function cleanupAudio(): void {
+  if (currentAudio) {
+    currentAudio.onplay =
+      null;
+
+    currentAudio.onended =
+      null;
+
+    currentAudio.onerror =
+      null;
+
+    currentAudio.pause();
+
+    currentAudio.src =
+      "";
+
+    currentAudio =
+      null;
+  }
+
+  if (
+    currentObjectUrl
+  ) {
+    URL.revokeObjectURL(
+      currentObjectUrl,
+    );
+
+    currentObjectUrl =
+      null;
+  }
+}
+
+
+function cancelBrowserSpeech(): void {
+  if (
+    typeof window ===
+    "undefined"
+  ) {
+    return;
+  }
+
+  window
+    .speechSynthesis
+    .cancel();
+}
+
+
+/**
+ * Important:
+ *
+ * Clearing the queue invalidates
+ * existing prefetch promises too.
+ */
+export function clearSpeechQueue(): void {
+  speechQueue.splice(
+    0,
+    speechQueue.length,
+  );
+
+  queueRunning =
+    false;
+
+  queueIdleCallback =
+    null;
+}
+
+
+export function stopSpeaking(): void {
+  if (
+    typeof window ===
+    "undefined"
+  ) {
+    return;
+  }
+
+  playbackGeneration +=
+    1;
+
+  clearSpeechQueue();
+
+  cleanupAudio();
+
+  cancelBrowserSpeech();
+}
+
+
+function findChineseVoice():
+  SpeechSynthesisVoice |
+  undefined {
+  if (
+    typeof window ===
+    "undefined"
+  ) {
+    return undefined;
+  }
+
+  const voices =
+    window
+      .speechSynthesis
+      .getVoices();
+
+  return voices.find(
+    (
+      voice,
+    ) => {
+      const language =
+        voice.lang
+          .toLowerCase();
+
+      return (
+        language ===
+          "zh-cn" ||
+        language.startsWith(
+          "zh",
+        )
+      );
+    },
+  );
+}
+
+
+/**
+ * Browser Mandarin fallback.
+ */
+function playWithBrowserTts(
+  text: string,
+  options:
+    SpeakChineseOptions,
+  generation: number,
+): Promise<void> {
+  return new Promise(
+    (
+      resolve,
+      reject,
+    ) => {
+      if (
+        typeof window ===
+        "undefined"
+      ) {
+        resolve();
+
+        return;
+      }
+
+      if (
+        generation !==
+        playbackGeneration
+      ) {
+        resolve();
+
+        return;
+      }
+
+      cancelBrowserSpeech();
+
+      const utterance =
+        new SpeechSynthesisUtterance(
+          text,
+        );
+
+      utterance.lang =
+        "zh-CN";
+
+      utterance.rate =
+        options.rate ??
+        (
+          options.speed ===
+            "slow"
+            ? 0.78
+            : 0.9
+        );
+
+      utterance.pitch =
+        options.pitch ??
+        1;
+
+      utterance.volume =
+        options.volume ??
+        1;
+
+      const chineseVoice =
+        findChineseVoice();
+
+      if (
+        chineseVoice
+      ) {
+        utterance.voice =
+          chineseVoice;
+      }
+
+      utterance.onstart =
+        () => {
+          if (
+            generation ===
+            playbackGeneration
+          ) {
+            options
+              .onStart?.();
+          }
+        };
+
+      utterance.onend =
+        () => {
+          if (
+            generation ===
+            playbackGeneration
+          ) {
+            options
+              .onEnd?.();
+          }
+
+          resolve();
+        };
+
+      utterance.onerror =
+        (
+          event,
+        ) => {
+          if (
+            generation ===
+            playbackGeneration
+          ) {
+            options
+              .onError?.(
+                event,
+              );
+          }
+
+          reject(
+            new Error(
+              "Browser TTS failed.",
+            ),
+          );
+        };
+
+      window
+        .speechSynthesis
+        .speak(
+          utterance,
+        );
+    },
+  );
+}
+
+
+/**
+ * Fetch/generate Piper WAV.
+ *
+ * This function does NOT play audio.
+ * That distinction is what allows
+ * prefetching while another sentence
+ * is already playing.
+ */
+async function fetchPiperAudio(
+  text: string,
+  speed:
+    | "normal"
+    | "slow",
+  generation: number,
+): Promise<Blob | null> {
+  if (
+    generation !==
+    playbackGeneration
+  ) {
+    return null;
+  }
+
+  const key =
+    getAudioCacheKey(
+      text,
+      speed,
+    );
+
+  const cached =
+    audioBlobCache.get(
+      key,
+    );
+
+  if (cached) {
+    return cached;
+  }
+
+  try {
+    const blob =
+      await getAnnaTtsAudio(
+        text,
+        speed,
+      );
+
+    if (
+      generation !==
+      playbackGeneration
+    ) {
+      return null;
+    }
+
+    saveAudioToMemoryCache(
+      key,
+      blob,
+    );
+
+    return blob;
+  } catch (
+    error
+  ) {
+    console.warn(
+      "Piper audio prefetch failed:",
+      text,
+      error,
+    );
+
+    throw error;
+  }
+}
+
+
+/**
+ * Play an already prepared Blob.
+ *
+ * There is no network request here.
+ */
+async function playPreparedAudio(
+  audioBlob: Blob,
+  options:
+    SpeakChineseOptions,
+  generation: number,
+): Promise<void> {
+  if (
+    generation !==
+    playbackGeneration
+  ) {
+    return;
+  }
+
+  cleanupAudio();
+
+  const objectUrl =
+    URL.createObjectURL(
+      audioBlob,
+    );
+
+  const audio =
+    new Audio(
+      objectUrl,
+    );
+
+  currentObjectUrl =
+    objectUrl;
+
+  currentAudio =
+    audio;
+
+  audio.preload =
+    "auto";
+
+  audio.volume =
+    options.volume ??
+    1;
+
+  /**
+   * Explicitly ask the browser
+   * to load/decode the WAV.
+   */
+  audio.load();
+
+  await new Promise<void>(
+    (
+      resolve,
+      reject,
+    ) => {
+      let settled =
+        false;
+
+      const finish =
+        () => {
+          if (settled) {
+            return;
+          }
+
+          settled =
+            true;
+
+          cleanupAudio();
+
+          resolve();
+        };
+
+      const fail =
+        (
+          error: unknown,
+        ) => {
+          if (settled) {
+            return;
+          }
+
+          settled =
+            true;
+
+          cleanupAudio();
+
+          reject(
+            error,
+          );
+        };
+
+      audio.onplay =
+        () => {
+          if (
+            generation ===
+            playbackGeneration
+          ) {
+            options
+              .onStart?.();
+          }
+        };
+
+      audio.onended =
+        () => {
+          if (
+            generation ===
+            playbackGeneration
+          ) {
+            options
+              .onEnd?.();
+          }
+
+          finish();
+        };
+
+      audio.onerror =
+        (
+          event,
+        ) => {
+          fail(
+            event,
+          );
+        };
+
+      audio
+        .play()
+        .catch(
+          (
+            error,
+          ) => {
+            fail(
+              error,
+            );
+          },
+        );
+    },
+  );
+}
+
+
+/**
+ * Normal one-shot Piper playback.
+ *
+ * Used by replay buttons and
+ * Sentence Builder.
+ */
+async function playPiperAudio(
+  text: string,
+  options:
+    SpeakChineseOptions,
+  generation: number,
+): Promise<void> {
+  const speed =
+    options.speed ??
+    "normal";
+
+  const audioBlob =
+    await fetchPiperAudio(
+      text,
+      speed,
+      generation,
+    );
+
+  if (
+    !audioBlob ||
+    generation !==
+      playbackGeneration
+  ) {
+    return;
+  }
+
+  await playPreparedAudio(
+    audioBlob,
+    options,
+    generation,
+  );
+}
+
+
+async function playOneChinese(
+  text: string,
+  options:
+    SpeakChineseOptions,
+  generation: number,
+): Promise<void> {
+  try {
+    await playPiperAudio(
+      text,
+      options,
+      generation,
+    );
+  } catch (
+    piperError
+  ) {
+    if (
+      generation !==
+      playbackGeneration
+    ) {
+      return;
+    }
+
+    console.error(
+      "Anna Piper Mandarin TTS failed:",
+      piperError,
+    );
+
+    options
+      .onError?.(
+        piperError,
+      );
+
+    throw piperError;
+  }
+}
+
+
+export async function speakChinese(
+  text: string,
+  options:
+    SpeakChineseOptions = {},
+): Promise<void> {
+  if (
+    typeof window ===
+      "undefined" ||
+    !text.trim()
+  ) {
+    return;
+  }
+
+  stopSpeaking();
+
+  const generation =
+    playbackGeneration;
+
+  try {
+    await playOneChinese(
+      text.trim(),
+      options,
+      generation,
+    );
+  } catch (
+    error
+  ) {
+    console.error(
+      "Chinese speech failed:",
+      error,
+    );
+  }
+}
+
+
+/**
+ * Begin preparing a queue item
+ * immediately.
+ *
+ * This is the key improvement.
+ */
+function createQueueItem(
+  text: string,
+  options:
+    QueueChineseOptions,
+  generation: number,
+): QueueItem {
+  const speed =
+    options.speed ??
+    "normal";
+
+  const item:
+    QueueItem = {
+      id:
+        ++queueItemId,
+
+      text,
+
+      options,
+
+      generation,
+
+      audioPromise:
+        Promise.resolve(
+          null,
+        ),
+
+      audioBlob:
+        null,
+
+      audioError:
+        null,
+    };
+
+  item.audioPromise =
+    fetchPiperAudio(
+      text,
+      speed,
+      generation,
+    )
+      .then(
+        (
+          blob,
+        ) => {
+          if (
+            generation ===
+            playbackGeneration
+          ) {
+            item.audioBlob =
+              blob;
+          }
+
+          return blob;
+        },
+      )
+      .catch(
+        (
+          error,
+        ) => {
+          item.audioError =
+            error;
+
+          return null;
+        },
+      );
+
+  return item;
+}
+
+
+/**
+ * Ensure several future sentences
+ * are generating at the same time.
+ */
+function prefetchUpcomingItems(): void {
+  if (
+    typeof window ===
+    "undefined"
+  ) {
+    return;
+  }
+
+  const generation =
+    playbackGeneration;
+
+  const items =
+    speechQueue.slice(
+      0,
+      MAX_PREFETCH_ITEMS,
+    );
+
+  for (
+    const item
+    of items
+  ) {
+    if (
+      item.generation !==
+      generation
+    ) {
+      continue;
+    }
+
+    /**
+     * createQueueItem() already
+     * starts the promise.
+     *
+     * Referencing it here documents
+     * that these requests should remain
+     * active while playback continues.
+     */
+    void item.audioPromise;
+  }
+}
+
+
+/**
+ * Play a prefetched queue item.
+ */
+async function playQueueItem(
+  item: QueueItem,
+  generation: number,
+): Promise<void> {
+  if (
+    generation !==
+    playbackGeneration
+  ) {
+    return;
+  }
+
+  let audioBlob =
+    item.audioBlob;
+
+  if (!audioBlob) {
+    audioBlob =
+      await item.audioPromise;
+  }
+
+  if (
+    generation !==
+    playbackGeneration
+  ) {
+    return;
+  }
+
+  if (audioBlob) {
+    try {
+      await playPreparedAudio(
+        audioBlob,
+        {
+          speed:
+            item.options
+              .speed ??
+            "normal",
+
+          volume:
+            item.options
+              .volume ??
+            1,
+
+          onStart:
+            item.options
+              .onStart,
+
+          onError:
+            item.options
+              .onError,
+        },
+        generation,
+      );
+
+      return;
+    } catch (
+      playbackError
+    ) {
+      console.warn(
+        "Prepared Piper audio playback failed:",
+        playbackError,
+      );
+    }
+  }
+
+  /**
+   * Piper-only policy:
+   * never switch to the operating system/browser voice,
+   * because that can produce a non-Mandarin voice.
+   */
+  const piperError =
+    item.audioError ??
+    new Error(
+      "Anna Piper Mandarin TTS audio was not available.",
+    );
+
+  item.options
+    .onError?.(
+      piperError,
+    );
+
+  throw piperError;
+}
+
+
+/**
+ * Continuous playback queue.
+ *
+ * Important:
+ *
+ * Sentence 2/3 TTS requests have
+ * already started before Sentence 1
+ * playback finishes.
+ */
+async function runSpeechQueue():
+  Promise<void> {
+  if (
+    queueRunning
+  ) {
+    return;
+  }
+
+  queueRunning =
+    true;
+
+  const generation =
+    playbackGeneration;
+
+  try {
+    while (
+      generation ===
+        playbackGeneration
+    ) {
+      if (
+        speechQueue.length ===
+        0
+      ) {
+        break;
+      }
+
+      /**
+       * Keep future audio warm.
+       */
+      prefetchUpcomingItems();
+
+      const item =
+        speechQueue.shift();
+
+      if (!item) {
+        continue;
+      }
+
+      if (
+        item.generation !==
+        generation
+      ) {
+        continue;
+      }
+
+      /**
+       * After shifting current item,
+       * immediately make sure all
+       * remaining future items continue
+       * downloading/generating.
+       */
+      prefetchUpcomingItems();
+
+      try {
+        await playQueueItem(
+          item,
+          generation,
+        );
+      } catch (
+        error
+      ) {
+        console.error(
+          "Queued Chinese sentence failed:",
+          error,
+        );
+
+        item.options
+          .onError?.(
+            error,
+          );
+      }
+    }
+  } finally {
+    queueRunning =
+      false;
+
+    if (
+      generation ===
+        playbackGeneration &&
+      speechQueue.length ===
+        0
+    ) {
+      const callback =
+        queueIdleCallback;
+
+      queueIdleCallback =
+        null;
+
+      callback?.();
+    }
+
+    /**
+     * Race protection:
+     *
+     * A new sentence may have arrived
+     * exactly while queueRunning was
+     * being changed to false.
+     */
+    if (
+      generation ===
+        playbackGeneration &&
+      speechQueue.length >
+        0
+    ) {
+      void runSpeechQueue();
+    }
+  }
+}
+
+
+export function queueChineseSentence(
+  text: string,
+  options:
+    QueueChineseOptions = {},
+): void {
+  if (
+    typeof window ===
+    "undefined"
+  ) {
+    return;
+  }
+
+  const cleaned =
+    text.trim();
+
+  if (!cleaned) {
+    return;
+  }
+
+  /**
+   * Prevent duplicate queued
+   * sentence events.
+   */
+  const duplicate =
+    speechQueue.some(
+      (
+        item,
+      ) =>
+        item.text ===
+        cleaned,
+    );
+
+  if (duplicate) {
+    return;
+  }
+
+  const generation =
+    playbackGeneration;
+
+  /**
+   * IMPORTANT:
+   *
+   * createQueueItem() starts the
+   * Piper request NOW.
+   *
+   * It does not wait for previous
+   * audio to finish.
+   */
+  const item =
+    createQueueItem(
+      cleaned,
+      options,
+      generation,
+    );
+
+  speechQueue.push(
+    item,
+  );
+
+  if (
+    options.onQueueIdle
+  ) {
+    queueIdleCallback =
+      options.onQueueIdle;
+  }
+
+  /**
+   * Start/preload future sentences.
+   */
+  prefetchUpcomingItems();
+
+  void runSpeechQueue();
+}
+
+
+export function isSpeechQueueBusy():
+  boolean {
+  return (
+    queueRunning ||
+    speechQueue.length >
+      0
+  );
+}
+
+
+==============================
+FILE: C:\Users\HMT\anna-ai-mobile\app\(tabs)\speaking.tsx
+==============================
+
+import { Ionicons } from "@expo/vector-icons";
+
+import {
+  AudioModule,
+  RecordingPresets,
+  setAudioModeAsync,
+  useAudioRecorder,
+  useAudioRecorderState,
+} from "expo-audio";
+
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+
+import {
+  checkVoiceServer,
+  sendVoiceRecording,
+  streamVoiceRecording,
+  type AnnaCorrection,
+  type ConversationHistoryMessage,
+} from "@/lib/ai";
+
+import {
+  clearAnnaAudioQueue,
+  queueAnnaSentence,
+  speakAnnaText,
+  stopAnnaAudio,
+} from "@/lib/anna-audio";
+
+
+type ConversationState =
+  | "ready"
+  | "listening"
+  | "processing"
+  | "streaming"
+  | "speaking"
+  | "error";
+
+
+const MAX_MEMORY_MESSAGES =
+  40;
+
+const HANZI_DELAY_MS =
+  40;
+
+
+const EMPTY_CORRECTION:
+  AnnaCorrection = {
+    needed: false,
+    original: "",
+    corrected: "",
+    pinyin: "",
+  };
+
+
+const DEFAULT_HANZI =
+  "你好！今天想聊什么？";
+
+const DEFAULT_PINYIN =
+  "Nǐ hǎo! Jīntiān xiǎng liáo shénme?";
+
+
+export default function SpeakingScreen() {
+  const recorder =
+    useAudioRecorder(
+      RecordingPresets.HIGH_QUALITY,
+    );
+
+  const recorderState =
+    useAudioRecorderState(
+      recorder,
+      200,
+    );
+
+  const [
+    serverOnline,
+    setServerOnline,
+  ] =
+    useState(false);
+
+  const [
+    checkingServer,
+    setCheckingServer,
+  ] =
+    useState(true);
+
+  const [
+    conversationState,
+    setConversationState,
+  ] =
+    useState<ConversationState>(
+      "ready",
+    );
+
+  const [
+    speakerEnabled,
+    setSpeakerEnabled,
+  ] =
+    useState(true);
+
+  const [
+    transcript,
+    setTranscript,
+  ] =
+    useState("");
+
+  const [
+    hanzi,
+    setHanzi,
+  ] =
+    useState(
+      DEFAULT_HANZI,
+    );
+
+  const [
+    pinyin,
+    setPinyin,
+  ] =
+    useState(
+      DEFAULT_PINYIN,
+    );
+
+  const [
+    correction,
+    setCorrection,
+  ] =
+    useState<AnnaCorrection>(
+      EMPTY_CORRECTION,
+    );
+
+  const [
+    error,
+    setError,
+  ] =
+    useState("");
+
+  const historyRef =
+    useRef<
+      ConversationHistoryMessage[]
+    >([]);
+
+  const hanziQueueRef =
+    useRef<
+      string[]
+    >([]);
+
+  const hanziTimerRef =
+    useRef<
+      ReturnType<
+        typeof setInterval
+      > | null
+    >(null);
+
+  const displayedHanziRef =
+    useRef("");
+
+  const finalHanziRef =
+    useRef("");
+
+  const pendingPinyinRef =
+    useRef("");
+
+  const streamDoneRef =
+    useRef(false);
+
+  const speakingRef =
+    useRef(false);
+
+
+  const stopHanziTyping =
+    useCallback(
+      () => {
+        if (
+          hanziTimerRef.current
+        ) {
+          clearInterval(
+            hanziTimerRef.current,
+          );
+
+          hanziTimerRef.current =
+            null;
+        }
+
+        hanziQueueRef.current =
+          [];
+      },
+      [],
+    );
+
+
+  const finishLiveReply =
+    useCallback(
+      () => {
+        if (
+          finalHanziRef.current
+        ) {
+          setHanzi(
+            finalHanziRef.current,
+          );
+        }
+
+        setPinyin(
+          pendingPinyinRef.current,
+        );
+
+        if (
+          !speakingRef.current
+        ) {
+          setConversationState(
+            "ready",
+          );
+        }
+      },
+      [],
+    );
+
+
+  const startHanziTyping =
+    useCallback(
+      () => {
+        if (
+          hanziTimerRef.current
+        ) {
+          return;
+        }
+
+        hanziTimerRef.current =
+          setInterval(
+            () => {
+              const next =
+                hanziQueueRef
+                  .current
+                  .shift();
+
+              if (
+                next !==
+                undefined
+              ) {
+                displayedHanziRef
+                  .current +=
+                  next;
+
+                setHanzi(
+                  displayedHanziRef
+                    .current,
+                );
+
+                return;
+              }
+
+              if (
+                streamDoneRef.current
+              ) {
+                const current =
+                  displayedHanziRef
+                    .current;
+
+                const finalText =
+                  finalHanziRef
+                    .current;
+
+                if (
+                  finalText &&
+                  finalText.startsWith(
+                    current,
+                  ) &&
+                  finalText.length >
+                    current.length
+                ) {
+                  const missing =
+                    finalText.slice(
+                      current.length,
+                    );
+
+                  hanziQueueRef
+                    .current
+                    .push(
+                      ...Array.from(
+                        missing,
+                      ),
+                    );
+
+                  return;
+                }
+              }
+
+              if (
+                hanziTimerRef.current
+              ) {
+                clearInterval(
+                  hanziTimerRef.current,
+                );
+
+                hanziTimerRef.current =
+                  null;
+              }
+
+              if (
+                streamDoneRef.current
+              ) {
+                finishLiveReply();
+              }
+            },
+            HANZI_DELAY_MS,
+          );
+      },
+      [
+        finishLiveReply,
+      ],
+    );
+
+
+  const queueLiveHanzi =
+    useCallback(
+      (
+        text: string,
+      ) => {
+        if (!text) {
+          return;
+        }
+
+        hanziQueueRef
+          .current
+          .push(
+            ...Array.from(
+              text,
+            ),
+          );
+
+        startHanziTyping();
+      },
+      [
+        startHanziTyping,
+      ],
+    );
+
+
+  const resetStreaming =
+    useCallback(
+      () => {
+        stopHanziTyping();
+
+        displayedHanziRef.current =
+          "";
+
+        finalHanziRef.current =
+          "";
+
+        pendingPinyinRef.current =
+          "";
+
+        streamDoneRef.current =
+          false;
+
+        speakingRef.current =
+          false;
+      },
+      [
+        stopHanziTyping,
+      ],
+    );
+
+
+  const saveTurn =
+    useCallback(
+      (
+        userText: string,
+        annaText: string,
+      ) => {
+        const cleanUser =
+          userText.trim();
+
+        const cleanAnna =
+          annaText.trim();
+
+        if (
+          !cleanUser ||
+          !cleanAnna
+        ) {
+          return;
+        }
+
+        const newMessages:
+          ConversationHistoryMessage[] =
+          [
+            {
+              role:
+                "user",
+
+              content:
+                cleanUser,
+            },
+
+            {
+              role:
+                "assistant",
+
+              content:
+                cleanAnna,
+            },
+          ];
+
+        historyRef.current =
+          [
+            ...historyRef.current,
+            ...newMessages,
+          ].slice(
+            -MAX_MEMORY_MESSAGES,
+          );
+      },
+      [],
+    );
+
+
+  useEffect(
+    () => {
+      const setup =
+        async () => {
+          try {
+            const permission =
+              await AudioModule
+                .requestRecordingPermissionsAsync();
+
+            if (
+              !permission.granted
+            ) {
+              Alert.alert(
+                "Microphone permission",
+                "Anna AI needs microphone access for Chinese speaking practice.",
+              );
+
+              return;
+            }
+
+            await setAudioModeAsync({
+              allowsRecording:
+                true,
+
+              playsInSilentMode:
+                true,
+
+              shouldRouteThroughEarpiece:
+                false,
+
+              interruptionMode:
+                "doNotMix",
+            });
+          } catch (
+            setupError
+          ) {
+            console.error(
+              "Audio setup failed:",
+              setupError,
+            );
+          }
+        };
+
+      void setup();
+
+      return () => {
+        stopHanziTyping();
+
+        stopAnnaAudio();
+      };
+    },
+    [
+      stopHanziTyping,
+    ],
+  );
+
+
+  const refreshHealth =
+    useCallback(
+      async () => {
+        setCheckingServer(
+          true,
+        );
+
+        const online =
+          await checkVoiceServer();
+
+        setServerOnline(
+          online,
+        );
+
+        setCheckingServer(
+          false,
+        );
+      },
+      [],
+    );
+
+
+  useEffect(
+    () => {
+      void refreshHealth();
+    },
+    [
+      refreshHealth,
+    ],
+  );
+
+
+  const startRecording =
+    async () => {
+      if (
+        recorderState
+          .isRecording
+      ) {
+        return;
+      }
+
+      if (
+        !serverOnline
+      ) {
+        Alert.alert(
+          "Anna is offline",
+          "The Anna AI voice server is not available right now.",
+        );
+
+        return;
+      }
+
+      try {
+        stopAnnaAudio();
+
+        clearAnnaAudioQueue();
+
+        resetStreaming();
+
+        setError("");
+
+        setTranscript("");
+
+        setCorrection(
+          EMPTY_CORRECTION,
+        );
+
+        setHanzi("");
+
+        setPinyin("");
+
+        setConversationState(
+          "listening",
+        );
+
+        /**
+         * IMPORTANT:
+         * Anna playback may leave the
+         * native audio session in playback
+         * mode. Restore recording mode
+         * EVERY time before recording.
+         */
+        await setAudioModeAsync({
+          allowsRecording:
+            true,
+
+          playsInSilentMode:
+            true,
+
+          shouldRouteThroughEarpiece:
+            false,
+
+          interruptionMode:
+            "doNotMix",
+        });
+
+        const permission =
+          await AudioModule
+            .requestRecordingPermissionsAsync();
+
+        if (
+          !permission.granted
+        ) {
+          throw new Error(
+            "Microphone permission was denied.",
+          );
+        }
+
+        await recorder
+          .prepareToRecordAsync();
+
+        recorder.record();
+      } catch (
+        recordError
+      ) {
+        console.error(
+          "Start recording failed:",
+          recordError,
+        );
+
+        setConversationState(
+          "error",
+        );
+
+        setError(
+          recordError instanceof Error
+            ? recordError.message
+            : "Microphone recording failed.",
+        );
+      }
+    };
+
+
+  const processFallback =
+    useCallback(
+      async (
+        uri: string,
+      ) => {
+        const response =
+          await sendVoiceRecording(
+            uri,
+            historyRef.current,
+          );
+
+        setTranscript(
+          response.transcript,
+        );
+
+        finalHanziRef.current =
+          response.reply.hanzi;
+
+        pendingPinyinRef.current =
+          response.reply.pinyin;
+
+        streamDoneRef.current =
+          true;
+
+        setCorrection(
+          response.reply
+            .correction ??
+            EMPTY_CORRECTION,
+        );
+
+        displayedHanziRef.current =
+          "";
+
+        setHanzi("");
+
+        setPinyin("");
+
+        hanziQueueRef
+          .current
+          .push(
+            ...Array.from(
+              response.reply.hanzi,
+            ),
+          );
+
+        startHanziTyping();
+
+        saveTurn(
+          response.transcript,
+          response.reply.hanzi,
+        );
+
+        if (
+          speakerEnabled
+        ) {
+          speakingRef.current =
+            true;
+
+          setConversationState(
+            "speaking",
+          );
+
+          await speakAnnaText(
+            response.reply.hanzi,
+            "normal",
+            {
+              onStart:
+                () => {
+                  speakingRef.current =
+                    true;
+
+                  setConversationState(
+                    "speaking",
+                  );
+                },
+
+              onQueueIdle:
+                () => {
+                  speakingRef.current =
+                    false;
+
+                  setConversationState(
+                    "ready",
+                  );
+                },
+            },
+          );
+        } else {
+          setConversationState(
+            "ready",
+          );
+        }
+      },
+      [
+        saveTurn,
+        speakerEnabled,
+        startHanziTyping,
+      ],
+    );
+
+
+  const processStream =
+    useCallback(
+      async (
+        uri: string,
+      ): Promise<boolean> => {
+        let streamedTranscript =
+          "";
+
+        let finalReply =
+          "";
+
+        resetStreaming();
+
+        setHanzi("");
+
+        setPinyin("");
+
+        setCorrection(
+          EMPTY_CORRECTION,
+        );
+
+        const supported =
+          await streamVoiceRecording(
+            uri,
+            historyRef.current,
+            (
+              event,
+            ) => {
+              if (
+                event.type ===
+                  "start"
+              ) {
+                setConversationState(
+                  "processing",
+                );
+
+                return;
+              }
+
+              if (
+                event.type ===
+                  "transcript"
+              ) {
+                streamedTranscript =
+                  event.transcript
+                    .trim();
+
+                setTranscript(
+                  streamedTranscript,
+                );
+
+                setConversationState(
+                  "streaming",
+                );
+
+                return;
+              }
+
+              if (
+                event.type ===
+                  "token"
+              ) {
+                queueLiveHanzi(
+                  event.text,
+                );
+
+                if (
+                  !speakingRef.current
+                ) {
+                  setConversationState(
+                    "streaming",
+                  );
+                }
+
+                return;
+              }
+
+              if (
+                event.type ===
+                  "sentence"
+              ) {
+                if (
+                  !speakerEnabled
+                ) {
+                  return;
+                }
+
+                queueAnnaSentence(
+                  event.sentence,
+                  {
+                    speed:
+                      "normal",
+
+                    volume:
+                      1,
+
+                    onStart:
+                      () => {
+                        speakingRef.current =
+                          true;
+
+                        setConversationState(
+                          "speaking",
+                        );
+                      },
+
+                    onQueueIdle:
+                      () => {
+                        speakingRef.current =
+                          false;
+
+                        if (
+                          streamDoneRef
+                            .current
+                        ) {
+                          setConversationState(
+                            "ready",
+                          );
+                        } else {
+                          setConversationState(
+                            "streaming",
+                          );
+                        }
+                      },
+
+                    onError:
+                      (
+                        audioError,
+                      ) => {
+                        console.warn(
+                          "Anna sentence audio failed:",
+                          audioError,
+                        );
+                      },
+                  },
+                );
+
+                return;
+              }
+
+              if (
+                event.type ===
+                  "done"
+              ) {
+                finalReply =
+                  event.hanzi
+                    .trim();
+
+                finalHanziRef.current =
+                  finalReply;
+
+                pendingPinyinRef.current =
+                  event.pinyin
+                    .trim();
+
+                streamDoneRef.current =
+                  true;
+
+                const projected =
+                  (
+                    displayedHanziRef
+                      .current +
+                    hanziQueueRef
+                      .current
+                      .join("")
+                  );
+
+                if (
+                  finalReply.startsWith(
+                    projected,
+                  ) &&
+                  finalReply.length >
+                    projected.length
+                ) {
+                  const missing =
+                    finalReply.slice(
+                      projected.length,
+                    );
+
+                  hanziQueueRef
+                    .current
+                    .push(
+                      ...Array.from(
+                        missing,
+                      ),
+                    );
+
+                  startHanziTyping();
+                }
+
+                return;
+              }
+
+              if (
+                event.type ===
+                  "correction"
+              ) {
+                setCorrection(
+                  event.correction,
+                );
+
+                return;
+              }
+
+              if (
+                event.type ===
+                  "complete"
+              ) {
+                streamDoneRef.current =
+                  true;
+
+                return;
+              }
+            },
+          );
+
+        if (!supported) {
+          return false;
+        }
+
+        if (
+          streamedTranscript &&
+          finalReply
+        ) {
+          saveTurn(
+            streamedTranscript,
+            finalReply,
+          );
+        }
+
+        return true;
+      },
+      [
+        queueLiveHanzi,
+        resetStreaming,
+        saveTurn,
+        speakerEnabled,
+        startHanziTyping,
+      ],
+    );
+
+
+  const stopRecording =
+    async () => {
+      if (
+        !recorderState
+          .isRecording
+      ) {
+        return;
+      }
+
+      try {
+        await recorder.stop();
+
+        const uri =
+          recorder.uri;
+
+        if (!uri) {
+          throw new Error(
+            "Recording file was not created.",
+          );
+        }
+
+        setConversationState(
+          "processing",
+        );
+
+        const streamed =
+          await processStream(
+            uri,
+          );
+
+        if (!streamed) {
+          await processFallback(
+            uri,
+          );
+        }
+
+        setError("");
+      } catch (
+        voiceError
+      ) {
+        console.error(
+          "Voice request failed:",
+          voiceError,
+        );
+
+        stopAnnaAudio();
+
+        stopHanziTyping();
+
+        speakingRef.current =
+          false;
+
+        setConversationState(
+          "error",
+        );
+
+        setError(
+          voiceError instanceof Error
+            ? voiceError.message
+            : "Voice processing failed.",
+        );
+      }
+    };
+
+
+  const handleMic =
+    async () => {
+      /**
+       * Recording takes priority.
+       * If currently recording,
+       * the next tap MUST stop it.
+       */
+      if (
+        recorderState
+          .isRecording
+      ) {
+        await stopRecording();
+
+        return;
+      }
+
+      if (
+        conversationState ===
+          "processing" ||
+        conversationState ===
+          "streaming" ||
+        conversationState ===
+          "speaking"
+      ) {
+        return;
+      }
+
+      await startRecording();
+    };
+
+
+  const handleSpeakerToggle =
+    () => {
+      const enabled =
+        !speakerEnabled;
+
+      setSpeakerEnabled(
+        enabled,
+      );
+
+      if (!enabled) {
+        stopAnnaAudio();
+
+        speakingRef.current =
+          false;
+
+        if (
+          conversationState ===
+            "speaking"
+        ) {
+          setConversationState(
+            streamDoneRef.current
+              ? "ready"
+              : "streaming",
+          );
+        }
+      }
+    };
+
+
+  const replayAnna =
+    async () => {
+      const text =
+        finalHanziRef.current ||
+        hanzi;
+
+      if (
+        !text.trim() ||
+        recorderState
+          .isRecording
+      ) {
+        return;
+      }
+
+      speakingRef.current =
+        true;
+
+      setConversationState(
+        "speaking",
+      );
+
+      await speakAnnaText(
+        text,
+        "normal",
+        {
+          volume:
+            1,
+
+          onStart:
+            () => {
+              speakingRef.current =
+                true;
+
+              setConversationState(
+                "speaking",
+              );
+            },
+
+          onQueueIdle:
+            () => {
+              speakingRef.current =
+                false;
+
+              setConversationState(
+                "ready",
+              );
+            },
+        },
+      );
+    };
+
+
+  const replayCorrection =
+    async () => {
+      if (
+        !correction.needed ||
+        !correction.corrected
+          .trim()
+      ) {
+        return;
+      }
+
+      await speakAnnaText(
+        correction.corrected,
+        "slow",
+        {
+          volume:
+            1,
+        },
+      );
+    };
+
+
+  const newConversation =
+    () => {
+      stopAnnaAudio();
+
+      clearAnnaAudioQueue();
+
+      resetStreaming();
+
+      historyRef.current =
+        [];
+
+      setTranscript("");
+
+      setHanzi(
+        DEFAULT_HANZI,
+      );
+
+      setPinyin(
+        DEFAULT_PINYIN,
+      );
+
+      setCorrection(
+        EMPTY_CORRECTION,
+      );
+
+      setError("");
+
+      setConversationState(
+        "ready",
+      );
+    };
+
+
+  const statusText =
+    (() => {
+      if (
+        checkingServer
+      ) {
+        return "Checking Anna V7...";
+      }
+
+      if (
+        !serverOnline
+      ) {
+        return "Anna V7 Offline";
+      }
+
+      if (
+        conversationState ===
+          "listening"
+      ) {
+        return "Listening...";
+      }
+
+      if (
+        conversationState ===
+          "processing"
+      ) {
+        return "Anna is understanding...";
+      }
+
+      if (
+        conversationState ===
+          "streaming"
+      ) {
+        return "Anna is replying live...";
+      }
+
+      if (
+        conversationState ===
+          "speaking"
+      ) {
+        return "Anna is speaking...";
+      }
+
+      if (
+        conversationState ===
+          "error"
+      ) {
+        return "Please try again";
+      }
+
+      return "Ready to practice Mandarin";
+    })();
+
+
+  return (
+    <SafeAreaView
+      style={
+        styles.safeArea
+      }
+    >
+      <ScrollView
+        style={
+          styles.container
+        }
+        contentContainerStyle={
+          styles.content
+        }
+        showsVerticalScrollIndicator={
+          false
+        }
+      >
+        <View
+          style={
+            styles.header
+          }
+        >
+          <View>
+            <Text
+              style={
+                styles.title
+              }
+            >
+              AI Speaking
+            </Text>
+
+            <Pressable
+              style={
+                styles.statusRow
+              }
+              onPress={
+                refreshHealth
+              }
+            >
+              <View
+                style={[
+                  styles.statusDot,
+
+                  serverOnline
+                    ? styles.onlineDot
+                    : styles.offlineDot,
+                ]}
+              />
+
+              <Text
+                style={
+                  styles.statusSmallText
+                }
+              >
+                Anna V7
+              </Text>
+            </Pressable>
+          </View>
+
+          <Pressable
+            style={
+              styles.newButton
+            }
+            onPress={
+              newConversation
+            }
+          >
+            <Ionicons
+              name="add"
+              size={20}
+              color="#ffffff"
+            />
+
+            <Text
+              style={
+                styles.newButtonText
+              }
+            >
+              New
+            </Text>
+          </Pressable>
+        </View>
+
+
+        <View
+          style={
+            styles.avatarSection
+          }
+        >
+          <View
+            style={[
+              styles.avatarGlow,
+
+              recorderState
+                .isRecording &&
+                styles.avatarListening,
+
+              conversationState ===
+                "speaking" &&
+                styles.avatarSpeaking,
+            ]}
+          >
+            <View
+              style={
+                styles.avatar
+              }
+            >
+              <Text
+                style={
+                  styles.avatarText
+                }
+              >
+                安
+              </Text>
+            </View>
+          </View>
+
+          <Text
+            style={
+              styles.annaName
+            }
+          >
+            Anna
+          </Text>
+
+          <Text
+            style={
+              styles.stateText
+            }
+          >
+            {statusText}
+          </Text>
+
+          <Text
+            style={
+              styles.memoryText
+            }
+          >
+            Memory:{" "}
+            {
+              historyRef
+                .current
+                .length
+            } /{" "}
+            {
+              MAX_MEMORY_MESSAGES
+            }
+          </Text>
+        </View>
+
+
+        {transcript ? (
+          <View
+            style={
+              styles.userCard
+            }
+          >
+            <Text
+              style={
+                styles.cardLabel
+              }
+            >
+              YOU SAID
+            </Text>
+
+            <Text
+              style={
+                styles.userText
+              }
+            >
+              {transcript}
+            </Text>
+          </View>
+        ) : null}
+
+
+        {correction.needed &&
+        correction.corrected ? (
+          <View
+            style={
+              styles.correctionCard
+            }
+          >
+            <View
+              style={
+                styles.correctionHeader
+              }
+            >
+              <View>
+                <Text
+                  style={
+                    styles.correctionTitle
+                  }
+                >
+                  ✨ MORE NATURAL
+                </Text>
+
+                <Text
+                  style={
+                    styles.correctionSubtitle
+                  }
+                >
+                  ဒီလိုပြောရင် ပိုသဘာဝကျပါတယ်
+                </Text>
+              </View>
+
+              <Pressable
+                style={
+                  styles.smallSpeaker
+                }
+                onPress={
+                  replayCorrection
+                }
+              >
+                <Ionicons
+                  name="volume-high"
+                  size={19}
+                  color="#bbf7d0"
+                />
+              </Pressable>
+            </View>
+
+            {correction.original ? (
+              <>
+                <Text
+                  style={
+                    styles.correctionLabel
+                  }
+                >
+                  YOU SAID
+                </Text>
+
+                <Text
+                  style={
+                    styles.originalText
+                  }
+                >
+                  {
+                    correction.original
+                  }
+                </Text>
+              </>
+            ) : null}
+
+            <Text
+              style={
+                styles.correctionLabel
+              }
+            >
+              更自然的说法
+            </Text>
+
+            <Text
+              style={
+                styles.correctedText
+              }
+            >
+              {
+                correction.corrected
+              }
+            </Text>
+
+            {correction.pinyin ? (
+              <Text
+                style={
+                  styles.correctionPinyin
+                }
+              >
+                {
+                  correction.pinyin
+                }
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
+
+
+        <View
+          style={
+            styles.replyCard
+          }
+        >
+          <View
+            style={
+              styles.replyHeader
+            }
+          >
+            <Text
+              style={
+                styles.cardLabel
+              }
+            >
+              ANNA REPLY
+            </Text>
+
+            <Pressable
+              style={
+                styles.smallSpeaker
+              }
+              onPress={
+                replayAnna
+              }
+            >
+              <Ionicons
+                name="volume-high"
+                size={19}
+                color="#ffffff"
+              />
+            </Pressable>
+          </View>
+
+          <Text
+            style={
+              styles.hanziLabel
+            }
+          >
+            中文 · HANZI
+          </Text>
+
+          <Text
+            style={
+              styles.replyHanzi
+            }
+          >
+            {hanzi}
+
+            {(
+              conversationState ===
+                "streaming" ||
+              conversationState ===
+                "speaking"
+            ) ? (
+              <Text
+                style={
+                  styles.cursor
+                }
+              >
+                ▌
+              </Text>
+            ) : null}
+          </Text>
+
+          <View
+            style={
+              styles.divider
+            }
+          />
+
+          <Text
+            style={
+              styles.pinyinLabel
+            }
+          >
+            拼音 · PINYIN
+          </Text>
+
+          <Text
+            style={
+              styles.replyPinyin
+            }
+          >
+            {pinyin ||
+              (
+                conversationState ===
+                  "streaming"
+                  ? "Hanzi ပြီးရင် Pinyin ပေါ်လာပါမယ်..."
+                  : ""
+              )}
+          </Text>
+        </View>
+
+
+        {conversationState ===
+        "processing" ? (
+          <View
+            style={
+              styles.processingRow
+            }
+          >
+            <ActivityIndicator
+              color="#d946ef"
+            />
+
+            <Text
+              style={
+                styles.processingText
+              }
+            >
+              Anna is understanding...
+            </Text>
+          </View>
+        ) : null}
+
+
+        {error ? (
+          <View
+            style={
+              styles.errorCard
+            }
+          >
+            <Text
+              style={
+                styles.errorText
+              }
+            >
+              {error}
+            </Text>
+          </View>
+        ) : null}
+
+
+        <View
+          style={
+            styles.controls
+          }
+        >
+          <Pressable
+            style={[
+              styles.secondaryButton,
+
+              !speakerEnabled &&
+                styles.secondaryButtonMuted,
+            ]}
+            onPress={
+              handleSpeakerToggle
+            }
+          >
+            <Ionicons
+              name={
+                speakerEnabled
+                  ? "volume-high"
+                  : "volume-mute"
+              }
+              size={22}
+              color="#ffffff"
+            />
+          </Pressable>
+
+          <Pressable
+            onPress={
+              handleMic
+            }
+            disabled={
+              !recorderState
+                .isRecording &&
+              (
+                conversationState ===
+                  "processing" ||
+                conversationState ===
+                  "streaming" ||
+                conversationState ===
+                  "speaking"
+              )
+            }
+            style={[
+              styles.micButton,
+
+              recorderState
+                .isRecording &&
+                styles.micButtonRecording,
+
+              !recorderState
+                .isRecording &&
+              (
+                conversationState ===
+                  "processing" ||
+                conversationState ===
+                  "streaming" ||
+                conversationState ===
+                  "speaking"
+              ) &&
+                styles.micButtonDisabled,
+            ]}
+          >
+            {conversationState ===
+              "processing" ? (
+              <ActivityIndicator
+                color="#ffffff"
+              />
+            ) : (
+              <Ionicons
+                name={
+                  recorderState
+                    .isRecording
+                    ? "stop"
+                    : "mic"
+                }
+                size={34}
+                color="#ffffff"
+              />
+            )}
+          </Pressable>
+
+          <Pressable
+            style={
+              styles.secondaryButton
+            }
+            onPress={
+              newConversation
+            }
+          >
+            <Ionicons
+              name="refresh"
+              size={22}
+              color="#ffffff"
+            />
+          </Pressable>
+        </View>
+
+        <Text
+          style={
+            styles.helpText
+          }
+        >
+          {recorderState
+            .isRecording
+            ? "Tap again when you finish speaking"
+            : "Tap the microphone and speak Mandarin"}
+        </Text>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+
+const styles =
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor:
+        "#09030f",
+    },
+
+    container: {
+      flex: 1,
+      backgroundColor:
+        "#09030f",
+    },
+
+    content: {
+      flexGrow: 1,
+      paddingHorizontal:
+        18,
+      paddingTop: 18,
+      paddingBottom: 35,
+    },
+
+    header: {
+      flexDirection:
+        "row",
+      justifyContent:
+        "space-between",
+      alignItems:
+        "center",
+    },
+
+    title: {
+      color:
+        "#ffffff",
+      fontSize: 25,
+      fontWeight:
+        "800",
+    },
+
+    statusRow: {
+      flexDirection:
+        "row",
+      alignItems:
+        "center",
+      gap: 6,
+      marginTop: 5,
+    },
+
+    statusDot: {
+      width: 7,
+      height: 7,
+      borderRadius: 4,
+    },
+
+    onlineDot: {
+      backgroundColor:
+        "#22c55e",
+    },
+
+    offlineDot: {
+      backgroundColor:
+        "#ef4444",
+    },
+
+    statusSmallText: {
+      color:
+        "#8e8098",
+      fontSize: 12,
+    },
+
+    newButton: {
+      height: 40,
+      paddingHorizontal: 14,
+      borderRadius: 13,
+      backgroundColor:
+        "#251330",
+      borderWidth: 1,
+      borderColor:
+        "#432453",
+      flexDirection:
+        "row",
+      alignItems:
+        "center",
+      gap: 5,
+    },
+
+    newButtonText: {
+      color:
+        "#ffffff",
+      fontSize: 13,
+      fontWeight:
+        "600",
+    },
+
+    avatarSection: {
+      alignItems:
+        "center",
+      marginTop: 34,
+      marginBottom: 24,
+    },
+
+    avatarGlow: {
+      width: 112,
+      height: 112,
+      borderRadius: 56,
+      backgroundColor:
+        "rgba(168,85,247,0.15)",
+      alignItems:
+        "center",
+      justifyContent:
+        "center",
+      borderWidth: 2,
+      borderColor:
+        "transparent",
+    },
+
+    avatarListening: {
+      borderColor:
+        "#f43f5e",
+      backgroundColor:
+        "rgba(244,63,94,0.12)",
+    },
+
+    avatarSpeaking: {
+      borderColor:
+        "#d946ef",
+      backgroundColor:
+        "rgba(217,70,239,0.15)",
+    },
+
+    avatar: {
+      width: 84,
+      height: 84,
+      borderRadius: 42,
+      backgroundColor:
+        "#a855f7",
+      alignItems:
+        "center",
+      justifyContent:
+        "center",
+    },
+
+    avatarText: {
+      color:
+        "#ffffff",
+      fontSize: 38,
+      fontWeight:
+        "800",
+    },
+
+    annaName: {
+      color:
+        "#ffffff",
+      fontSize: 20,
+      fontWeight:
+        "700",
+      marginTop: 12,
+    },
+
+    stateText: {
+      color:
+        "#8f8099",
+      fontSize: 13,
+      marginTop: 4,
+    },
+
+    memoryText: {
+      color:
+        "#65586e",
+      fontSize: 10,
+      marginTop: 5,
+    },
+
+    userCard: {
+      borderRadius: 18,
+      backgroundColor:
+        "#251034",
+      borderWidth: 1,
+      borderColor:
+        "#47235a",
+      padding: 17,
+      marginBottom: 14,
+    },
+
+    cardLabel: {
+      color:
+        "#d8b4fe",
+      fontSize: 11,
+      fontWeight:
+        "800",
+      letterSpacing: 1.5,
+    },
+
+    userText: {
+      color:
+        "#ffffff",
+      fontSize: 19,
+      lineHeight: 29,
+      fontWeight:
+        "600",
+      marginTop: 12,
+    },
+
+    correctionCard: {
+      borderRadius: 18,
+      backgroundColor:
+        "rgba(16,185,129,0.08)",
+      borderWidth: 1,
+      borderColor:
+        "rgba(52,211,153,0.35)",
+      padding: 17,
+      marginBottom: 14,
+    },
+
+    correctionHeader: {
+      flexDirection:
+        "row",
+      justifyContent:
+        "space-between",
+      alignItems:
+        "center",
+      marginBottom: 15,
+    },
+
+    correctionTitle: {
+      color:
+        "#86efac",
+      fontSize: 12,
+      fontWeight:
+        "900",
+      letterSpacing: 1.4,
+    },
+
+    correctionSubtitle: {
+      color:
+        "#86efac",
+      opacity: 0.6,
+      fontSize: 10,
+      marginTop: 3,
+    },
+
+    correctionLabel: {
+      color:
+        "#6ee7b7",
+      fontSize: 10,
+      fontWeight:
+        "700",
+      marginTop: 10,
+    },
+
+    originalText: {
+      color:
+        "#9b8ca4",
+      fontSize: 16,
+      textDecorationLine:
+        "line-through",
+      marginTop: 6,
+    },
+
+    correctedText: {
+      color:
+        "#ecfdf5",
+      fontSize: 20,
+      fontWeight:
+        "700",
+      lineHeight: 29,
+      marginTop: 7,
+    },
+
+    correctionPinyin: {
+      color:
+        "#a7f3d0",
+      opacity: 0.85,
+      fontSize: 13,
+      lineHeight: 20,
+      marginTop: 8,
+    },
+
+    replyCard: {
+      borderRadius: 20,
+      backgroundColor:
+        "#130a1b",
+      borderWidth: 1,
+      borderColor:
+        "#2f1b3a",
+      padding: 18,
+    },
+
+    replyHeader: {
+      flexDirection:
+        "row",
+      alignItems:
+        "center",
+      justifyContent:
+        "space-between",
+    },
+
+    smallSpeaker: {
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+      backgroundColor:
+        "#261432",
+      alignItems:
+        "center",
+      justifyContent:
+        "center",
+    },
+
+    hanziLabel: {
+      color:
+        "#c084fc",
+      fontSize: 11,
+      fontWeight:
+        "700",
+      letterSpacing: 1.2,
+      marginTop: 17,
+    },
+
+    replyHanzi: {
+      color:
+        "#ffffff",
+      fontSize: 21,
+      lineHeight: 32,
+      fontWeight:
+        "700",
+      marginTop: 10,
+    },
+
+    cursor: {
+      color:
+        "#e879f9",
+    },
+
+    divider: {
+      height: 1,
+      backgroundColor:
+        "#2f1b3a",
+      marginVertical: 18,
+    },
+
+    pinyinLabel: {
+      color:
+        "#c084fc",
+      fontSize: 11,
+      fontWeight:
+        "700",
+      letterSpacing: 1.2,
+    },
+
+    replyPinyin: {
+      color:
+        "#c1afcc",
+      fontSize: 14,
+      lineHeight: 22,
+      marginTop: 9,
+    },
+
+    processingRow: {
+      flexDirection:
+        "row",
+      justifyContent:
+        "center",
+      alignItems:
+        "center",
+      gap: 10,
+      marginTop: 20,
+    },
+
+    processingText: {
+      color:
+        "#b89bc6",
+      fontSize: 13,
+    },
+
+    errorCard: {
+      marginTop: 15,
+      borderRadius: 14,
+      backgroundColor:
+        "rgba(239,68,68,0.12)",
+      borderWidth: 1,
+      borderColor:
+        "rgba(239,68,68,0.3)",
+      padding: 13,
+    },
+
+    errorText: {
+      color:
+        "#fecaca",
+      fontSize: 13,
+    },
+
+    controls: {
+      marginTop: 30,
+      flexDirection:
+        "row",
+      alignItems:
+        "center",
+      justifyContent:
+        "center",
+      gap: 25,
+    },
+
+    secondaryButton: {
+      width: 52,
+      height: 52,
+      borderRadius: 26,
+      backgroundColor:
+        "#21132a",
+      borderWidth: 1,
+      borderColor:
+        "#382342",
+      alignItems:
+        "center",
+      justifyContent:
+        "center",
+    },
+
+    secondaryButtonMuted: {
+      opacity: 0.45,
+    },
+
+    micButton: {
+      width: 78,
+      height: 78,
+      borderRadius: 39,
+      backgroundColor:
+        "#a855f7",
+      alignItems:
+        "center",
+      justifyContent:
+        "center",
+    },
+
+    micButtonRecording: {
+      backgroundColor:
+        "#ef4444",
+    },
+
+    micButtonDisabled: {
+      opacity: 0.55,
+    },
+
+    helpText: {
+      color:
+        "#786a81",
+      fontSize: 11,
+      textAlign:
+        "center",
+      marginTop: 13,
+    },
+  });
+
+
+==============================
+FILE: C:\Users\HMT\anna-ai-mobile\app\(tabs)\_layout.tsx
+==============================
+
+import { Ionicons } from "@expo/vector-icons";
+import { Tabs } from "expo-router";
+
+export default function TabLayout() {
+  return (
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+
+        sceneStyle: {
+          backgroundColor: "#09030f",
+        },
+
+        tabBarStyle: {
+          backgroundColor: "#12091c",
+          borderTopColor: "#2b1838",
+          borderTopWidth: 1,
+          height: 72,
+          paddingTop: 7,
+          paddingBottom: 9,
+        },
+
+        tabBarActiveTintColor: "#d946ef",
+        tabBarInactiveTintColor: "#796b82",
+
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontWeight: "600",
+        },
+      }}
+    >
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: "Home",
+
+          tabBarIcon: ({
+            color,
+            size,
+          }) => (
+            <Ionicons
+              name="home"
+              size={size}
+              color={color}
+            />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="hsk"
+        options={{
+          title: "HSK",
+
+          tabBarIcon: ({
+            color,
+            size,
+          }) => (
+            <Ionicons
+              name="albums"
+              size={size}
+              color={color}
+            />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="speaking"
+        options={{
+          title: "Speaking",
+
+          tabBarIcon: ({
+            color,
+            size,
+          }) => (
+            <Ionicons
+              name="mic"
+              size={size}
+              color={color}
+            />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="laoshi"
+        options={{
+          title: "Laoshi",
+
+          tabBarIcon: ({
+            color,
+            size,
+          }) => (
+            <Ionicons
+              name="school"
+              size={size}
+              color={color}
+            />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="account"
+        options={{
+          title: "Account",
+
+          tabBarIcon: ({
+            color,
+            size,
+          }) => (
+            <Ionicons
+              name="person"
+              size={size}
+              color={color}
+            />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="sentence-builder"
+        options={{
+          href: null,
+        }}
+      />
+
+      <Tabs.Screen
+        name="explore"
+        options={{
+          href: null,
+        }}
+      />
+    </Tabs>
+  );
+}
