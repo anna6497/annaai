@@ -1,0 +1,1123 @@
+
+
+===== app\layout.tsx =====
+
+import type {
+  Metadata,
+} from "next";
+
+import {
+  Geist,
+  Geist_Mono,
+} from "next/font/google";
+
+import InstallAnnaAI from "@/components/pwa/InstallAnnaAI";
+import PwaBottomNav from "@/components/pwa/PwaBottomNav";
+
+import "./globals.css";
+
+
+const geistSans =
+  Geist({
+    variable:
+      "--font-geist-sans",
+
+    subsets: [
+      "latin",
+    ],
+  });
+
+
+const geistMono =
+  Geist_Mono({
+    variable:
+      "--font-geist-mono",
+
+    subsets: [
+      "latin",
+    ],
+  });
+
+
+export const metadata:
+  Metadata = {
+  title:
+    "Anna AI",
+
+  description:
+    "Speak Chinese with your AI Best Friend",
+
+  applicationName:
+    "Anna AI",
+
+  appleWebApp: {
+    capable:
+      true,
+
+    title:
+      "Anna AI",
+
+    statusBarStyle:
+      "black-translucent",
+  },
+
+  icons: {
+    icon:
+      "/pwa/anna-ai-icon.png",
+
+    apple:
+      "/pwa/anna-ai-icon.png",
+  },
+};
+
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children:
+    React.ReactNode;
+}>) {
+  return (
+    <html
+      lang="en"
+      data-scroll-behavior="smooth"
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+    >
+      <body
+        className="
+          min-h-full
+          flex
+          flex-col
+          bg-[#09030f]
+        "
+      >
+        {children}
+
+        <PwaBottomNav />
+
+        <InstallAnnaAI />
+      </body>
+    </html>
+  );
+}
+
+===== app\dashboard\layout.tsx =====
+
+FILE NOT FOUND
+
+===== app\dashboard\ai\layout.tsx =====
+
+FILE NOT FOUND
+
+===== app\hsk\layout.tsx =====
+
+FILE NOT FOUND
+
+===== app\app-home\page.tsx =====
+
+"use client";
+
+import Link from "next/link";
+
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+import {
+  createClient,
+} from "@/lib/supabase/client";
+
+
+export default function PwaHomePage() {
+  const supabase =
+    useMemo(
+      () =>
+        createClient(),
+      [],
+    );
+
+
+  const [
+    loading,
+    setLoading,
+  ] =
+    useState(
+      true,
+    );
+
+
+  const [
+    name,
+    setName,
+  ] =
+    useState(
+      "Anna Learner",
+    );
+
+
+  const [
+    email,
+    setEmail,
+  ] =
+    useState(
+      "",
+    );
+
+
+  useEffect(
+    () => {
+      let active =
+        true;
+
+
+      async function loadUser() {
+        try {
+          const {
+            data: {
+              user,
+            },
+            error:
+              userError,
+          } =
+            await supabase.auth
+              .getUser();
+
+
+          if (
+            userError ||
+            !user
+          ) {
+            window.location.replace(
+              "/login?next=/app-home",
+            );
+
+            return;
+          }
+
+
+          const {
+            data:
+              profile,
+            error:
+              profileError,
+          } =
+            await supabase
+              .from(
+                "profiles",
+              )
+              .select(
+                "name,email",
+              )
+              .eq(
+                "id",
+                user.id,
+              )
+              .maybeSingle();
+
+
+          if (
+            profileError
+          ) {
+            console.error(
+              "Failed to load PWA profile:",
+              profileError,
+            );
+          }
+
+
+          if (
+            !active
+          ) {
+            return;
+          }
+
+
+          const profileName =
+            typeof profile?.name ===
+              "string" &&
+            profile.name
+              .trim()
+              .length >
+              0
+              ? profile.name.trim()
+              : "Anna Learner";
+
+
+          const profileEmail =
+            typeof profile?.email ===
+              "string" &&
+            profile.email
+              .trim()
+              .length >
+              0
+              ? profile.email.trim()
+              : user.email ??
+                "";
+
+
+          setName(
+            profileName,
+          );
+
+          setEmail(
+            profileEmail,
+          );
+        } catch (
+          error
+        ) {
+          console.error(
+            "Failed to load PWA user:",
+            error,
+          );
+
+
+          window.location.replace(
+            "/login?next=/app-home",
+          );
+        } finally {
+          if (
+            active
+          ) {
+            setLoading(
+              false,
+            );
+          }
+        }
+      }
+
+
+      void loadUser();
+
+
+      return () => {
+        active =
+          false;
+      };
+    },
+    [
+      supabase,
+    ],
+  );
+
+
+  if (
+    loading
+  ) {
+    return (
+      <main
+        className="
+          flex
+          min-h-screen
+          items-center
+          justify-center
+          bg-[#09030f]
+          text-white
+        "
+      >
+        <div
+          className="
+            text-center
+          "
+        >
+          <div
+            className="
+              mx-auto
+              h-10
+              w-10
+              animate-spin
+              rounded-full
+              border-4
+              border-white/10
+              border-t-fuchsia-500
+            "
+          />
+
+          <p
+            className="
+              mt-4
+              text-sm
+              text-white/50
+            "
+          >
+            Opening Anna AI...
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+
+  return (
+    <main
+      className="
+        min-h-screen
+        bg-[#09030f]
+        px-[14px]
+        pb-28
+        pt-5
+        text-white
+      "
+    >
+      <section
+        className="
+          mx-auto
+          w-full
+          max-w-lg
+        "
+      >
+        {/* Header */}
+        <div
+          className="
+            flex
+            items-center
+            justify-between
+            px-1
+          "
+        >
+          <div>
+            <h1
+              className="
+                text-[22px]
+                font-black
+              "
+            >
+              Anna AI
+            </h1>
+
+            <p
+              className="
+                mt-1
+                text-[10px]
+                text-[#7e6c89]
+              "
+            >
+              中文学习 · AI Speaking
+            </p>
+          </div>
+
+
+          <Link
+            href="/dashboard"
+            aria-label="Open account"
+            className="
+              flex
+              h-[45px]
+              w-[45px]
+              items-center
+              justify-center
+              rounded-full
+              bg-fuchsia-500
+              text-xl
+              font-black
+              text-white
+            "
+          >
+            安
+          </Link>
+        </div>
+
+
+        {/* User */}
+        <div
+          className="
+            mt-5
+            rounded-2xl
+            border
+            border-white/[0.06]
+            bg-white/[0.025]
+            px-4
+            py-3
+          "
+        >
+          <p
+            className="
+              text-[9px]
+              font-black
+              uppercase
+              tracking-[0.16em]
+              text-fuchsia-300
+            "
+          >
+            Welcome back
+          </p>
+
+          <p
+            className="
+              mt-1
+              text-sm
+              font-bold
+              text-white
+            "
+          >
+            {name}
+          </p>
+
+          {email ? (
+            <p
+              className="
+                mt-1
+                truncate
+                text-[10px]
+                text-white/35
+              "
+            >
+              {email}
+            </p>
+          ) : null}
+        </div>
+
+
+        {/* Intro */}
+        <div
+          className="
+            mb-6
+            mt-8
+            px-3
+            text-center
+          "
+        >
+          <p
+            className="
+              text-[9px]
+              font-black
+              tracking-[0.22em]
+              text-fuchsia-300
+            "
+          >
+            ANNA AI LEARNING
+          </p>
+
+          <h2
+            className="
+              mt-3
+              text-[30px]
+              font-black
+              leading-[1.15]
+            "
+          >
+            Choose Your
+            <br />
+            Learning Path
+          </h2>
+
+          <p
+            lang="my"
+            className="
+              mx-auto
+              mt-3
+              max-w-sm
+              text-[12px]
+              leading-5
+              text-[#95849e]
+            "
+          >
+            Anna နဲ့ Chinese
+            speaking လေ့ကျင့်ပြီး
+            HSK 1–9 vocabulary,
+            Writing နဲ့ Pronunciation
+            ကို တစ်နေရာတည်းမှာ
+            လေ့လာနိုင်ပါတယ်။
+          </p>
+        </div>
+
+
+        {/* Talk with Anna */}
+        <Link
+          href="/dashboard/ai/talk"
+          className="
+            block
+            rounded-[27px]
+            border
+            border-[#66308a]
+            bg-[#280b46]
+            p-[22px]
+            transition
+            active:scale-[0.99]
+          "
+        >
+          <div
+            className="
+              flex
+              items-start
+              justify-between
+              gap-4
+            "
+          >
+            <div>
+              <p
+                className="
+                  text-[9px]
+                  font-black
+                  tracking-[0.2em]
+                  text-[#e9b7ff]
+                "
+              >
+                AI SPEAKING PLAN
+              </p>
+
+              <h3
+                className="
+                  mt-2
+                  text-[25px]
+                  font-black
+                "
+              >
+                Talk with Anna
+              </h3>
+            </div>
+
+
+            <div
+              className="
+                flex
+                h-[60px]
+                w-[60px]
+                items-center
+                justify-center
+                rounded-[18px]
+                bg-white/[0.06]
+                text-[28px]
+              "
+            >
+              💜
+            </div>
+          </div>
+
+
+          <p
+            className="
+              mt-5
+              text-[13px]
+              leading-[22px]
+              text-[#b9a3c9]
+            "
+          >
+            Practice natural Chinese
+            conversation using voice,
+            Hanzi, Pinyin and
+            conversation memory.
+          </p>
+
+
+          <div
+            className="
+              mt-[22px]
+              flex
+              h-[51px]
+              items-center
+              justify-center
+              rounded-[14px]
+              bg-[#c400ed]
+              text-[13px]
+              font-black
+            "
+          >
+            Start Talking →
+          </div>
+        </Link>
+
+
+        {/* HSK */}
+        <Link
+          href="/hsk"
+          className="
+            mt-4
+            block
+            rounded-[27px]
+            border
+            border-[#155e75]
+            bg-[#06313b]
+            p-[22px]
+            transition
+            active:scale-[0.99]
+          "
+        >
+          <div
+            className="
+              flex
+              items-start
+              justify-between
+              gap-4
+            "
+          >
+            <div>
+              <p
+                className="
+                  text-[9px]
+                  font-black
+                  tracking-[0.2em]
+                  text-cyan-300
+                "
+              >
+                HSK LEARNING PLAN
+              </p>
+
+              <h3
+                className="
+                  mt-2
+                  text-[25px]
+                  font-black
+                "
+              >
+                HSK Flashcards
+              </h3>
+            </div>
+
+
+            <div
+              className="
+                flex
+                h-[60px]
+                w-[60px]
+                items-center
+                justify-center
+                rounded-[18px]
+                bg-white/[0.06]
+                text-[29px]
+                text-cyan-300
+              "
+            >
+              ▣
+            </div>
+          </div>
+
+
+          <p
+            className="
+              mt-5
+              text-[13px]
+              leading-[22px]
+              text-[#9cbabe]
+            "
+          >
+            Study HSK 1–9
+            vocabulary with
+            Flashcards and Writing.
+            HSK 1 is free.
+          </p>
+
+
+          <div
+            className="
+              mt-[22px]
+              flex
+              h-[51px]
+              items-center
+              justify-center
+              rounded-[14px]
+              bg-cyan-500
+              text-[13px]
+              font-black
+            "
+          >
+            Start HSK Learning →
+          </div>
+        </Link>
+
+
+        <h3
+          className="
+            mb-3
+            mt-7
+            text-[17px]
+            font-extrabold
+          "
+        >
+          Your learning tools
+        </h3>
+
+
+        <div
+          className="
+            grid
+            grid-cols-2
+            gap-[10px]
+          "
+        >
+          {/* Laoshi */}
+          <Link
+            href="/dashboard/ai/laoshi"
+            className="
+              min-h-[180px]
+              rounded-[19px]
+              border
+              border-[#2c1b36]
+              bg-[#130a1b]
+              p-[14px]
+            "
+          >
+            <div
+              className="
+                flex
+                h-[42px]
+                w-[42px]
+                items-center
+                justify-center
+                rounded-[13px]
+                bg-[#2b1237]
+                text-xl
+              "
+            >
+              学
+            </div>
+
+            <p
+              className="
+                mt-[13px]
+                text-[8px]
+                font-black
+                tracking-[0.12em]
+                text-purple-400
+              "
+            >
+              AI TEACHER
+            </p>
+
+            <p
+              className="
+                mt-2
+                text-[15px]
+                font-extrabold
+              "
+            >
+              Your Laoshi
+            </p>
+
+            <p
+              className="
+                mt-2
+                text-[11px]
+                leading-[17px]
+                text-[#85778e]
+              "
+            >
+              Pronunciation,
+              lessons, Smart Review
+              and progress.
+            </p>
+          </Link>
+
+
+          {/* HSK */}
+          <Link
+            href="/hsk"
+            className="
+              min-h-[180px]
+              rounded-[19px]
+              border
+              border-[#2c1b36]
+              bg-[#130a1b]
+              p-[14px]
+            "
+          >
+            <div
+              className="
+                flex
+                h-[42px]
+                w-[42px]
+                items-center
+                justify-center
+                rounded-[13px]
+                bg-[#2b1237]
+                text-xl
+              "
+            >
+              字
+            </div>
+
+            <p
+              className="
+                mt-[13px]
+                text-[8px]
+                font-black
+                tracking-[0.12em]
+                text-purple-400
+              "
+            >
+              HSK 1–9
+            </p>
+
+            <p
+              className="
+                mt-2
+                text-[15px]
+                font-extrabold
+              "
+            >
+              Vocabulary
+            </p>
+
+            <p
+              className="
+                mt-2
+                text-[11px]
+                leading-[17px]
+                text-[#85778e]
+              "
+            >
+              Review Chinese
+              vocabulary by HSK
+              level.
+            </p>
+          </Link>
+        </div>
+
+
+        {/* Sentence Builder */}
+        <Link
+          href="/dashboard/ai/sentence-builder"
+          className="
+            mt-3
+            flex
+            min-h-[91px]
+            items-center
+            gap-3
+            rounded-[18px]
+            border
+            border-[#183942]
+            bg-[#0c171e]
+            px-[14px]
+          "
+        >
+          <div
+            className="
+              flex
+              h-[47px]
+              w-[47px]
+              shrink-0
+              items-center
+              justify-center
+              rounded-[14px]
+              bg-[#10303a]
+              text-xl
+              text-cyan-300
+            "
+          >
+            ✎
+          </div>
+
+          <div
+            className="
+              flex-1
+            "
+          >
+            <div
+              className="
+                flex
+                items-center
+                gap-2
+              "
+            >
+              <p
+                className="
+                  text-[15px]
+                  font-extrabold
+                "
+              >
+                Sentence Builder
+              </p>
+
+              <span
+                className="
+                  rounded-lg
+                  bg-[#342043]
+                  px-2
+                  py-1
+                  text-[7px]
+                  font-black
+                  text-purple-100
+                "
+              >
+                AI PLAN
+              </span>
+            </div>
+
+            <p
+              className="
+                mt-1
+                text-[11px]
+                text-[#849ca2]
+              "
+            >
+              Myanmar → natural
+              Mandarin with Hanzi
+              and Pinyin.
+            </p>
+          </div>
+
+          <span
+            className="
+              text-xl
+              text-[#70868c]
+            "
+          >
+            ›
+          </span>
+        </Link>
+
+
+        {/* Pronunciation */}
+        <Link
+          href="/dashboard/ai/pronunciation"
+          className="
+            mt-3
+            flex
+            min-h-[91px]
+            items-center
+            gap-3
+            rounded-[18px]
+            border
+            border-[#3b2146]
+            bg-[#180d22]
+            px-[14px]
+          "
+        >
+          <div
+            className="
+              flex
+              h-[47px]
+              w-[47px]
+              shrink-0
+              items-center
+              justify-center
+              rounded-[14px]
+              bg-[#2b1436]
+              text-xl
+            "
+          >
+            🎙
+          </div>
+
+          <div
+            className="
+              flex-1
+            "
+          >
+            <p
+              className="
+                text-[8px]
+                font-black
+                tracking-[0.12em]
+                text-purple-400
+              "
+            >
+              YOUR LAOSHI
+            </p>
+
+            <p
+              className="
+                mt-1
+                text-[14px]
+                font-extrabold
+              "
+            >
+              Pronunciation
+            </p>
+
+            <p
+              className="
+                mt-1
+                text-[10px]
+                leading-4
+                text-[#81718a]
+              "
+            >
+              Listen, repeat and
+              check your Chinese
+              pronunciation.
+            </p>
+          </div>
+
+          <span
+            className="
+              text-xl
+              text-[#75677f]
+            "
+          >
+            ›
+          </span>
+        </Link>
+
+
+                {/* Plans */}
+        <Link
+          href="/dashboard/ai/pricing"
+          className="
+            mt-3
+            flex
+            min-h-[94px]
+            items-center
+            gap-3
+            rounded-[18px]
+            border
+            border-[#382047]
+            bg-[#180d22]
+            px-[14px]
+          "
+        >
+          <div
+            className="
+              flex
+              h-[47px]
+              w-[47px]
+              shrink-0
+              items-center
+              justify-center
+              rounded-[14px]
+              bg-[#2b1436]
+              text-xl
+            "
+          >
+            ◆
+          </div>
+
+          <div className="flex-1">
+            <p
+              className="
+                text-[8px]
+                font-black
+                tracking-[0.12em]
+                text-purple-400
+              "
+            >
+              PLANS & ACCESS
+            </p>
+
+            <p
+              className="
+                mt-1
+                text-[14px]
+                font-extrabold
+              "
+            >
+              AI Speaking & HSK Plans
+            </p>
+
+            <p
+              className="
+                mt-1
+                text-[10px]
+                leading-4
+                text-[#81718a]
+              "
+            >
+              View prices, upgrade AI Speaking
+              or unlock HSK levels.
+            </p>
+          </div>
+
+          <span
+            className="
+              text-xl
+              text-[#75677f]
+            "
+          >
+            ›
+          </span>
+        </Link>
+      </section>
+    </main>
+  );
+}

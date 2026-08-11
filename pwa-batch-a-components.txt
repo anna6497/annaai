@@ -1,0 +1,2708 @@
+
+
+
+===== app\hsk\writing\[level]\WritingClient.tsx =====
+
+"use client";
+
+import type { HskLevel } from "@/types/hsk-vocabulary";
+import HanziWriter from "hanzi-writer";
+import Link from "next/link";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { getVocabularyByLevel } from "@/lib/hsk-vocabulary";
+
+export default function WritingClient({ level }: { level: HskLevel }) {
+  const params = useSearchParams();
+  const requestedWord = params.get("word") ?? "";
+  const words = useMemo(() => getVocabularyByLevel(level), [level]);
+
+  const characters = useMemo(() => {
+    const unique = new Set<string>();
+    for (const word of words) {
+      for (const character of Array.from(word.hanzi)) {
+        if (/[\u3400-\u9fff]/u.test(character)) unique.add(character);
+      }
+    }
+    return [...unique];
+  }, [words]);
+
+  const initialIndex = Math.max(
+    0,
+    characters.findIndex((character) => requestedWord.includes(character)),
+  );
+  const [index, setIndex] = useState(initialIndex);
+  const [quizMessage, setQuizMessage] = useState("");
+  const targetRef = useRef<HTMLDivElement>(null);
+  const writerRef = useRef<HanziWriter | null>(null);
+
+  const character = characters[index] ?? "";
+
+  useEffect(() => {
+    if (!targetRef.current || !character) return;
+
+    targetRef.current.innerHTML = "";
+    const writer = HanziWriter.create(targetRef.current, character, {
+      width: 300,
+      height: 300,
+      padding: 12,
+      showOutline: true,
+      strokeAnimationSpeed: 1,
+      delayBetweenStrokes: 120,
+      charDataLoader(char, onComplete, onError) {
+        fetch(`/hanzi-data/${encodeURIComponent(char)}.json`)
+          .then((response) => {
+            if (!response.ok) throw new Error("Character data unavailable");
+            return response.json();
+          })
+          .then(onComplete)
+          .catch(onError);
+      },
+    });
+
+    writerRef.current = writer;
+    setQuizMessage("");
+
+    return () => {
+      targetRef.current?.replaceChildren();
+      writerRef.current = null;
+    };
+  }, [character]);
+
+  function animate() {
+    writerRef.current?.animateCharacter();
+  }
+
+  function quiz() {
+    setQuizMessage("အစဉ်လိုက် ရေးကြည့်ပါ။");
+    writerRef.current?.quiz({
+      showHintAfterMisses: 2,
+      highlightOnComplete: true,
+      onComplete(summary) {
+        setQuizMessage(
+          `Completed · mistakes ${summary.totalMistakes}`,
+        );
+      },
+    });
+  }
+
+  if (!character) {
+    return (
+      <main className="min-h-screen bg-[#080011] p-8 text-white">
+        No writing characters found.
+      </main>
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-[#080011] px-4 py-8 text-white">
+      <section className="mx-auto max-w-5xl">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-sm font-black uppercase tracking-[0.2em] text-fuchsia-300">
+              HSK {level} Writing
+            </p>
+            <h1 className="mt-2 text-4xl font-black">
+              Character Practice
+            </h1>
+            <p className="mt-2 text-white/45">
+              {characters.length.toLocaleString()} unique characters
+            </p>
+          </div>
+          <Link
+            href={`/hsk/vocabulary/${level}`}
+            className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold"
+          >
+            Browse vocabulary
+          </Link>
+        </div>
+
+        <div className="mt-8 grid gap-6 lg:grid-cols-[360px_1fr]">
+          <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-6">
+            <div
+              ref={targetRef}
+              className="mx-auto h-[300px] w-[300px] overflow-hidden rounded-2xl bg-white"
+            />
+
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={animate}
+                className="rounded-2xl bg-cyan-600 px-4 py-3 font-black"
+              >
+                ▶ Stroke order
+              </button>
+              <button
+                type="button"
+                onClick={quiz}
+                className="rounded-2xl bg-fuchsia-600 px-4 py-3 font-black"
+              >
+                ✍ Practice
+              </button>
+            </div>
+
+            {quizMessage ? (
+              <p className="mt-4 text-center text-sm text-emerald-200">
+                {quizMessage}
+              </p>
+            ) : null}
+
+            <div className="mt-5 flex justify-between gap-3">
+              <button
+                type="button"
+                onClick={() =>
+                  setIndex((value) =>
+                    value <= 0 ? characters.length - 1 : value - 1,
+                  )
+                }
+                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 font-bold"
+              >
+                ← Previous
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setIndex((value) =>
+                    value >= characters.length - 1 ? 0 : value + 1,
+                  )
+                }
+                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 font-bold"
+              >
+                Next →
+              </button>
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-6">
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-white/35">
+              Current character
+            </p>
+            <p className="mt-4 text-8xl font-black">{character}</p>
+            <p className="mt-4 text-white/45">
+              Character {index + 1} of {characters.length}
+            </p>
+
+            <div className="mt-7 grid max-h-[420px] grid-cols-5 gap-2 overflow-y-auto pr-2 sm:grid-cols-8">
+              {characters.map((item, itemIndex) => (
+                <button
+                  type="button"
+                  key={`${item}-${itemIndex}`}
+                  onClick={() => setIndex(itemIndex)}
+                  className={`aspect-square rounded-xl text-2xl font-black ${
+                    itemIndex === index
+                      ? "bg-fuchsia-600"
+                      : "border border-white/10 bg-white/5 hover:bg-white/10"
+                  }`}
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+
+===== components\speaking-practice\PronunciationPractice.tsx =====
+
+"use client";
+
+import { useRouter } from "next/navigation";
+
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+
+import {
+  checkPronunciation,
+  type PronunciationCheckResponse,
+} from "@/lib/speaking-practice/api";
+
+import {
+  getLatestAttemptBefore,
+  savePronunciationAttempt,
+} from "@/lib/speaking-practice/history";
+
+import {
+  completeReviewSession,
+  createReviewSession,
+  saveReviewSessionItem,
+} from "@/lib/speaking-practice/review-session";
+
+import PronunciationFeedback from "@/components/speaking-practice/PronunciationFeedback";
+
+import type {
+  SpeakingPracticeSentence,
+} from "@/lib/speaking-practice/types";
+
+type PronunciationPracticeProps = {
+  sentences: SpeakingPracticeSentence[];
+  initialSearchQuery?: string;
+  initialLesson?: number | "all";
+  initialCategory?: string;
+  initialReviewSentenceIds?: string[];
+};
+
+type AudioMode = "normal" | "slow";
+
+export default function PronunciationPractice({
+  sentences,
+  initialSearchQuery = "",
+  initialLesson = "all",
+  initialCategory = "all",
+  initialReviewSentenceIds = [],
+}: PronunciationPracticeProps) {
+  const router = useRouter();
+
+  const [hasMounted, setHasMounted] =
+    useState(false);
+
+  const sampleAudioRef = useRef<HTMLAudioElement | null>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const microphoneStreamRef = useRef<MediaStream | null>(null);
+  const recordedChunksRef = useRef<Blob[]>([]);
+  const recordingStartedAtRef = useRef<number | null>(null);
+  const recordedAudioUrlRef = useRef<string | null>(null);
+
+  const [
+    activeReviewSessionId,
+    setActiveReviewSessionId,
+  ] = useState<string | null>(null);
+
+  const [
+    isCreatingReviewSession,
+    setIsCreatingReviewSession,
+  ] = useState(false);
+
+  const [
+    isSavingReviewSession,
+    setIsSavingReviewSession,
+  ] = useState(false);
+
+  const [
+    reviewSessionMessage,
+    setReviewSessionMessage,
+  ] = useState<string | null>(null);
+
+  const completedReviewSessionIdRef =
+    useRef<string | null>(null);
+
+  const [searchQuery, setSearchQuery] =
+    useState(initialSearchQuery);
+
+  const [
+    selectedLesson,
+    setSelectedLesson,
+  ] = useState<number | "all">(
+    initialLesson
+  );
+
+  const [
+    selectedCategory,
+    setSelectedCategory,
+  ] = useState<string>(
+    initialCategory
+  );
+
+  const [reviewSentenceIds, setReviewSentenceIds] =
+    useState<string[]>(
+      initialReviewSentenceIds
+    );
+
+  const [
+    completedSentenceIds,
+    setCompletedSentenceIds,
+  ] = useState<string[]>([]);
+
+  const [
+    sessionScores,
+    setSessionScores,
+  ] = useState<Record<string, number>>({});
+
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  const [isPlayingSample, setIsPlayingSample] = useState(false);
+  const [playingMode, setPlayingMode] = useState<AudioMode | null>(null);
+
+  const [showPinyin, setShowPinyin] = useState(true);
+  const [showMeaning, setShowMeaning] = useState(true);
+  const [showEnglish, setShowEnglish] = useState(false);
+
+  const [audioError, setAudioError] = useState<string | null>(null);
+
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingError, setRecordingError] = useState<string | null>(null);
+  const [recordedAudioUrl, setRecordedAudioUrl] = useState<string | null>(null);
+  const [recordedAudioBlob, setRecordedAudioBlob] = useState<Blob | null>(null);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+
+  const [isCheckingScore, setIsCheckingScore] = useState(false);
+  const [scoreError, setScoreError] = useState<string | null>(null);
+
+  const [pronunciationResult, setPronunciationResult] =
+    useState<PronunciationCheckResponse | null>(null);
+
+  const [isSavingResult, setIsSavingResult] =
+    useState(false);
+
+  const [saveResultMessage, setSaveResultMessage] =
+    useState<string | null>(null);
+
+  const lessons = useMemo(() => {
+    return Array.from(
+      new Set(sentences.map((sentence) => sentence.lesson))
+    ).sort((first, second) => first - second);
+  }, [sentences]);
+
+  const categories = useMemo(() => {
+    return Array.from(
+      new Set(sentences.map((sentence) => sentence.category))
+    ).sort((first, second) => first.localeCompare(second));
+  }, [sentences]);
+
+  const filteredSentences = useMemo(() => {
+    const normalizedQuery =
+      searchQuery.trim().toLowerCase();
+
+    const reviewIdSet = new Set(
+      reviewSentenceIds
+    );
+
+    return sentences.filter((sentence) => {
+      const reviewMatches =
+        reviewIdSet.size === 0 ||
+        reviewIdSet.has(sentence.id);
+
+      const lessonMatches =
+        selectedLesson === "all" ||
+        sentence.lesson === selectedLesson;
+
+      const categoryMatches =
+        selectedCategory === "all" ||
+        sentence.category === selectedCategory;
+
+      const searchableText = [
+        sentence.hanzi,
+        sentence.pinyin,
+        sentence.pinyinNumbered,
+        sentence.myanmar,
+        sentence.english,
+        sentence.category,
+        ...(sentence.keywords ?? []),
+        ...(sentence.grammar ?? []),
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      const searchMatches =
+        normalizedQuery.length === 0 ||
+        searchableText.includes(
+          normalizedQuery
+        );
+
+      return (
+        reviewMatches &&
+        lessonMatches &&
+        categoryMatches &&
+        searchMatches
+      );
+    });
+  }, [
+    sentences,
+    reviewSentenceIds,
+    searchQuery,
+    selectedLesson,
+    selectedCategory,
+  ]);
+
+  const currentSentence =
+    filteredSentences[currentIndex];
+
+  const isReviewMode =
+    reviewSentenceIds.length > 0;
+
+  const completedCount =
+    completedSentenceIds.filter((id) =>
+      reviewSentenceIds.includes(id)
+    ).length;
+
+  const isReviewComplete =
+    isReviewMode &&
+    filteredSentences.length > 0 &&
+    completedCount ===
+      filteredSentences.length;
+
+  const reviewAverageScore =
+    completedCount > 0
+      ? Math.round(
+          Object.entries(sessionScores)
+            .filter(([id]) =>
+              reviewSentenceIds.includes(id)
+            )
+            .reduce(
+              (sum, [, score]) =>
+                sum + score,
+              0
+            ) / completedCount
+        )
+      : 0;
+
+  const reviewProgressPercentage =
+    filteredSentences.length > 0
+      ? Math.round(
+          (completedCount /
+            filteredSentences.length) *
+            100
+        )
+      : 0;
+
+  const stopSampleAudio = useCallback(() => {
+    if (sampleAudioRef.current) {
+      sampleAudioRef.current.pause();
+      sampleAudioRef.current.currentTime = 0;
+      sampleAudioRef.current = null;
+    }
+
+    setIsPlayingSample(false);
+    setPlayingMode(null);
+  }, []);
+
+  const stopMicrophoneStream = useCallback(() => {
+    microphoneStreamRef.current
+      ?.getTracks()
+      .forEach((track) => track.stop());
+
+    microphoneStreamRef.current = null;
+  }, []);
+
+  const clearRecordedAudioUrl = useCallback(() => {
+    if (recordedAudioUrlRef.current) {
+      URL.revokeObjectURL(recordedAudioUrlRef.current);
+      recordedAudioUrlRef.current = null;
+    }
+
+    setRecordedAudioUrl(null);
+  }, []);
+
+  const resetRecording = useCallback(() => {
+    const recorder = recorderRef.current;
+
+    if (recorder?.state === "recording") {
+      recorder.onstop = null;
+      recorder.stop();
+    }
+
+    recorderRef.current = null;
+    recordedChunksRef.current = [];
+    recordingStartedAtRef.current = null;
+
+    stopMicrophoneStream();
+    clearRecordedAudioUrl();
+
+    setRecordedAudioBlob(null);
+    setRecordingDuration(0);
+    setIsRecording(false);
+    setRecordingError(null);
+
+    setPronunciationResult(null);
+    setScoreError(null);
+    setIsCheckingScore(false);
+    setIsSavingResult(false);
+    setSaveResultMessage(null);
+  }, [
+    clearRecordedAudioUrl,
+    stopMicrophoneStream,
+  ]);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
+  useEffect(() => {
+    setSearchQuery(
+      initialSearchQuery
+    );
+
+    setSelectedLesson(
+      initialLesson
+    );
+
+    setSelectedCategory(
+      initialCategory
+    );
+
+    setReviewSentenceIds(
+      initialReviewSentenceIds
+    );
+
+    setCompletedSentenceIds([]);
+    setSessionScores({});
+    setActiveReviewSessionId(null);
+    setIsSavingReviewSession(false);
+    setReviewSessionMessage(null);
+
+
+    completedReviewSessionIdRef.current =
+      null;
+
+    setCurrentIndex(0);
+  }, [
+    initialSearchQuery,
+    initialLesson,
+    initialCategory,
+    initialReviewSentenceIds,
+  ]);
+
+  useEffect(() => {
+    if (
+      !isReviewComplete ||
+      !activeReviewSessionId ||
+      completedReviewSessionIdRef.current ===
+        activeReviewSessionId
+    ) {
+      return;
+    }
+
+    const reviewSessionId =
+      activeReviewSessionId;
+
+    completedReviewSessionIdRef.current =
+      reviewSessionId;
+
+    let isCancelled = false;
+
+    async function finishSession() {
+      setIsSavingReviewSession(true);
+      setReviewSessionMessage(null);
+
+      try {
+        await completeReviewSession({
+          reviewSessionId,
+          completedSentenceIds,
+          averageScore:
+            reviewAverageScore,
+        });
+
+        if (!isCancelled) {
+          setReviewSessionMessage(
+            "Smart Review session saved to your progress."
+          );
+        }
+      } catch (error) {
+        console.error(
+          "Unable to complete Smart Review session:",
+          error
+        );
+
+        if (!isCancelled) {
+          completedReviewSessionIdRef.current =
+            null;
+
+          setReviewSessionMessage(
+            error instanceof Error
+              ? error.message
+              : "Smart Review session could not be saved."
+          );
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsSavingReviewSession(false);
+        }
+      }
+    }
+
+    void finishSession();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [
+    isReviewComplete,
+    activeReviewSessionId,
+    completedSentenceIds,
+    reviewAverageScore,
+  ]);
+
+  useEffect(() => {
+    if (
+      reviewSentenceIds.length === 0 ||
+      activeReviewSessionId ||
+      isCreatingReviewSession
+    ) {
+      return;
+    }
+
+    let isCancelled = false;
+
+    async function startSession() {
+      setIsCreatingReviewSession(true);
+      setReviewSessionMessage(null);
+
+      try {
+        const sessionId =
+          await createReviewSession({
+            sentenceIds:
+              reviewSentenceIds,
+          });
+
+        if (!isCancelled) {
+          setActiveReviewSessionId(
+            sessionId
+          );
+        }
+      } catch (error) {
+        console.error(
+          "Unable to create Smart Review session:",
+          error
+        );
+
+        if (!isCancelled) {
+          setReviewSessionMessage(
+            error instanceof Error
+              ? error.message
+              : "Smart Review session could not be started."
+          );
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsCreatingReviewSession(false);
+        }
+      }
+    }
+
+    void startSession();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [
+    reviewSentenceIds,
+    activeReviewSessionId,
+    isCreatingReviewSession,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      stopSampleAudio();
+      stopMicrophoneStream();
+      clearRecordedAudioUrl();
+    };
+  }, [
+    clearRecordedAudioUrl,
+    stopMicrophoneStream,
+    stopSampleAudio,
+  ]);
+
+  useEffect(() => {
+    setCurrentIndex(0);
+    stopSampleAudio();
+    resetRecording();
+    setAudioError(null);
+  }, [
+    searchQuery,
+    selectedLesson,
+    selectedCategory,
+    resetRecording,
+    stopSampleAudio,
+  ]);
+
+  useEffect(() => {
+    stopSampleAudio();
+    resetRecording();
+    setAudioError(null);
+  }, [
+    currentIndex,
+    resetRecording,
+    stopSampleAudio,
+  ]);
+
+  function playSampleAudio(mode: AudioMode) {
+    if (!currentSentence) {
+      return;
+    }
+
+    if (isRecording) {
+      setRecordingError(
+        "Please stop recording before playing the sample."
+      );
+      return;
+    }
+
+    const audioUrl =
+      mode === "slow"
+        ? currentSentence.audio.slow
+        : currentSentence.audio.normal;
+
+    if (!audioUrl) {
+      setAudioError(
+        `${mode} audio is not configured for this sentence.`
+      );
+      return;
+    }
+
+    if (
+      isPlayingSample &&
+      playingMode === mode
+    ) {
+      stopSampleAudio();
+      return;
+    }
+
+    stopSampleAudio();
+    setAudioError(null);
+
+    const audio = new Audio(audioUrl);
+    audio.preload = "auto";
+
+    audio.onplay = () => {
+      setIsPlayingSample(true);
+      setPlayingMode(mode);
+    };
+
+    audio.onended = () => {
+      sampleAudioRef.current = null;
+      setIsPlayingSample(false);
+      setPlayingMode(null);
+    };
+
+    audio.onerror = () => {
+      sampleAudioRef.current = null;
+      setIsPlayingSample(false);
+      setPlayingMode(null);
+
+      setAudioError(
+        `Audio could not be loaded: ${audioUrl}`
+      );
+    };
+
+    sampleAudioRef.current = audio;
+
+    void audio.play().catch((error: unknown) => {
+      console.error("Unable to play sample audio:", error);
+
+      sampleAudioRef.current = null;
+      setIsPlayingSample(false);
+      setPlayingMode(null);
+
+      setAudioError(
+        "The browser could not play this audio."
+      );
+    });
+  }
+
+  async function startRecording() {
+    setRecordingError(null);
+    setScoreError(null);
+    setPronunciationResult(null);
+    setIsSavingResult(false);
+    setSaveResultMessage(null);
+
+    stopSampleAudio();
+    clearRecordedAudioUrl();
+
+    setRecordedAudioBlob(null);
+    setRecordingDuration(0);
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setRecordingError(
+        "Microphone recording is not supported by this browser."
+      );
+      return;
+    }
+
+    if (typeof MediaRecorder === "undefined") {
+      setRecordingError(
+        "MediaRecorder is not supported by this browser."
+      );
+      return;
+    }
+
+    try {
+      const stream =
+        await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+        });
+
+      microphoneStreamRef.current = stream;
+
+      console.log(
+        "Active microphone:",
+        stream.getAudioTracks().map((track) => ({
+          label: track.label,
+          enabled: track.enabled,
+          muted: track.muted,
+          readyState: track.readyState,
+          settings: track.getSettings(),
+        }))
+      );
+
+      const preferredMimeTypes = [
+        "audio/webm;codecs=opus",
+        "audio/webm",
+        "audio/mp4",
+        "audio/ogg;codecs=opus",
+        "audio/ogg",
+      ];
+
+      const supportedMimeType =
+        preferredMimeTypes.find((mimeType) =>
+          MediaRecorder.isTypeSupported(mimeType)
+        );
+
+      const recorder = supportedMimeType
+        ? new MediaRecorder(stream, {
+            mimeType: supportedMimeType,
+          })
+        : new MediaRecorder(stream);
+
+      recorderRef.current = recorder;
+      recordedChunksRef.current = [];
+      recordingStartedAtRef.current = Date.now();
+
+      recorder.ondataavailable = (
+        event: BlobEvent
+      ) => {
+        if (event.data.size > 0) {
+          recordedChunksRef.current.push(
+            event.data
+          );
+        }
+      };
+
+      recorder.onerror = () => {
+        setRecordingError(
+          "Recording failed. Please try again."
+        );
+
+        setIsRecording(false);
+        stopMicrophoneStream();
+      };
+
+      recorder.onstop = () => {
+        const mimeType =
+          recorder.mimeType ||
+          supportedMimeType ||
+          "audio/webm";
+
+        const audioBlob = new Blob(
+          recordedChunksRef.current,
+          {
+            type: mimeType,
+          }
+        );
+
+        const startedAt =
+          recordingStartedAtRef.current;
+
+        const duration =
+          startedAt === null
+            ? 0
+            : (Date.now() - startedAt) / 1000;
+
+        console.log(
+          "Recorded MediaRecorder audio:",
+          {
+            size: audioBlob.size,
+            type: audioBlob.type,
+            duration,
+            chunks: recordedChunksRef.current.length,
+          }
+        );
+
+        if (audioBlob.size === 0) {
+          setRecordingError(
+            "No audio was recorded. Please try again."
+          );
+        } else {
+          const audioUrl =
+            URL.createObjectURL(audioBlob);
+
+          recordedAudioUrlRef.current =
+            audioUrl;
+
+          setRecordedAudioBlob(audioBlob);
+          setRecordedAudioUrl(audioUrl);
+          setRecordingDuration(
+            Number(duration.toFixed(1))
+          );
+        }
+
+        setIsRecording(false);
+        stopMicrophoneStream();
+      };
+
+      recorder.start(250);
+      setIsRecording(true);
+    } catch (error) {
+      console.error(
+        "Unable to access microphone:",
+        error
+      );
+
+      if (
+        error instanceof DOMException &&
+        error.name === "NotAllowedError"
+      ) {
+        setRecordingError(
+          "Microphone permission was denied."
+        );
+      } else if (
+        error instanceof DOMException &&
+        error.name === "NotFoundError"
+      ) {
+        setRecordingError(
+          "No microphone was found."
+        );
+      } else {
+        setRecordingError(
+          "Unable to access the microphone."
+        );
+      }
+
+      setIsRecording(false);
+      stopMicrophoneStream();
+    }
+  }
+
+  function stopRecording() {
+    const recorder = recorderRef.current;
+
+    if (recorder?.state === "recording") {
+      recorder.stop();
+    }
+  }
+
+  async function handleCheckScore() {
+    if (!recordedAudioBlob) {
+      setScoreError(
+        "Please record your voice first."
+      );
+      return;
+    }
+
+    if (!currentSentence) {
+      setScoreError(
+        "The current sentence was not found."
+      );
+      return;
+    }
+
+    setIsCheckingScore(true);
+    setScoreError(null);
+    setSaveResultMessage(null);
+    setPronunciationResult(null);
+
+    try {
+      const result =
+        await checkPronunciation({
+          audioBlob: recordedAudioBlob,
+          sentenceId: currentSentence.id,
+          targetText: currentSentence.hanzi,
+          durationSeconds: recordingDuration,
+        });
+
+      setPronunciationResult(result);
+
+      if (isReviewMode) {
+        setCompletedSentenceIds(
+          (previousIds) =>
+            previousIds.includes(
+              currentSentence.id
+            )
+              ? previousIds
+              : [
+                  ...previousIds,
+                  currentSentence.id,
+                ]
+        );
+
+        setSessionScores(
+          (previousScores) => ({
+            ...previousScores,
+            [currentSentence.id]:
+              result.scores.overall,
+          })
+        );
+      }
+
+      setIsSavingResult(true);
+
+      try {
+        const previousAttempt =
+          isReviewMode
+            ? await getLatestAttemptBefore(
+                currentSentence.id,
+                new Date().toISOString()
+              )
+            : null;
+
+        const reviewAttemptId =
+          await savePronunciationAttempt({
+            sentence: currentSentence,
+            result,
+            recordingDuration,
+            reviewSessionId:
+              activeReviewSessionId,
+          });
+
+        if (
+          isReviewMode &&
+          activeReviewSessionId
+        ) {
+          await saveReviewSessionItem({
+            reviewSessionId:
+              activeReviewSessionId,
+            sentenceId:
+              currentSentence.id,
+            targetText:
+              currentSentence.hanzi,
+            previousScore:
+              previousAttempt?.overall_score ??
+              null,
+            reviewScore:
+              result.scores.overall,
+            previousAttemptId:
+              previousAttempt?.id ?? null,
+            reviewAttemptId,
+          });
+        }
+
+        setSaveResultMessage(
+          "Score saved to your speaking history."
+        );
+      } catch (saveError) {
+        console.error(
+          "Unable to save pronunciation result:",
+          saveError
+        );
+
+        setSaveResultMessage(
+          saveError instanceof Error
+            ? saveError.message
+            : "Score could not be saved."
+        );
+      } finally {
+        setIsSavingResult(false);
+      }
+    } catch (error) {
+      console.error(
+        "Pronunciation checking failed:",
+        error
+      );
+
+      setScoreError(
+        error instanceof Error
+          ? error.message
+          : "Pronunciation checking failed."
+      );
+    } finally {
+      setIsCheckingScore(false);
+    }
+  }
+
+  function goToPreviousSentence() {
+    setCurrentIndex((previousIndex) =>
+      Math.max(0, previousIndex - 1)
+    );
+  }
+
+  function goToNextSentence() {
+    setCurrentIndex((previousIndex) =>
+      Math.min(
+        filteredSentences.length - 1,
+        previousIndex + 1
+      )
+    );
+  }
+
+  function clearFilters() {
+    setSearchQuery("");
+    setSelectedLesson("all");
+    setSelectedCategory("all");
+    setReviewSentenceIds([]);
+    setCompletedSentenceIds([]);
+    setSessionScores({});
+    setActiveReviewSessionId(null);
+    setIsSavingReviewSession(false);
+    setReviewSessionMessage(null);
+
+
+    completedReviewSessionIdRef.current =
+      null;
+
+    setCurrentIndex(0);
+
+    router.replace(
+      "/dashboard/ai/pronunciation",
+      {
+        scroll: false,
+      }
+    );
+  }
+
+  function restartReviewSession() {
+    setCompletedSentenceIds([]);
+    setSessionScores({});
+    setActiveReviewSessionId(null);
+    setIsSavingReviewSession(false);
+    setReviewSessionMessage(null);
+
+
+    completedReviewSessionIdRef.current =
+      null;
+
+    setCurrentIndex(0);
+    resetRecording();
+  }
+
+  const progressPercentage =
+    filteredSentences.length > 0
+      ? ((currentIndex + 1) /
+          filteredSentences.length) *
+        100
+      : 0;
+
+  return (
+    <section className="mx-auto w-full max-w-4xl">
+      <div className="mb-6">
+        <p className="text-sm font-medium text-violet-200">
+          Anna AI V6
+        </p>
+
+        <h1 className="mt-1 text-3xl font-bold text-white">
+          Listen and Repeat
+        </h1>
+
+        <p className="mt-2 text-sm text-white/55">
+          Search and practice Chinese sentences by lesson
+          and category.
+        </p>
+      </div>
+
+      <div className="mb-6 rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl">
+        <div className="grid gap-4 md:grid-cols-3">
+          <label className="block">
+            <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-white/50">
+              Search
+            </span>
+
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(event) =>
+                setSearchQuery(event.target.value)
+              }
+              placeholder="Hanzi, pinyin, Myanmar, English..."
+              className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white outline-none placeholder:text-white/30 focus:border-violet-400"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-white/50">
+              Lesson
+            </span>
+
+            <select
+              value={selectedLesson}
+              onChange={(event) => {
+                const value = event.target.value;
+
+                setSelectedLesson(
+                  value === "all"
+                    ? "all"
+                    : Number(value)
+                );
+              }}
+              className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-violet-400"
+            >
+              <option value="all">
+                All lessons
+              </option>
+
+              {lessons.map((lesson) => (
+                <option
+                  key={lesson}
+                  value={lesson}
+                >
+                  Lesson {lesson}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-white/50">
+              Category
+            </span>
+
+            <select
+              value={selectedCategory}
+              onChange={(event) =>
+                setSelectedCategory(
+                  event.target.value
+                )
+              }
+              className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-violet-400"
+            >
+              <option value="all">
+                All categories
+              </option>
+
+              {categories.map((category) => (
+                <option
+                  key={category}
+                  value={category}
+                >
+                  {formatCategory(category)}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-white/50">
+            {filteredSentences.length} sentence
+            {filteredSentences.length === 1
+              ? ""
+              : "s"}{" "}
+            found
+          </p>
+
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-white/70 transition hover:bg-white/10"
+          >
+            Clear filters
+          </button>
+        </div>
+      </div>
+
+      {isReviewMode ? (
+        <>
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-amber-300/20 bg-amber-400/10 px-5 py-4">
+            <div>
+              <p className="text-sm font-semibold text-amber-100">
+                Smart Review Session
+              </p>
+
+              <p className="mt-1 text-sm text-amber-50/70">
+                Practicing{" "}
+                <strong>
+                  {filteredSentences.length}
+                </strong>{" "}
+                difficult sentence
+                {filteredSentences.length === 1
+                  ? ""
+                  : "s"}{" "}
+                from your history.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="rounded-2xl border border-amber-200/20 bg-black/10 px-4 py-2 text-sm font-semibold text-amber-50 transition hover:bg-black/20"
+            >
+              Exit Review
+            </button>
+          </div>
+
+          {isCreatingReviewSession ? (
+            <p className="mb-4 text-sm text-violet-200">
+              Starting Smart Review session…
+            </p>
+          ) : null}
+
+          <div className="mb-6 rounded-3xl border border-white/10 bg-white/5 p-5">
+            <div className="flex items-center justify-between gap-4">
+              <p className="text-sm font-semibold text-white">
+                Review Progress
+              </p>
+
+              <p className="text-sm text-white/60">
+                {completedCount} /{" "}
+                {filteredSentences.length}
+              </p>
+            </div>
+
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-amber-400 to-violet-400 transition-all duration-300"
+                style={{
+                  width: `${reviewProgressPercentage}%`,
+                }}
+              />
+            </div>
+          </div>
+        </>
+      ) : initialSearchQuery ? (
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-amber-300/20 bg-amber-400/10 px-5 py-4">
+          <div>
+            <p className="text-sm font-semibold text-amber-100">
+              Smart Review
+            </p>
+
+            <p className="mt-1 text-sm text-amber-50/70">
+              Practicing sentences that contain{" "}
+              <span className="text-xl font-bold text-amber-50">
+                {initialSearchQuery}
+              </span>
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="rounded-2xl border border-amber-200/20 bg-black/10 px-4 py-2 text-sm font-semibold text-amber-50 transition hover:bg-black/20"
+          >
+            Exit Smart Review
+          </button>
+        </div>
+      ) : null}
+
+      {isReviewComplete ? (
+        <div className="mb-6 rounded-[2rem] border border-emerald-300/20 bg-emerald-400/10 p-7 text-center">
+          <p className="text-sm font-semibold text-emerald-200">
+            Smart Review Complete
+          </p>
+
+          <h2 className="mt-2 text-3xl font-bold text-white">
+            Great work!
+          </h2>
+
+          <p className="mt-4 text-5xl font-bold text-white">
+            {reviewAverageScore}
+          </p>
+
+          <p className="mt-1 text-sm text-white/50">
+            Average score
+          </p>
+
+          <p className="mt-4 text-sm text-white/60">
+            You reviewed{" "}
+            {filteredSentences.length} sentence
+            {filteredSentences.length === 1
+              ? ""
+              : "s"}{" "}
+            in this session.
+          </p>
+
+          {isSavingReviewSession ? (
+            <p className="mt-4 text-sm text-violet-200">
+              Saving Smart Review session…
+            </p>
+          ) : null}
+
+          {reviewSessionMessage ? (
+            <div className="mx-auto mt-4 max-w-xl rounded-2xl border border-white/10 bg-black/10 px-4 py-3 text-sm text-white/70">
+              {reviewSessionMessage}
+            </div>
+          ) : null}
+
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
+            <button
+              type="button"
+              onClick={restartReviewSession}
+              className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 font-semibold text-white transition hover:bg-white/15"
+            >
+              Review Again
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                router.push(
+                  "/dashboard/ai/pronunciation/progress"
+                )
+              }
+              className="rounded-2xl bg-violet-500 px-5 py-3 font-semibold text-white transition hover:bg-violet-400"
+            >
+              Back to Dashboard
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                router.push(
+                  "/dashboard/ai/pronunciation"
+                )
+              }
+              className="rounded-2xl border border-white/10 bg-black/10 px-5 py-3 font-semibold text-white transition hover:bg-black/20"
+            >
+              Continue Daily Practice
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {!currentSentence ? (
+        <div className="rounded-3xl border border-white/10 bg-white/5 p-10 text-center">
+          <p className="text-xl font-semibold text-white">
+            No sentences found
+          </p>
+
+          <p className="mt-2 text-sm text-white/50">
+            Try changing the lesson, category, or search
+            word.
+          </p>
+
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="mt-5 rounded-2xl bg-violet-500 px-6 py-3 font-semibold text-white"
+          >
+            Show all sentences
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="mb-5 flex items-center justify-between gap-4">
+            <p className="text-sm text-white/60">
+              HSK {currentSentence.level} · Lesson{" "}
+              {currentSentence.lesson}
+            </p>
+
+            <div className="rounded-full border border-white/10 bg-white/10 px-4 py-2 text-sm text-white/80">
+              {currentIndex + 1} /{" "}
+              {filteredSentences.length}
+            </div>
+          </div>
+
+          <div className="mb-6 h-2 overflow-hidden rounded-full bg-white/10">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-violet-400 to-fuchsia-400 transition-all duration-300"
+              style={{
+                width: `${progressPercentage}%`,
+              }}
+            />
+          </div>
+
+          <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/10 shadow-2xl backdrop-blur-xl">
+            <div className="border-b border-white/10 px-6 py-4 sm:px-8">
+              <div className="flex items-center justify-between gap-3">
+                <span className="rounded-full bg-violet-400/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-violet-200">
+                  {formatCategory(
+                    currentSentence.category
+                  )}
+                </span>
+
+                <span className="text-xs text-white/50">
+                  Difficulty{" "}
+                  {currentSentence.difficulty}
+                </span>
+              </div>
+            </div>
+
+            <div className="px-6 py-10 text-center sm:px-10">
+              <p className="text-4xl font-semibold leading-relaxed text-white sm:text-5xl">
+                {currentSentence.hanzi}
+              </p>
+
+              {showPinyin ? (
+                <p className="mt-5 text-xl text-violet-200 sm:text-2xl">
+                  {currentSentence.pinyin}
+                </p>
+              ) : null}
+
+              {showMeaning ? (
+                <p className="mt-4 text-base text-white/70 sm:text-lg">
+                  {currentSentence.myanmar}
+                </p>
+              ) : null}
+
+              {showEnglish ? (
+                <p className="mt-2 text-sm text-white/45">
+                  {currentSentence.english}
+                </p>
+              ) : null}
+
+              <div className="mt-9 flex flex-wrap justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() =>
+                    playSampleAudio("normal")
+                  }
+                  disabled={isRecording}
+                  className="min-w-36 rounded-2xl bg-white px-5 py-3 font-semibold text-violet-700 shadow-lg transition hover:bg-violet-50 disabled:opacity-50"
+                >
+                  {isPlayingSample &&
+                  playingMode === "normal"
+                    ? "■ Stop"
+                    : "▶ Normal"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    playSampleAudio("slow")
+                  }
+                  disabled={isRecording}
+                  className="min-w-36 rounded-2xl border border-white/15 bg-white/10 px-5 py-3 font-semibold text-white transition hover:bg-white/15 disabled:opacity-50"
+                >
+                  {isPlayingSample &&
+                  playingMode === "slow"
+                    ? "■ Stop"
+                    : "🐢 Slow"}
+                </button>
+              </div>
+
+              {audioError ? (
+                <div className="mx-auto mt-5 max-w-xl rounded-2xl border border-red-300/20 bg-red-400/10 px-4 py-3 text-sm text-red-100">
+                  {audioError}
+                </div>
+              ) : null}
+
+              <div className="mt-8 rounded-3xl border border-white/10 bg-black/10 p-5">
+                <p className="text-sm font-semibold text-white">
+                  Your pronunciation
+                </p>
+
+                <p className="mt-1 text-sm text-white/60">
+                  Listen and repeat the sentence.
+                </p>
+
+                <div className="mt-5 flex flex-wrap justify-center gap-3">
+                  {!isRecording ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void startRecording()
+                      }
+                      disabled={
+                        !hasMounted ||
+                        isCheckingScore ||
+                        isSavingResult ||
+                        (isReviewMode &&
+                          !activeReviewSessionId)
+                      }
+                      className="rounded-2xl bg-violet-500 px-6 py-3 font-semibold text-white disabled:opacity-50"
+                    >
+                      🎤 Start Recording
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={stopRecording}
+                      className="animate-pulse rounded-2xl bg-red-500 px-6 py-3 font-semibold text-white"
+                    >
+                      ■ Stop Recording
+                    </button>
+                  )}
+
+                  {recordedAudioUrl &&
+                  !isRecording ? (
+                    <button
+                      type="button"
+                      onClick={resetRecording}
+                      disabled={
+                        isCheckingScore ||
+                        isSavingResult
+                      }
+                      className="rounded-2xl border border-white/15 bg-white/10 px-6 py-3 font-semibold text-white disabled:opacity-50"
+                    >
+                      ↻ Record Again
+                    </button>
+                  ) : null}
+                </div>
+
+                {isRecording ? (
+                  <p className="mt-4 text-sm font-medium text-red-200">
+                    Recording…
+                  </p>
+                ) : null}
+
+                {recordingError ? (
+                  <div className="mx-auto mt-5 max-w-xl rounded-2xl border border-red-300/20 bg-red-400/10 px-4 py-3 text-sm text-red-100">
+                    {recordingError}
+                  </div>
+                ) : null}
+
+                {recordedAudioUrl ? (
+                  <div className="mx-auto mt-6 max-w-md rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <p className="mb-3 text-sm text-white/70">
+                      Duration: {recordingDuration}s
+                    </p>
+
+                    <audio
+                      controls
+                      src={recordedAudioUrl}
+                      className="w-full"
+                    />
+                  </div>
+                ) : null}
+
+                {scoreError ? (
+                  <div className="mx-auto mt-5 max-w-xl rounded-2xl border border-red-300/20 bg-red-400/10 px-4 py-3 text-sm text-red-100">
+                    {scoreError}
+                  </div>
+                ) : null}
+
+                {pronunciationResult ? (
+                  <PronunciationFeedback
+                    result={pronunciationResult}
+                    onTryAgain={resetRecording}
+                    onListenNormal={() =>
+                      playSampleAudio("normal")
+                    }
+                    onListenSlow={() =>
+                      playSampleAudio("slow")
+                    }
+                  />
+                ) : null}
+
+                {isSavingResult ? (
+                  <p className="mt-4 text-sm text-violet-200">
+                    Saving score…
+                  </p>
+                ) : null}
+
+                {saveResultMessage ? (
+                  <div className="mx-auto mt-4 max-w-xl rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/70">
+                    {saveResultMessage}
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="mt-8 flex flex-wrap justify-center gap-3">
+                <ToggleButton
+                  active={showPinyin}
+                  onClick={() =>
+                    setShowPinyin(
+                      (value) => !value
+                    )
+                  }
+                  showLabel="Show Pinyin"
+                  hideLabel="Hide Pinyin"
+                />
+
+                <ToggleButton
+                  active={showMeaning}
+                  onClick={() =>
+                    setShowMeaning(
+                      (value) => !value
+                    )
+                  }
+                  showLabel="Show Myanmar"
+                  hideLabel="Hide Myanmar"
+                />
+
+                <ToggleButton
+                  active={showEnglish}
+                  onClick={() =>
+                    setShowEnglish(
+                      (value) => !value
+                    )
+                  }
+                  showLabel="Show English"
+                  hideLabel="Hide English"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-3 border-t border-white/10 bg-black/10 px-5 py-5">
+              <button
+                type="button"
+                onClick={goToPreviousSentence}
+                disabled={
+                  !hasMounted ||
+                  currentIndex === 0 ||
+                  isRecording ||
+                  isCheckingScore ||
+                  isSavingResult ||
+                  (isReviewMode &&
+                    !activeReviewSessionId)
+                }
+                className="rounded-xl border border-white/10 px-5 py-3 text-sm font-semibold text-white disabled:opacity-30"
+              >
+                ← Previous
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  void handleCheckScore()
+                }
+                disabled={
+                  !hasMounted ||
+                  !recordedAudioBlob ||
+                  isRecording ||
+                  isCheckingScore ||
+                  isSavingResult ||
+                  (isReviewMode &&
+                    !activeReviewSessionId)
+                }
+                className="rounded-xl bg-violet-500 px-5 py-3 text-sm font-semibold text-white disabled:opacity-40"
+              >
+                {isCheckingScore
+                  ? "Checking…"
+                  : isSavingResult
+                    ? "Saving…"
+                    : "Check Score"}
+              </button>
+
+              <button
+                type="button"
+                onClick={goToNextSentence}
+                disabled={
+                  !hasMounted ||
+                  currentIndex ===
+                    filteredSentences.length - 1 ||
+                  isRecording ||
+                  isCheckingScore ||
+                  isSavingResult ||
+                  (isReviewMode &&
+                    !activeReviewSessionId)
+                }
+                className="rounded-xl bg-violet-500 px-5 py-3 text-sm font-semibold text-white disabled:opacity-30"
+              >
+                Next →
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
+
+function ToggleButton({
+  active,
+  onClick,
+  showLabel,
+  hideLabel,
+}: {
+  active: boolean;
+  onClick: () => void;
+  showLabel: string;
+  hideLabel: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="rounded-xl border border-white/10 bg-black/10 px-4 py-2 text-sm font-medium text-white/80"
+    >
+      {active ? hideLabel : showLabel}
+    </button>
+  );
+}
+
+function formatCategory(category: string): string {
+  return category
+    .replaceAll("-", " ")
+    .replace(/\b\w/g, (character) =>
+      character.toUpperCase()
+    );
+}
+
+
+===== components\speaking-practice\SpeakingDashboard.tsx =====
+
+"use client";
+
+import Link from "next/link";
+
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+import {
+  getSpeakingDashboardData,
+  type SpeakingDashboardData,
+} from "@/lib/speaking-practice/dashboard";
+
+import {
+  saveSpeakingDailyGoal,
+  type SpeakingDailyGoal,
+} from "@/lib/speaking-practice/preferences";
+
+const EMPTY_DASHBOARD: SpeakingDashboardData = {
+  isAuthenticated: false,
+  todayGoal: 10,
+  todayCompleted: 0,
+  todayProgressPercentage: 0,
+  currentStreak: 0,
+  averageScore: 0,
+  totalAttempts: 0,
+  practicedSentenceCount: 0,
+  weakCharacters: [],
+  recentAttempts: [],
+  latestReviewSession: null,
+  latestReviewImprovement: null,
+};
+
+const DAILY_GOALS: SpeakingDailyGoal[] = [
+  5,
+  10,
+  20,
+];
+
+export default function SpeakingDashboard() {
+  const [dashboard, setDashboard] =
+    useState<SpeakingDashboardData>(
+      EMPTY_DASHBOARD
+    );
+
+  const [isLoading, setIsLoading] =
+    useState(true);
+
+  const [error, setError] =
+    useState<string | null>(null);
+
+  const [
+    isSavingGoal,
+    setIsSavingGoal,
+  ] = useState(false);
+
+  const [
+    goalMessage,
+    setGoalMessage,
+  ] = useState<string | null>(null);
+
+  const loadDashboard =
+    useCallback(async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        setDashboard(
+          await getSpeakingDashboardData()
+        );
+      } catch (loadError) {
+        console.error(
+          "Unable to load speaking dashboard:",
+          loadError
+        );
+
+        setError(
+          loadError instanceof Error
+            ? loadError.message
+            : "Unable to load speaking dashboard."
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    }, []);
+
+  useEffect(() => {
+    void loadDashboard();
+  }, [loadDashboard]);
+
+  async function handleGoalChange(
+    dailyGoal: SpeakingDailyGoal
+  ) {
+    if (
+      dailyGoal ===
+      dashboard.todayGoal
+    ) {
+      return;
+    }
+
+    setIsSavingGoal(true);
+    setGoalMessage(null);
+
+    try {
+      await saveSpeakingDailyGoal(
+        dailyGoal
+      );
+
+      setDashboard(
+        (previous) => ({
+          ...previous,
+          todayGoal: dailyGoal,
+          todayProgressPercentage:
+            Math.min(
+              100,
+              Math.round(
+                (previous.todayCompleted /
+                  dailyGoal) *
+                  100
+              )
+            ),
+        })
+      );
+
+      setGoalMessage(
+        `Daily goal changed to ${dailyGoal} sentences.`
+      );
+    } catch (saveError) {
+      setGoalMessage(
+        saveError instanceof Error
+          ? saveError.message
+          : "Daily goal could not be saved."
+      );
+    } finally {
+      setIsSavingGoal(false);
+    }
+  }
+
+  const reviewAgainHref =
+    useMemo(() => {
+      const sentenceIds =
+        dashboard
+          .latestReviewSession
+          ?.sentenceIds ?? [];
+
+      if (sentenceIds.length === 0) {
+        return "/dashboard/ai/pronunciation/review";
+      }
+
+      return `/dashboard/ai/pronunciation?review=${encodeURIComponent(
+        sentenceIds.join(",")
+      )}`;
+    }, [
+      dashboard.latestReviewSession,
+    ]);
+
+  if (isLoading) {
+    return (
+      <MessageCard>
+        Loading your speaking progress…
+      </MessageCard>
+    );
+  }
+
+  if (error) {
+    return (
+      <MessageCard>
+        <p>{error}</p>
+
+        <button
+          type="button"
+          onClick={() =>
+            void loadDashboard()
+          }
+          className="mt-5 rounded-2xl bg-violet-500 px-6 py-3 font-semibold text-white"
+        >
+          Try Again
+        </button>
+      </MessageCard>
+    );
+  }
+
+  if (!dashboard.isAuthenticated) {
+    return (
+      <MessageCard>
+        <h1 className="text-2xl font-bold text-white">
+          Sign in to view your progress
+        </h1>
+
+        <Link
+          href="/login"
+          className="mt-6 inline-flex rounded-2xl bg-violet-500 px-6 py-3 font-semibold text-white"
+        >
+          Sign In
+        </Link>
+      </MessageCard>
+    );
+  }
+
+  const improvement =
+    dashboard.latestReviewImprovement;
+
+  return (
+    <section className="mx-auto w-full max-w-6xl">
+      <header className="flex flex-wrap items-end justify-between gap-5">
+        <div>
+          <p className="text-sm font-semibold text-violet-200">
+            Anna AI V6
+          </p>
+
+          <h1 className="mt-1 text-3xl font-bold text-white sm:text-4xl">
+            Speaking Dashboard
+          </h1>
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          <Link
+            href="/dashboard/ai/pronunciation/review"
+            className="rounded-2xl border border-amber-300/20 bg-amber-400/10 px-6 py-3 font-semibold text-amber-100"
+          >
+            Smart Review
+          </Link>
+
+          <Link
+            href="/dashboard/ai/pronunciation"
+            className="rounded-2xl bg-violet-500 px-6 py-3 font-semibold text-white"
+          >
+            Continue Practice →
+          </Link>
+        </div>
+      </header>
+
+      <div className="mt-8 grid gap-5 lg:grid-cols-[1.5fr_1fr]">
+        <section className="rounded-[2rem] border border-white/10 bg-white/10 p-6">
+          <p className="text-sm font-semibold text-violet-200">
+            Today&apos;s Goal
+          </p>
+
+          <p className="mt-2 text-4xl font-bold text-white">
+            {dashboard.todayCompleted} /{" "}
+            {dashboard.todayGoal}
+          </p>
+
+          <div className="mt-6 h-3 overflow-hidden rounded-full bg-white/10">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-violet-400 to-fuchsia-400"
+              style={{
+                width: `${dashboard.todayProgressPercentage}%`,
+              }}
+            />
+          </div>
+
+          <div className="mt-6 flex flex-wrap gap-3">
+            {DAILY_GOALS.map(
+              (dailyGoal) => (
+                <button
+                  key={dailyGoal}
+                  type="button"
+                  disabled={isSavingGoal}
+                  onClick={() =>
+                    void handleGoalChange(
+                      dailyGoal
+                    )
+                  }
+                  className={`rounded-2xl px-5 py-3 text-sm font-semibold ${
+                    dashboard.todayGoal ===
+                    dailyGoal
+                      ? "bg-violet-500 text-white"
+                      : "border border-white/10 bg-white/5 text-white/70"
+                  }`}
+                >
+                  {dailyGoal} sentences
+                </button>
+              )
+            )}
+          </div>
+
+          {goalMessage ? (
+            <p className="mt-3 text-sm text-white/60">
+              {goalMessage}
+            </p>
+          ) : null}
+        </section>
+
+        <div className="grid grid-cols-2 gap-4">
+          <Metric
+            label="Streak"
+            value={`${dashboard.currentStreak} days`}
+          />
+          <Metric
+            label="Average"
+            value={`${dashboard.averageScore}%`}
+          />
+          <Metric
+            label="Attempts"
+            value={String(
+              dashboard.totalAttempts
+            )}
+          />
+          <Metric
+            label="Sentences"
+            value={String(
+              dashboard.practicedSentenceCount
+            )}
+          />
+        </div>
+      </div>
+
+      <section className="mt-6 rounded-[2rem] border border-violet-300/15 bg-violet-400/10 p-6">
+        <div className="flex flex-wrap items-start justify-between gap-5">
+          <div>
+            <p className="text-sm font-semibold text-violet-200">
+              Last Smart Review
+            </p>
+
+            <h2 className="mt-2 text-2xl font-bold text-white">
+              {dashboard.latestReviewSession
+                ? `${dashboard.latestReviewSession.completedSentences} sentences reviewed`
+                : "No completed review yet"}
+            </h2>
+          </div>
+
+          {dashboard.latestReviewSession ? (
+            <div className="rounded-3xl bg-black/15 px-6 py-4 text-center">
+              <p className="text-xs text-white/40">
+                Average Score
+              </p>
+              <p className="mt-1 text-4xl font-bold text-white">
+                {
+                  dashboard
+                    .latestReviewSession
+                    .averageScore
+                }
+              </p>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Link
+            href={reviewAgainHref}
+            className="rounded-2xl bg-violet-500 px-6 py-3 font-semibold text-white"
+          >
+            Review Again →
+          </Link>
+
+          <Link
+            href="/dashboard/ai/pronunciation/review"
+            className="rounded-2xl border border-white/10 bg-white/5 px-6 py-3 font-semibold text-white/75"
+          >
+            Build New Review
+          </Link>
+        </div>
+      </section>
+
+      <section className="mt-6 rounded-[2rem] border border-emerald-300/15 bg-emerald-400/10 p-6">
+        <p className="text-sm font-semibold text-emerald-200">
+          Improvement Summary
+        </p>
+
+        {!improvement ? (
+          <p className="mt-3 text-white/60">
+            Complete a Smart Review to see
+            improvement analytics.
+          </p>
+        ) : (
+          <>
+            <div className="mt-5 grid gap-4 sm:grid-cols-3">
+              <Metric
+                label="Previous Average"
+                value={
+                  improvement.previousAverage ===
+                  null
+                    ? "—"
+                    : String(
+                        improvement.previousAverage
+                      )
+                }
+              />
+
+              <Metric
+                label="Latest Average"
+                value={String(
+                  improvement.latestAverage
+                )}
+              />
+
+              <Metric
+                label="Improvement"
+                value={
+                  improvement.averageImprovement ===
+                  null
+                    ? "—"
+                    : `${improvement.averageImprovement >= 0 ? "+" : ""}${improvement.averageImprovement}`
+                }
+              />
+            </div>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-4">
+              <SummaryPill
+                label="Improved"
+                value={
+                  improvement.improvedCount
+                }
+              />
+              <SummaryPill
+                label="Mastered"
+                value={
+                  improvement.masteredCount
+                }
+              />
+              <SummaryPill
+                label="Needs Practice"
+                value={
+                  improvement.needsPracticeCount
+                }
+              />
+              <SummaryPill
+                label="Declined"
+                value={
+                  improvement.declinedCount
+                }
+              />
+            </div>
+
+            <div className="mt-6 space-y-3">
+              {improvement.items.map(
+                (item) => (
+                  <div
+                    key={item.sentenceId}
+                    className="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-black/15 px-4 py-3"
+                  >
+                    <div>
+                      <p className="text-lg font-semibold text-white">
+                        {item.targetText}
+                      </p>
+
+                      <p className="mt-1 text-xs text-white/45">
+                        {formatStatus(
+                          item.status
+                        )}
+                      </p>
+                    </div>
+
+                    <p className="font-semibold text-white">
+                      {item.previousScore ??
+                        "—"}{" "}
+                      → {item.reviewScore}
+                      {item.previousScore !==
+                      null ? (
+                        <span className="ml-2 text-emerald-200">
+                          (
+                          {item.scoreChange >= 0
+                            ? "+"
+                            : ""}
+                          {item.scoreChange})
+                        </span>
+                      ) : null}
+                    </p>
+                  </div>
+                )
+              )}
+            </div>
+          </>
+        )}
+      </section>
+
+      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+        <section className="rounded-[2rem] border border-white/10 bg-white/10 p-6">
+          <h2 className="text-xl font-bold text-white">
+            Weak Characters
+          </h2>
+
+          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {dashboard.weakCharacters.map(
+              (item) => (
+                <Link
+                  key={item.character}
+                  href={`/dashboard/ai/pronunciation?q=${encodeURIComponent(
+                    item.character
+                  )}`}
+                  className="rounded-2xl bg-amber-400/10 p-4 text-center"
+                >
+                  <p className="text-4xl font-semibold text-amber-50">
+                    {item.character}
+                  </p>
+                  <p className="mt-2 text-xs text-amber-100/60">
+                    {item.mistakeCount} mistakes
+                  </p>
+                </Link>
+              )
+            )}
+          </div>
+        </section>
+
+        <section className="rounded-[2rem] border border-white/10 bg-white/10 p-6">
+          <h2 className="text-xl font-bold text-white">
+            Recent Practice
+          </h2>
+
+          <div className="mt-5 space-y-3">
+            {dashboard.recentAttempts.map(
+              (attempt) => (
+                <div
+                  key={attempt.id}
+                  className="flex items-center justify-between rounded-2xl bg-black/15 px-4 py-3"
+                >
+                  <p className="text-white">
+                    {attempt.targetText}
+                  </p>
+
+                  <span className="font-bold text-violet-200">
+                    {attempt.overallScore}
+                  </span>
+                </div>
+              )
+            )}
+          </div>
+        </section>
+      </div>
+    </section>
+  );
+}
+
+function MessageCard({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="mx-auto max-w-2xl rounded-[2rem] border border-white/10 bg-white/10 p-10 text-center text-white/70">
+      {children}
+    </section>
+  );
+}
+
+function Metric({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-3xl bg-black/15 p-5">
+      <p className="text-xs uppercase tracking-wide text-white/40">
+        {label}
+      </p>
+
+      <p className="mt-1 text-2xl font-bold text-white">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function SummaryPill({
+  label,
+  value,
+}: {
+  label: string;
+  value: number;
+}) {
+  return (
+    <div className="rounded-2xl bg-black/15 px-4 py-3 text-center">
+      <p className="text-xs text-white/45">
+        {label}
+      </p>
+
+      <p className="mt-1 text-2xl font-bold text-white">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function formatStatus(
+  status: string
+): string {
+  return status
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (character) =>
+      character.toUpperCase()
+    );
+}
+
+
+===== components\speaking-practice\SmartReviewSession.tsx =====
+
+"use client";
+
+import Link from "next/link";
+
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
+
+import {
+  getSmartReviewItems,
+  type SmartReviewItem,
+} from "@/lib/speaking-practice/review";
+
+export default function SmartReviewSession() {
+  const [items, setItems] = useState<
+    SmartReviewItem[]
+  >([]);
+
+  const [isLoading, setIsLoading] =
+    useState(true);
+
+  const [error, setError] =
+    useState<string | null>(null);
+
+  const loadReviewItems =
+    useCallback(async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const result =
+          await getSmartReviewItems(10);
+
+        setItems(result);
+      } catch (loadError) {
+        console.error(
+          "Unable to load smart review:",
+          loadError
+        );
+
+        setError(
+          loadError instanceof Error
+            ? loadError.message
+            : "Unable to load smart review."
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    }, []);
+
+  useEffect(() => {
+    void loadReviewItems();
+  }, [loadReviewItems]);
+
+  if (isLoading) {
+    return (
+      <ReviewMessage>
+        Preparing your Smart Review…
+      </ReviewMessage>
+    );
+  }
+
+  if (error) {
+    return (
+      <ReviewMessage>
+        <p>{error}</p>
+
+        <button
+          type="button"
+          onClick={() =>
+            void loadReviewItems()
+          }
+          className="mt-5 rounded-2xl bg-violet-500 px-6 py-3 font-semibold text-white"
+        >
+          Try Again
+        </button>
+      </ReviewMessage>
+    );
+  }
+
+  if (items.length === 0) {
+    return (
+      <ReviewMessage>
+        <h1 className="text-2xl font-bold text-white">
+          No Smart Review needed
+        </h1>
+
+        <p className="mt-3 text-white/55">
+          Complete more pronunciation
+          checks to build your review
+          session.
+        </p>
+
+        <Link
+          href="/dashboard/ai/pronunciation"
+          className="mt-6 inline-flex rounded-2xl bg-violet-500 px-6 py-3 font-semibold text-white"
+        >
+          Start Practice
+        </Link>
+      </ReviewMessage>
+    );
+  }
+
+  const sentenceIds = items
+    .map((item) => item.sentenceId)
+    .join(",");
+
+  return (
+    <section className="mx-auto w-full max-w-4xl">
+      <div className="flex flex-wrap items-end justify-between gap-5">
+        <div>
+          <p className="text-sm font-semibold text-amber-200">
+            Anna AI Smart Review
+          </p>
+
+          <h1 className="mt-1 text-3xl font-bold text-white">
+            Your Review Session
+          </h1>
+
+          <p className="mt-2 text-sm text-white/55">
+            These sentences were selected
+            from your pronunciation
+            history.
+          </p>
+        </div>
+
+        <Link
+          href={`/dashboard/ai/pronunciation?review=${encodeURIComponent(
+            sentenceIds
+          )}`}
+          className="rounded-2xl bg-violet-500 px-6 py-3 font-semibold text-white shadow-lg transition hover:bg-violet-400"
+        >
+          Start Review →
+        </Link>
+      </div>
+
+      <div className="mt-8 space-y-4">
+        {items.map((item, index) => (
+          <div
+            key={item.sentenceId}
+            className="flex flex-wrap items-center justify-between gap-5 rounded-3xl border border-white/10 bg-white/10 p-5 backdrop-blur-xl"
+          >
+            <div className="flex min-w-0 items-center gap-4">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-violet-400/15 font-bold text-violet-100">
+                {index + 1}
+              </div>
+
+              <div className="min-w-0">
+                <p className="text-2xl font-semibold text-white">
+                  {item.targetText}
+                </p>
+
+                <p className="mt-1 text-xs text-white/45">
+                  Attempted{" "}
+                  {item.attemptCount} time
+                  {item.attemptCount === 1
+                    ? ""
+                    : "s"}{" "}
+                  · {item.mistakeCount} mistake
+                  {item.mistakeCount === 1
+                    ? ""
+                    : "s"}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <ScoreBadge
+                label="Average"
+                score={item.averageScore}
+              />
+
+              <ScoreBadge
+                label="Latest"
+                score={item.latestScore}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-7 flex flex-wrap justify-between gap-4">
+        <Link
+          href="/dashboard/ai/pronunciation/progress"
+          className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 font-semibold text-white/75 transition hover:bg-white/10"
+        >
+          ← Progress Dashboard
+        </Link>
+
+        <Link
+          href={`/dashboard/ai/pronunciation?review=${encodeURIComponent(
+            sentenceIds
+          )}`}
+          className="rounded-2xl bg-violet-500 px-6 py-3 font-semibold text-white"
+        >
+          Practice {items.length} Sentences
+        </Link>
+      </div>
+    </section>
+  );
+}
+
+function ScoreBadge({
+  label,
+  score,
+}: {
+  label: string;
+  score: number;
+}) {
+  return (
+    <div className="rounded-2xl bg-black/15 px-4 py-3 text-center">
+      <p className="text-xs text-white/40">
+        {label}
+      </p>
+
+      <p className="mt-1 text-xl font-bold text-white">
+        {score}
+      </p>
+    </div>
+  );
+}
+
+function ReviewMessage({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="mx-auto max-w-2xl rounded-[2rem] border border-white/10 bg-white/10 p-10 text-center text-white/70 backdrop-blur-xl">
+      {children}
+    </section>
+  );
+}
+
+
+===== components\speaking-practice\LaoshiCard.tsx =====
+
+import Link from "next/link";
+
+type LaoshiCardProps = {
+  icon: string;
+  eyebrow: string;
+  title: string;
+  description: string;
+  href?: string;
+  buttonLabel: string;
+  badge?: string;
+  disabled?: boolean;
+};
+
+export default function LaoshiCard({
+  icon,
+  eyebrow,
+  title,
+  description,
+  href,
+  buttonLabel,
+  badge,
+  disabled = false,
+}: LaoshiCardProps) {
+  return (
+    <article className={`relative flex h-full flex-col overflow-hidden rounded-[30px] border border-white/10 bg-white/[0.055] p-6 shadow-xl backdrop-blur-xl ${
+      disabled ? "opacity-70" : "transition hover:-translate-y-1 hover:bg-white/[0.075]"
+    }`}>
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex h-16 w-16 items-center justify-center rounded-[22px] border border-cyan-300/20 bg-cyan-400/10 text-3xl">
+          {icon}
+        </div>
+        {badge ? (
+          <span className="rounded-full border border-white/10 bg-black/15 px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] text-white/55">
+            {badge}
+          </span>
+        ) : null}
+      </div>
+
+      <p className="mt-6 text-[11px] font-black uppercase tracking-[0.25em] text-cyan-300">
+        {eyebrow}
+      </p>
+      <h2 className="mt-2 text-2xl font-black text-white">
+        {title}
+      </h2>
+      <p className="mt-3 flex-1 text-sm leading-7 text-white/52">
+        {description}
+      </p>
+
+      {disabled || !href ? (
+        <div className="mt-6 flex min-h-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-black text-white/45">
+          {buttonLabel}
+        </div>
+      ) : (
+        <Link
+          href={href}
+          className="mt-6 flex min-h-12 items-center justify-center rounded-2xl bg-gradient-to-r from-emerald-500 to-cyan-500 px-5 py-3 text-sm font-black text-white"
+        >
+          {buttonLabel}
+        </Link>
+      )}
+    </article>
+  );
+}
