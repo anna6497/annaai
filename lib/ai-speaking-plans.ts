@@ -1,15 +1,14 @@
 export type AiSpeakingPlanId =
   | "ai-monthly"
   | "ai-six-months"
-  | "ai-yearly"
-  | "ai-lifetime";
+  | "ai-yearly";
 
 export type AiSpeakingPlan = {
   id: AiSpeakingPlanId;
   title: string;
   shortTitle: string;
   durationLabel: string;
-  durationDays: number | null;
+  durationDays: number;
   priceMmk: number;
   originalPriceMmk: number;
   badge: string;
@@ -51,18 +50,6 @@ export const AI_SPEAKING_PLANS: Record<
     priceMmk: 299_999,
     originalPriceMmk: 600_000,
     badge: "Best Value",
-  },
-
-  "ai-lifetime": {
-    id: "ai-lifetime",
-    title: "AI Speaking Lifetime",
-    shortTitle: "Lifetime",
-    durationLabel: "Lifetime",
-    durationDays: null,
-    priceMmk: 0,
-    originalPriceMmk: 0,
-    badge: "Admin Only",
-    lifetime: true,
   },
 };
 

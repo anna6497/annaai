@@ -1,4 +1,6 @@
-import { NextResponse } from "next/server";
+import {
+  NextResponse,
+} from "next/server";
 
 import {
   createSupabaseAdminClient,
@@ -13,14 +15,14 @@ import {
   isAiSpeakingPlanId,
 } from "@/lib/ai-speaking-plans";
 
+export const runtime =
+  "nodejs";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
+export const dynamic =
+  "force-dynamic";
 
 const MAX_FILE_SIZE =
   5 * 1024 * 1024;
-
 
 function unauthorized() {
   return NextResponse.json(
@@ -37,16 +39,13 @@ function unauthorized() {
   );
 }
 
-
 function getProduct(
   productCode: string,
 ) {
   if (
     isAiSpeakingPlanId(
       productCode,
-    ) &&
-    productCode !==
-      "ai-lifetime"
+    )
   ) {
     const plan =
       AI_SPEAKING_PLANS[
@@ -65,7 +64,6 @@ function getProduct(
     };
   }
 
-
   const hsk =
     PAYMENT_PRODUCTS.find(
       (product) =>
@@ -74,11 +72,9 @@ function getProduct(
         product.active,
     );
 
-
   if (!hsk) {
     return null;
   }
-
 
   return {
     code:
@@ -92,13 +88,11 @@ function getProduct(
   };
 }
 
-
 function getExtension(
   file: File,
 ): string {
   const name =
     file.name.toLowerCase();
-
 
   if (
     name.endsWith(".png")
@@ -125,7 +119,6 @@ function getExtension(
     return "jpg";
   }
 
-
   if (
     file.type ===
     "image/png"
@@ -147,23 +140,20 @@ function getExtension(
     return "pdf";
   }
 
-
   return "jpg";
 }
-
 
 export async function POST(
   request: Request,
 ) {
   try {
     /*
-     * 1. Authenticate mobile user
+     * 1. Authenticate user
      */
     const authorization =
       request.headers.get(
         "authorization",
       );
-
 
     if (
       !authorization?.startsWith(
@@ -173,21 +163,17 @@ export async function POST(
       return unauthorized();
     }
 
-
     const accessToken =
       authorization
         .slice(7)
         .trim();
 
-
     if (!accessToken) {
       return unauthorized();
     }
 
-
     const admin =
       createSupabaseAdminClient();
-
 
     const {
       data: {
@@ -200,7 +186,6 @@ export async function POST(
         accessToken,
       );
 
-
     if (
       userError ||
       !user
@@ -208,13 +193,11 @@ export async function POST(
       return unauthorized();
     }
 
-
     /*
-     * 2. Read multipart form
+     * 2. Read form
      */
     const formData =
       await request.formData();
-
 
     const productCode =
       String(
@@ -225,7 +208,6 @@ export async function POST(
         .trim()
         .toLowerCase();
 
-
     const paymentMethod =
       String(
         formData.get(
@@ -235,16 +217,12 @@ export async function POST(
         .trim()
         .toLowerCase();
 
-
     const slip =
       formData.get(
         "slip",
       );
 
-
-    if (
-      !productCode
-    ) {
+    if (!productCode) {
       return NextResponse.json(
         {
           error:
@@ -256,12 +234,10 @@ export async function POST(
       );
     }
 
-
     const product =
       getProduct(
         productCode,
       );
-
 
     if (!product) {
       return NextResponse.json(
@@ -275,6 +251,23 @@ export async function POST(
       );
     }
 
+    /*
+     * Extra safety:
+     * no zero/negative payment.
+     */
+    if (
+      product.amountMmk <= 0
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "This product cannot be purchased.",
+        },
+        {
+          status: 400,
+        },
+      );
+    }
 
     if (
       paymentMethod !==
@@ -293,7 +286,6 @@ export async function POST(
       );
     }
 
-
     if (
       !(slip instanceof File)
     ) {
@@ -308,7 +300,6 @@ export async function POST(
       );
     }
 
-
     if (
       slip.size <= 0
     ) {
@@ -322,7 +313,6 @@ export async function POST(
         },
       );
     }
-
 
     if (
       slip.size >
@@ -339,10 +329,8 @@ export async function POST(
       );
     }
 
-
     /*
-     * 3. Prevent multiple pending
-     * payment requests.
+     * 3. Prevent duplicate pending
      */
     const {
       data:
@@ -366,11 +354,9 @@ export async function POST(
         .limit(1)
         .maybeSingle();
 
-
     if (pendingError) {
       throw pendingError;
     }
-
 
     if (pendingPayment) {
       return NextResponse.json(
@@ -384,27 +370,22 @@ export async function POST(
       );
     }
 
-
     /*
-     * 4. Upload payment slip
+     * 4. Upload slip
      */
     const extension =
       getExtension(
         slip,
       );
 
-
     const fileName =
       `${Date.now()}-${crypto.randomUUID()}.${extension}`;
-
 
     const storagePath =
       `${user.id}/${fileName}`;
 
-
     const bytes =
       await slip.arrayBuffer();
-
 
     const {
       error:
@@ -422,11 +403,9 @@ export async function POST(
               slip.type ||
               "application/octet-stream",
 
-            upsert:
-              false,
+            upsert: false,
           },
         );
-
 
     if (uploadError) {
       throw new Error(
@@ -434,9 +413,8 @@ export async function POST(
       );
     }
 
-
     /*
-     * 5. Create payment request
+     * 5. Create payment
      */
     const {
       data:
@@ -486,13 +464,10 @@ export async function POST(
         )
         .single();
 
-
-    if (
-      paymentError
-    ) {
+    if (paymentError) {
       /*
-       * DB insert fail ရင်
-       * orphan slip ကို remove.
+       * DB insert failed:
+       * remove orphan slip.
        */
       await admin.storage
         .from(
@@ -502,38 +477,29 @@ export async function POST(
           storagePath,
         ]);
 
-
       throw new Error(
         `Payment request failed: ${paymentError.message}`,
       );
     }
 
-
     return NextResponse.json(
       {
-        success:
-          true,
-
+        success: true,
         payment,
       },
       {
-        status:
-          201,
-
+        status: 201,
         headers: {
           "Cache-Control":
             "no-store, max-age=0",
         },
       },
     );
-  } catch (
-    error
-  ) {
+  } catch (error) {
     console.error(
       "Mobile payment submit error:",
       error,
     );
-
 
     return NextResponse.json(
       {
@@ -543,8 +509,7 @@ export async function POST(
             : "Unable to submit payment.",
       },
       {
-        status:
-          500,
+        status: 500,
       },
     );
   }

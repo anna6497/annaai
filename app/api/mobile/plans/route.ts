@@ -15,80 +15,57 @@ import {
   PAYMENT_CONFIG,
 } from "@/lib/payment-config";
 
-
 export const runtime =
   "nodejs";
 
 export const dynamic =
   "force-dynamic";
 
-
 export async function GET() {
   try {
     const aiSpeakingPlans =
-      AI_SPEAKING_PLAN_IDS
-        .filter(
-          (
-            planId,
-          ) =>
-            planId !==
-            "ai-lifetime",
-        )
-        .map(
-          (
-            planId,
-          ) => {
-            const plan =
-              AI_SPEAKING_PLANS[
-                planId
-              ];
+      AI_SPEAKING_PLAN_IDS.map(
+        (planId) => {
+          const plan =
+            AI_SPEAKING_PLANS[
+              planId
+            ];
 
-            return {
-              id:
-                plan.id,
+          return {
+            id: plan.id,
 
-              title:
-                plan.title,
+            title:
+              plan.title,
 
-              shortTitle:
-                plan.shortTitle,
+            shortTitle:
+              plan.shortTitle,
 
-              durationLabel:
-                plan.durationLabel,
+            durationLabel:
+              plan.durationLabel,
 
-              durationDays:
-                plan.durationDays,
+            durationDays:
+              plan.durationDays,
 
-              priceMmk:
-                plan.priceMmk,
+            priceMmk:
+              plan.priceMmk,
 
-              originalPriceMmk:
-                plan.originalPriceMmk,
+            originalPriceMmk:
+              plan.originalPriceMmk,
 
-              badge:
-                plan.badge,
-
-              lifetime:
-                Boolean(
-                  plan.lifetime,
-                ),
-            };
-          },
-        );
-
+            badge:
+              plan.badge,
+          };
+        },
+      );
 
     const hskPlans =
       PAYMENT_PRODUCTS
         .filter(
-          (
-            product,
-          ) =>
+          (product) =>
             product.active,
         )
         .map(
-          (
-            product,
-          ) => ({
+          (product) => ({
             code:
               product.code,
 
@@ -115,57 +92,50 @@ export async function GET() {
           }),
         );
 
+    const paymentMethods = [
+      {
+        id: "kpay",
 
-    const paymentMethods =
-      [
-        {
-          id:
-            "kpay",
+        label:
+          PAYMENT_CONFIG.kpay
+            .label,
 
-          label:
-            PAYMENT_CONFIG.kpay
-              .label,
+        accountName:
+          PAYMENT_CONFIG.kpay
+            .accountName,
 
-          accountName:
-            PAYMENT_CONFIG.kpay
-              .accountName,
+        accountNumber:
+          PAYMENT_CONFIG.kpay
+            .accountNumber,
 
-          accountNumber:
-            PAYMENT_CONFIG.kpay
-              .accountNumber,
+        qrImageUrl:
+          "https://www.annaai.online/payments/kbzpay-qr.png",
+      },
 
-          qrImageUrl:
-            "https://www.annaai.online/payments/kbzpay-qr.png",
-        },
+      {
+        id: "qr_pay",
 
-        {
-          id:
-            "qr_pay",
+        label:
+          PAYMENT_CONFIG.qr_pay
+            .label,
 
-          label:
-            PAYMENT_CONFIG.qr_pay
-              .label,
+        accountName:
+          PAYMENT_CONFIG.qr_pay
+            .accountName,
 
-          accountName:
-            PAYMENT_CONFIG.qr_pay
-              .accountName,
+        accountNumber:
+          PAYMENT_CONFIG.qr_pay
+            .accountNumber,
 
-          accountNumber:
-            PAYMENT_CONFIG.qr_pay
-              .accountNumber,
-
-          qrImageUrl:
-            "https://www.annaai.online/payments/promptpay-qr.png",
-        },
-      ];
-
+        qrImageUrl:
+          "https://www.annaai.online/payments/promptpay-qr.png",
+      },
+    ];
 
     return NextResponse.json(
       {
         aiSpeakingPlans,
-
         hskPlans,
-
         paymentMethods,
       },
       {
@@ -175,9 +145,7 @@ export async function GET() {
         },
       },
     );
-  } catch (
-    error
-  ) {
+  } catch (error) {
     console.error(
       "Mobile plans endpoint error:",
       error,
@@ -189,8 +157,7 @@ export async function GET() {
           "Unable to load plans.",
       },
       {
-        status:
-          500,
+        status: 500,
       },
     );
   }
