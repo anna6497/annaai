@@ -1,0 +1,2148 @@
+
+
+
+================================
+FILE: C:\Users\HMT\anna-ai-mobile\app\(tabs)\account.tsx
+================================
+
+import {
+  Ionicons,
+} from "@expo/vector-icons";
+
+import {
+  router,
+  useFocusEffect,
+} from "expo-router";
+
+import {
+  useCallback,
+  useMemo,
+  useState,
+} from "react";
+
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  RefreshControl,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+
+import {
+  getMobileAiSpeakingAccess,
+  type AiSpeakingAccess,
+} from "@/lib/access";
+
+import {
+  getMobileHskAccess,
+  hasMobileHskLevelAccess,
+  type MobileHskAccess,
+} from "@/lib/hsk-access";
+
+import {
+  getMobilePaymentStatus,
+  type MobilePaymentStatusItem,
+} from "@/lib/payment-status";
+
+import {
+  supabase,
+} from "@/lib/supabase";
+
+
+const HSK_LEVELS =
+  [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+  ] as const;
+
+
+export default function AccountScreen() {
+  const [
+    email,
+    setEmail,
+  ] =
+    useState("");
+
+  const [
+    aiAccess,
+    setAiAccess,
+  ] =
+    useState<
+      AiSpeakingAccess | null
+    >(null);
+
+  const [
+    hskAccess,
+    setHskAccess,
+  ] =
+    useState<
+      MobileHskAccess | null
+    >(null);
+
+  const [
+    payments,
+    setPayments,
+  ] =
+    useState<
+      MobilePaymentStatusItem[]
+    >([]);
+
+  const [
+    loading,
+    setLoading,
+  ] =
+    useState(true);
+
+  const [
+    refreshing,
+    setRefreshing,
+  ] =
+    useState(false);
+
+  const [
+    loggingOut,
+    setLoggingOut,
+  ] =
+    useState(false);
+
+  const [
+    error,
+    setError,
+  ] =
+    useState("");
+
+
+  const loadAccount =
+    useCallback(
+      async (
+        silent = false,
+      ) => {
+        if (
+          !silent
+        ) {
+          setLoading(
+            true,
+          );
+        }
+
+        setError("");
+
+        try {
+          const {
+            data: {
+              session,
+            },
+            error:
+              sessionError,
+          } =
+            await supabase.auth
+              .getSession();
+
+          if (
+            sessionError ||
+            !session?.user
+          ) {
+            router.replace(
+              "/login",
+            );
+
+            return;
+          }
+
+          setEmail(
+            session.user.email ??
+              "",
+          );
+
+
+          const [
+            aiResult,
+            hskResult,
+            paymentResult,
+          ] =
+            await Promise.allSettled([
+              getMobileAiSpeakingAccess(),
+              getMobileHskAccess(),
+              getMobilePaymentStatus(),
+            ]);
+
+
+          if (
+            aiResult.status ===
+            "fulfilled"
+          ) {
+            setAiAccess(
+              aiResult.value,
+            );
+          } else {
+            console.error(
+              "AI access load failed:",
+              aiResult.reason,
+            );
+          }
+
+
+          if (
+            hskResult.status ===
+            "fulfilled"
+          ) {
+            setHskAccess(
+              hskResult.value,
+            );
+          } else {
+            console.error(
+              "HSK access load failed:",
+              hskResult.reason,
+            );
+          }
+
+
+          if (
+            paymentResult.status ===
+            "fulfilled"
+          ) {
+            setPayments(
+              paymentResult.value,
+            );
+          } else {
+            console.error(
+              "Payment status load failed:",
+              paymentResult.reason,
+            );
+          }
+
+
+          const failures =
+            [
+              aiResult,
+              hskResult,
+              paymentResult,
+            ].filter(
+              (
+                result,
+              ) =>
+                result.status ===
+                "rejected",
+            );
+
+
+          if (
+            failures.length ===
+            3
+          ) {
+            setError(
+              "Unable to refresh account access. Please try again.",
+            );
+          }
+        } catch (
+          loadError
+        ) {
+          console.error(
+            "Account load failed:",
+            loadError,
+          );
+
+          setError(
+            loadError instanceof
+              Error
+              ? loadError.message
+              : "Unable to load account.",
+          );
+        } finally {
+          setLoading(
+            false,
+          );
+
+          setRefreshing(
+            false,
+          );
+        }
+      },
+      [],
+    );
+
+
+  useFocusEffect(
+    useCallback(
+      () => {
+        void loadAccount();
+
+        return undefined;
+      },
+      [
+        loadAccount,
+      ],
+    ),
+  );
+
+
+  const refresh =
+    () => {
+      if (
+        refreshing
+      ) {
+        return;
+      }
+
+      setRefreshing(
+        true,
+      );
+
+      void loadAccount(
+        true,
+      );
+    };
+
+
+  const activeHskLevels =
+    useMemo(
+      () =>
+        HSK_LEVELS.filter(
+          (
+            level,
+          ) =>
+            hasMobileHskLevelAccess(
+              level,
+              hskAccess,
+            ),
+        ),
+      [
+        hskAccess,
+      ],
+    );
+
+
+  const pendingPayments =
+    useMemo(
+      () =>
+        payments.filter(
+          (
+            item,
+          ) =>
+            item.status ===
+            "pending",
+        ),
+      [
+        payments,
+      ],
+    );
+
+
+  const logout =
+    async () => {
+      if (
+        loggingOut
+      ) {
+        return;
+      }
+
+      setLoggingOut(
+        true,
+      );
+
+      try {
+        const {
+          error:
+            logoutError,
+        } =
+          await supabase.auth
+            .signOut();
+
+        if (
+          logoutError
+        ) {
+          throw logoutError;
+        }
+
+        router.replace(
+          "/login",
+        );
+      } catch (
+        logoutError
+      ) {
+        console.error(
+          "Logout failed:",
+          logoutError,
+        );
+
+        Alert.alert(
+          "Logout failed",
+          "Please try again.",
+        );
+      } finally {
+        setLoggingOut(
+          false,
+        );
+      }
+    };
+
+
+  return (
+    <SafeAreaView
+      style={
+        styles.safeArea
+      }
+    >
+      <ScrollView
+        contentContainerStyle={
+          styles.content
+        }
+        showsVerticalScrollIndicator={
+          false
+        }
+        refreshControl={
+          <RefreshControl
+            refreshing={
+              refreshing
+            }
+            onRefresh={
+              refresh
+            }
+            tintColor="#d946ef"
+          />
+        }
+      >
+        <View
+          style={
+            styles.avatar
+          }
+        >
+          <Text
+            style={
+              styles.avatarText
+            }
+          >
+            安
+          </Text>
+        </View>
+
+
+        <Text
+          style={
+            styles.title
+          }
+        >
+          Anna AI Account
+        </Text>
+
+
+        <Text
+          style={
+            styles.email
+          }
+        >
+          {email ||
+            "Anna AI User"}
+        </Text>
+
+
+        {loading ? (
+          <View
+            style={
+              styles.loadingCard
+            }
+          >
+            <ActivityIndicator
+              color="#d946ef"
+            />
+
+            <Text
+              style={
+                styles.loadingText
+              }
+            >
+              Checking your access...
+            </Text>
+          </View>
+        ) : null}
+
+
+        {error ? (
+          <View
+            style={
+              styles.errorCard
+            }
+          >
+            <Ionicons
+              name="alert-circle"
+              size={18}
+              color="#fecaca"
+            />
+
+            <Text
+              style={
+                styles.errorText
+              }
+            >
+              {error}
+            </Text>
+          </View>
+        ) : null}
+
+
+        {/* AI SPEAKING */}
+        <View
+          style={
+            styles.aiCard
+          }
+        >
+          <View
+            style={
+              styles.cardHeader
+            }
+          >
+            <View
+              style={
+                styles.aiIcon
+              }
+            >
+              <Ionicons
+                name="diamond"
+                size={22}
+                color="#f0abfc"
+              />
+            </View>
+
+            <View
+              style={{
+                flex:
+                  1,
+              }}
+            >
+              <Text
+                style={
+                  styles.aiLabel
+                }
+              >
+                AI SPEAKING
+              </Text>
+
+              <Text
+                style={[
+                  styles.accessStatus,
+
+                  aiAccess?.active &&
+                    styles.activeStatus,
+                ]}
+              >
+                {aiAccess?.active
+                  ? "ACTIVE"
+                  : "NOT ACTIVE"}
+              </Text>
+            </View>
+
+            {aiAccess?.active ? (
+              <Ionicons
+                name="checkmark-circle"
+                size={24}
+                color="#86efac"
+              />
+            ) : (
+              <Ionicons
+                name="lock-closed"
+                size={20}
+                color="#75677f"
+              />
+            )}
+          </View>
+
+
+          <Text
+            style={
+              styles.aiPlanName
+            }
+          >
+            {aiAccess?.active
+              ? (
+                aiAccess.planTitle ??
+                "Active AI Speaking Plan"
+              )
+              : "Free Account"}
+          </Text>
+
+
+          <Text
+            style={
+              styles.aiDescription
+            }
+          >
+            {aiAccess?.active
+              ? (
+                aiAccess.lifetime
+                  ? "Lifetime AI Speaking access"
+                  : (
+                    aiAccess.durationLabel ??
+                    "AI Speaking access"
+                  )
+              )
+              : "Unlock Talk with Anna, Sentence Builder, pronunciation and premium speaking features."}
+          </Text>
+
+
+          {aiAccess?.expiresAt &&
+          !aiAccess.lifetime ? (
+            <View
+              style={
+                styles.expiryRow
+              }
+            >
+              <Ionicons
+                name="calendar-outline"
+                size={15}
+                color="#c4b5fd"
+              />
+
+              <Text
+                style={
+                  styles.expiry
+                }
+              >
+                Expires{" "}
+                {
+                  new Date(
+                    aiAccess.expiresAt,
+                  ).toLocaleDateString()
+                }
+              </Text>
+            </View>
+          ) : null}
+
+
+          <Pressable
+            style={
+              styles.primaryButton
+            }
+            onPress={
+              () =>
+                router.push(
+                  "/plans",
+                )
+            }
+          >
+            <Ionicons
+              name={
+                aiAccess?.active
+                  ? "add-circle"
+                  : "diamond"
+              }
+              size={18}
+              color="#ffffff"
+            />
+
+            <Text
+              style={
+                styles.primaryButtonText
+              }
+            >
+              {aiAccess?.active
+                ? "View / Extend Plans"
+                : "Buy AI Speaking Plan"}
+            </Text>
+          </Pressable>
+        </View>
+
+
+        {/* HSK ACCESS */}
+        <View
+          style={
+            styles.hskCard
+          }
+        >
+          <View
+            style={
+              styles.cardHeader
+            }
+          >
+            <View
+              style={
+                styles.hskIcon
+              }
+            >
+              <Ionicons
+                name="albums"
+                size={22}
+                color="#67e8f9"
+              />
+            </View>
+
+            <View
+              style={{
+                flex:
+                  1,
+              }}
+            >
+              <Text
+                style={
+                  styles.hskLabel
+                }
+              >
+                HSK LEARNING
+              </Text>
+
+              <Text
+                style={
+                  styles.hskHeading
+                }
+              >
+                Flashcards + Writing
+              </Text>
+            </View>
+
+            {hskAccess?.fullPackage ? (
+              <View
+                style={
+                  styles.fullBadge
+                }
+              >
+                <Text
+                  style={
+                    styles.fullBadgeText
+                  }
+                >
+                  FULL
+                </Text>
+              </View>
+            ) : null}
+          </View>
+
+
+          <Text
+            style={
+              styles.hskDescription
+            }
+          >
+            HSK 1 is free. Purchased levels unlock
+            both Flashcards and Writing.
+          </Text>
+
+
+          <View
+            style={
+              styles.levelGrid
+            }
+          >
+            {HSK_LEVELS.map(
+              (
+                level,
+              ) => {
+                const active =
+                  hasMobileHskLevelAccess(
+                    level,
+                    hskAccess,
+                  );
+
+                return (
+                  <Pressable
+                    key={
+                      level
+                    }
+                    style={[
+                      styles.levelBox,
+
+                      active &&
+                        styles.levelBoxActive,
+                    ]}
+                    onPress={
+                      () => {
+                        if (
+                          active
+                        ) {
+                          router.push({
+                            pathname:
+                              "/hsk/[level]",
+
+                            params: {
+                              level:
+                                String(
+                                  level,
+                                ),
+                            },
+                          });
+
+                          return;
+                        }
+
+                        router.push(
+                          "/plans",
+                        );
+                      }
+                    }
+                  >
+                    <Text
+                      style={[
+                        styles.levelNumber,
+
+                        active &&
+                          styles.levelNumberActive,
+                      ]}
+                    >
+                      {level}
+                    </Text>
+
+                    {level ===
+                    1 ? (
+                      <Text
+                        style={
+                          styles.freeText
+                        }
+                      >
+                        FREE
+                      </Text>
+                    ) : active ? (
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={14}
+                        color="#86efac"
+                      />
+                    ) : (
+                      <Ionicons
+                        name="lock-closed"
+                        size={12}
+                        color="#675a6e"
+                      />
+                    )}
+                  </Pressable>
+                );
+              },
+            )}
+          </View>
+
+
+          <View
+            style={
+              styles.hskSummary
+            }
+          >
+            <Text
+              style={
+                styles.hskSummaryLabel
+              }
+            >
+              ACTIVE LEVELS
+            </Text>
+
+            <Text
+              style={
+                styles.hskSummaryValue
+              }
+            >
+              {hskAccess?.fullPackage
+                ? "HSK 1–9"
+                : activeHskLevels
+                    .map(
+                      (
+                        level,
+                      ) =>
+                        `HSK ${level}`,
+                    )
+                    .join(
+                      ", ",
+                    )}
+            </Text>
+          </View>
+
+
+          <Pressable
+            style={
+              styles.hskPlanButton
+            }
+            onPress={
+              () =>
+                router.push(
+                  "/plans",
+                )
+            }
+          >
+            <Text
+              style={
+                styles.hskPlanButtonText
+              }
+            >
+              View HSK Plans
+            </Text>
+
+            <Ionicons
+              name="arrow-forward"
+              size={17}
+              color="#67e8f9"
+            />
+          </Pressable>
+        </View>
+
+
+        {/* PAYMENT STATUS */}
+        <View
+          style={
+            styles.paymentCard
+          }
+        >
+          <View
+            style={
+              styles.paymentHeader
+            }
+          >
+            <View>
+              <Text
+                style={
+                  styles.paymentEyebrow
+                }
+              >
+                PAYMENTS
+              </Text>
+
+              <Text
+                style={
+                  styles.paymentTitle
+                }
+              >
+                Payment Status
+              </Text>
+            </View>
+
+            {pendingPayments.length >
+            0 ? (
+              <View
+                style={
+                  styles.pendingCount
+                }
+              >
+                <Text
+                  style={
+                    styles.pendingCountText
+                  }
+                >
+                  {
+                    pendingPayments.length
+                  }{" "}
+                  pending
+                </Text>
+              </View>
+            ) : null}
+          </View>
+
+
+          {payments.length ===
+          0 ? (
+            <View
+              style={
+                styles.noPayment
+              }
+            >
+              <Ionicons
+                name="receipt-outline"
+                size={25}
+                color="#62566a"
+              />
+
+              <Text
+                style={
+                  styles.noPaymentText
+                }
+              >
+                No payment requests yet.
+              </Text>
+            </View>
+          ) : (
+            payments
+              .slice(
+                0,
+                5,
+              )
+              .map(
+                (
+                  payment,
+                ) => (
+                  <View
+                    key={
+                      payment.id
+                    }
+                    style={
+                      styles.paymentItem
+                    }
+                  >
+                    <View
+                      style={
+                        styles.paymentItemTop
+                      }
+                    >
+                      <View
+                        style={{
+                          flex:
+                            1,
+                        }}
+                      >
+                        <Text
+                          style={
+                            styles.paymentProduct
+                          }
+                          numberOfLines={
+                            2
+                          }
+                        >
+                          {
+                            payment.productTitle
+                          }
+                        </Text>
+
+                        <Text
+                          style={
+                            styles.paymentDate
+                          }
+                        >
+                          {
+                            formatDate(
+                              payment.createdAt,
+                            )
+                          }
+                        </Text>
+                      </View>
+
+                      <PaymentBadge
+                        status={
+                          payment.status
+                        }
+                      />
+                    </View>
+
+
+                    <View
+                      style={
+                        styles.paymentBottom
+                      }
+                    >
+                      <Text
+                        style={
+                          styles.paymentAmount
+                        }
+                      >
+                        {payment.amountMmk
+                          .toLocaleString(
+                            "en-US",
+                          )}{" "}
+                        MMK
+                      </Text>
+
+                      <Text
+                        style={
+                          styles.paymentMethod
+                        }
+                      >
+                        {payment.paymentMethod ===
+                        "kpay"
+                          ? "KPay"
+                          : "QR Pay"}
+                      </Text>
+                    </View>
+
+
+                    {payment.adminNote ? (
+                      <Text
+                        style={
+                          styles.adminNote
+                        }
+                      >
+                        Admin:{" "}
+                        {
+                          payment.adminNote
+                        }
+                      </Text>
+                    ) : null}
+                  </View>
+                ),
+              )
+          )}
+        </View>
+
+
+        <Pressable
+          style={
+            styles.refreshButton
+          }
+          onPress={
+            refresh
+          }
+          disabled={
+            refreshing
+          }
+        >
+          {refreshing ? (
+            <ActivityIndicator
+              color="#d8b4fe"
+            />
+          ) : (
+            <Ionicons
+              name="refresh"
+              size={19}
+              color="#d8b4fe"
+            />
+          )}
+
+          <Text
+            style={
+              styles.refreshText
+            }
+          >
+            Refresh Access
+          </Text>
+        </Pressable>
+
+
+        <Text
+          style={
+            styles.refreshNote
+          }
+        >
+          Admin approve လုပ်ပြီးရင် Refresh Access
+          နှိပ်ပါ။ AI Speaking နဲ့ HSK access ကို
+          ချက်ချင်းပြန်စစ်ပေးပါမယ်။
+        </Text>
+
+
+        <Pressable
+          style={({
+            pressed,
+          }) => [
+            styles.logoutButton,
+
+            pressed &&
+              styles.pressed,
+
+            loggingOut &&
+              styles.disabled,
+          ]}
+          disabled={
+            loggingOut
+          }
+          onPress={
+            () =>
+              void logout()
+          }
+        >
+          {loggingOut ? (
+            <ActivityIndicator
+              color="#fecaca"
+            />
+          ) : (
+            <>
+              <Ionicons
+                name="log-out-outline"
+                size={20}
+                color="#fecaca"
+              />
+
+              <Text
+                style={
+                  styles.logoutText
+                }
+              >
+                Logout
+              </Text>
+            </>
+          )}
+        </Pressable>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+
+function formatDate(
+  value: string,
+): string {
+  if (
+    !value
+  ) {
+    return "";
+  }
+
+  const date =
+    new Date(
+      value,
+    );
+
+  if (
+    Number.isNaN(
+      date.getTime(),
+    )
+  ) {
+    return "";
+  }
+
+  return date
+    .toLocaleDateString();
+}
+
+
+function PaymentBadge({
+  status,
+}: {
+  status:
+    "pending" |
+    "approved" |
+    "rejected";
+}) {
+  if (
+    status ===
+    "approved"
+  ) {
+    return (
+      <View
+        style={[
+          styles.paymentBadge,
+          styles.approvedBadge,
+        ]}
+      >
+        <Text
+          style={
+            styles.approvedText
+          }
+        >
+          APPROVED
+        </Text>
+      </View>
+    );
+  }
+
+  if (
+    status ===
+    "rejected"
+  ) {
+    return (
+      <View
+        style={[
+          styles.paymentBadge,
+          styles.rejectedBadge,
+        ]}
+      >
+        <Text
+          style={
+            styles.rejectedText
+          }
+        >
+          REJECTED
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <View
+      style={[
+        styles.paymentBadge,
+        styles.pendingBadge,
+      ]}
+    >
+      <Text
+        style={
+          styles.pendingText
+        }
+      >
+        PENDING
+      </Text>
+    </View>
+  );
+}
+
+
+const styles =
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: "#09030f",
+    },
+
+    content: {
+      paddingHorizontal: 20,
+      paddingTop: 30,
+      paddingBottom: 45,
+      alignItems: "center",
+    },
+
+    avatar: {
+      width: 82,
+      height: 82,
+      borderRadius: 41,
+      backgroundColor: "#a855f7",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+
+    avatarText: {
+      color: "#ffffff",
+      fontSize: 38,
+      fontWeight: "900",
+    },
+
+    title: {
+      color: "#ffffff",
+      fontSize: 24,
+      fontWeight: "800",
+      marginTop: 17,
+    },
+
+    email: {
+      color: "#8f8099",
+      fontSize: 13,
+      marginTop: 6,
+    },
+
+    loadingCard: {
+      width: "100%",
+      minHeight: 70,
+      marginTop: 22,
+      borderRadius: 17,
+      backgroundColor: "#130a1b",
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 10,
+    },
+
+    loadingText: {
+      color: "#9b8aa4",
+      fontSize: 12,
+    },
+
+    errorCard: {
+      width: "100%",
+      marginTop: 15,
+      borderRadius: 15,
+      padding: 13,
+      flexDirection: "row",
+      gap: 8,
+      backgroundColor: "rgba(239,68,68,0.08)",
+      borderWidth: 1,
+      borderColor: "rgba(239,68,68,0.22)",
+    },
+
+    errorText: {
+      flex: 1,
+      color: "#fecaca",
+      fontSize: 11,
+      lineHeight: 18,
+    },
+
+    aiCard: {
+      width: "100%",
+      marginTop: 20,
+      borderRadius: 22,
+      padding: 19,
+      backgroundColor: "#160b20",
+      borderWidth: 1,
+      borderColor: "#382044",
+    },
+
+    cardHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+    },
+
+    aiIcon: {
+      width: 42,
+      height: 42,
+      borderRadius: 13,
+      backgroundColor: "#2b1436",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+
+    aiLabel: {
+      color: "#d8b4fe",
+      fontSize: 9,
+      fontWeight: "900",
+      letterSpacing: 1.2,
+    },
+
+    accessStatus: {
+      color: "#817189",
+      fontSize: 8,
+      fontWeight: "900",
+      marginTop: 4,
+    },
+
+    activeStatus: {
+      color: "#86efac",
+    },
+
+    aiPlanName: {
+      color: "#ffffff",
+      fontSize: 21,
+      fontWeight: "900",
+      marginTop: 17,
+    },
+
+    aiDescription: {
+      color: "#9b8aa5",
+      fontSize: 12,
+      lineHeight: 20,
+      marginTop: 7,
+    },
+
+    expiryRow: {
+      marginTop: 10,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+
+    expiry: {
+      color: "#c4b5fd",
+      fontSize: 11,
+    },
+
+    primaryButton: {
+      height: 49,
+      borderRadius: 14,
+      backgroundColor: "#9333ea",
+      marginTop: 17,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+    },
+
+    primaryButtonText: {
+      color: "#ffffff",
+      fontSize: 13,
+      fontWeight: "800",
+    },
+
+    hskCard: {
+      width: "100%",
+      marginTop: 14,
+      borderRadius: 22,
+      padding: 18,
+      backgroundColor: "#0c171e",
+      borderWidth: 1,
+      borderColor: "#173941",
+    },
+
+    hskIcon: {
+      width: 42,
+      height: 42,
+      borderRadius: 13,
+      backgroundColor: "#10303a",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+
+    hskLabel: {
+      color: "#67e8f9",
+      fontSize: 8,
+      fontWeight: "900",
+      letterSpacing: 1,
+    },
+
+    hskHeading: {
+      color: "#ffffff",
+      fontSize: 16,
+      fontWeight: "900",
+      marginTop: 3,
+    },
+
+    fullBadge: {
+      paddingHorizontal: 9,
+      paddingVertical: 5,
+      borderRadius: 9,
+      backgroundColor: "rgba(34,197,94,0.12)",
+    },
+
+    fullBadgeText: {
+      color: "#86efac",
+      fontSize: 8,
+      fontWeight: "900",
+    },
+
+    hskDescription: {
+      color: "#789097",
+      fontSize: 11,
+      lineHeight: 18,
+      marginTop: 13,
+    },
+
+    levelGrid: {
+      marginTop: 15,
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+    },
+
+    levelBox: {
+      width: "30%",
+      minHeight: 67,
+      borderRadius: 14,
+      backgroundColor: "#111920",
+      borderWidth: 1,
+      borderColor: "#20333a",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+
+    levelBoxActive: {
+      backgroundColor: "#10272d",
+      borderColor: "#277b87",
+    },
+
+    levelNumber: {
+      color: "#766f7b",
+      fontSize: 21,
+      fontWeight: "900",
+    },
+
+    levelNumberActive: {
+      color: "#ffffff",
+    },
+
+    freeText: {
+      color: "#86efac",
+      fontSize: 7,
+      fontWeight: "900",
+      marginTop: 2,
+    },
+
+    hskSummary: {
+      marginTop: 15,
+      paddingTop: 13,
+      borderTopWidth: 1,
+      borderTopColor: "#173039",
+    },
+
+    hskSummaryLabel: {
+      color: "#5f7a80",
+      fontSize: 8,
+      fontWeight: "900",
+      letterSpacing: 1,
+    },
+
+    hskSummaryValue: {
+      color: "#d8f7fb",
+      fontSize: 12,
+      lineHeight: 18,
+      fontWeight: "700",
+      marginTop: 5,
+    },
+
+    hskPlanButton: {
+      marginTop: 14,
+      height: 45,
+      borderRadius: 13,
+      backgroundColor: "#10303a",
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 7,
+    },
+
+    hskPlanButtonText: {
+      color: "#67e8f9",
+      fontSize: 12,
+      fontWeight: "800",
+    },
+
+    paymentCard: {
+      width: "100%",
+      marginTop: 14,
+      borderRadius: 22,
+      padding: 18,
+      backgroundColor: "#130d18",
+      borderWidth: 1,
+      borderColor: "#302435",
+    },
+
+    paymentHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+
+    paymentEyebrow: {
+      color: "#c4b5fd",
+      fontSize: 8,
+      fontWeight: "900",
+      letterSpacing: 1,
+    },
+
+    paymentTitle: {
+      color: "#ffffff",
+      fontSize: 17,
+      fontWeight: "900",
+      marginTop: 3,
+    },
+
+    pendingCount: {
+      paddingHorizontal: 9,
+      paddingVertical: 5,
+      borderRadius: 9,
+      backgroundColor: "rgba(245,158,11,0.10)",
+    },
+
+    pendingCountText: {
+      color: "#fde68a",
+      fontSize: 8,
+      fontWeight: "900",
+    },
+
+    noPayment: {
+      marginTop: 18,
+      paddingVertical: 22,
+      alignItems: "center",
+    },
+
+    noPaymentText: {
+      color: "#75687c",
+      fontSize: 11,
+      marginTop: 8,
+    },
+
+    paymentItem: {
+      marginTop: 13,
+      paddingTop: 13,
+      borderTopWidth: 1,
+      borderTopColor: "#29202e",
+    },
+
+    paymentItemTop: {
+      flexDirection: "row",
+      gap: 10,
+      alignItems: "flex-start",
+    },
+
+    paymentProduct: {
+      color: "#ffffff",
+      fontSize: 12,
+      fontWeight: "800",
+    },
+
+    paymentDate: {
+      color: "#786c7f",
+      fontSize: 9,
+      marginTop: 4,
+    },
+
+    paymentBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 5,
+      borderRadius: 8,
+    },
+
+    approvedBadge: {
+      backgroundColor: "rgba(34,197,94,0.11)",
+    },
+
+    rejectedBadge: {
+      backgroundColor: "rgba(239,68,68,0.10)",
+    },
+
+    pendingBadge: {
+      backgroundColor: "rgba(245,158,11,0.10)",
+    },
+
+    approvedText: {
+      color: "#86efac",
+      fontSize: 7,
+      fontWeight: "900",
+    },
+
+    rejectedText: {
+      color: "#fca5a5",
+      fontSize: 7,
+      fontWeight: "900",
+    },
+
+    pendingText: {
+      color: "#fde68a",
+      fontSize: 7,
+      fontWeight: "900",
+    },
+
+    paymentBottom: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginTop: 8,
+    },
+
+    paymentAmount: {
+      color: "#d8b4fe",
+      fontSize: 11,
+      fontWeight: "800",
+    },
+
+    paymentMethod: {
+      color: "#817589",
+      fontSize: 10,
+    },
+
+    adminNote: {
+      color: "#9c8da4",
+      fontSize: 10,
+      lineHeight: 16,
+      marginTop: 8,
+    },
+
+    refreshButton: {
+      width: "100%",
+      height: 50,
+      borderRadius: 15,
+      marginTop: 14,
+      backgroundColor: "#21132a",
+      borderWidth: 1,
+      borderColor: "#3b2447",
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+    },
+
+    refreshText: {
+      color: "#d8b4fe",
+      fontWeight: "700",
+    },
+
+    refreshNote: {
+      color: "#6f6376",
+      fontSize: 9,
+      lineHeight: 15,
+      textAlign: "center",
+      marginTop: 8,
+      paddingHorizontal: 15,
+    },
+
+    logoutButton: {
+      width: "100%",
+      height: 52,
+      borderRadius: 15,
+      marginTop: 14,
+      backgroundColor: "rgba(239,68,68,0.08)",
+      borderWidth: 1,
+      borderColor: "rgba(239,68,68,0.25)",
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+    },
+
+    logoutText: {
+      color: "#fecaca",
+      fontSize: 14,
+      fontWeight: "700",
+    },
+
+    pressed: {
+      opacity: 0.8,
+    },
+
+    disabled: {
+      opacity: 0.55,
+    },
+  });
+
+
+================================
+FILE: C:\Users\HMT\anna-ai\lib\ai-speaking-access.ts
+================================
+
+import { createClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import {
+  AI_SPEAKING_PLANS,
+  isAiSpeakingPlanId,
+  type AiSpeakingPlanId,
+} from "@/lib/ai-speaking-plans";
+
+export type AiSpeakingAccess = {
+  active: boolean;
+  planCode: AiSpeakingPlanId | null;
+  planTitle: string | null;
+  durationLabel: string | null;
+  startsAt: string | null;
+  expiresAt: string | null;
+  lifetime: boolean;
+};
+
+const EMPTY_ACCESS: AiSpeakingAccess = {
+  active: false,
+  planCode: null,
+  planTitle: null,
+  durationLabel: null,
+  startsAt: null,
+  expiresAt: null,
+  lifetime: false,
+};
+
+export async function getAiSpeakingAccess(): Promise<AiSpeakingAccess> {
+  /*
+   * Use the normal server client only to confirm
+   * which user is currently signed in.
+   */
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError) {
+    console.error(
+      "AI Speaking authentication error:",
+      authError.message,
+    );
+
+    return EMPTY_ACCESS;
+  }
+
+  if (!user) {
+    return EMPTY_ACCESS;
+  }
+
+  /*
+   * Use the admin client for the subscription query.
+   *
+   * This avoids an RLS policy blocking the signed-in
+   * user from reading their own subscription.
+   *
+   * Security is preserved because the query is always
+   * restricted to the authenticated user's ID.
+   */
+  const admin = createSupabaseAdminClient();
+
+  const now = new Date().toISOString();
+
+  const { data, error } = await admin
+    .from("ai_speaking_subscriptions")
+    .select(
+      `
+        plan_code,
+        starts_at,
+        expires_at,
+        status
+      `,
+    )
+    .eq("user_id", user.id)
+    .eq("status", "active")
+    .lte("starts_at", now)
+    .gt("expires_at", now)
+    .order("expires_at", {
+      ascending: false,
+    })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error(
+      "AI Speaking subscription query error:",
+      {
+        userId: user.id,
+        email: user.email,
+        message: error.message,
+      },
+    );
+
+    return EMPTY_ACCESS;
+  }
+
+  if (!data) {
+    console.info(
+      "No active AI Speaking subscription:",
+      {
+        userId: user.id,
+        email: user.email,
+      },
+    );
+
+    return EMPTY_ACCESS;
+  }
+
+  const planCode =
+    typeof data.plan_code === "string" &&
+    isAiSpeakingPlanId(data.plan_code)
+      ? data.plan_code
+      : null;
+
+  if (!planCode) {
+    console.error(
+      "Invalid AI Speaking plan code:",
+      data.plan_code,
+    );
+
+    return EMPTY_ACCESS;
+  }
+
+  const plan = AI_SPEAKING_PLANS[planCode];
+
+  return {
+    active: true,
+    planCode,
+    planTitle: plan.title,
+    durationLabel: plan.durationLabel,
+    startsAt: data.starts_at ?? null,
+    expiresAt: data.expires_at ?? null,
+    lifetime: Boolean(plan.lifetime),
+  };
+}
+
+
+================================
+FILE: C:\Users\HMT\anna-ai\lib\hsk-access.ts
+================================
+
+"use client";
+
+import { createClient } from "@/lib/supabase/client";
+import type { HskProductCode, UserHskAccess } from "@/types/access";
+
+export async function getUserHskAccess(): Promise<UserHskAccess[]> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data, error } = await supabase
+    .from("user_hsk_access")
+    .select("id,user_id,product_code,level,lifetime,granted_at")
+    .eq("user_id", user.id)
+    .order("granted_at", { ascending: false });
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as UserHskAccess[];
+}
+
+export function hasHskLevelAccess(level: number, rows: UserHskAccess[]): boolean {
+  if (level === 1) return true;
+  return rows.some((item) => item.product_code === "hsk_full" || item.level === level || item.product_code === (`hsk_${level}` as HskProductCode));
+}
+
+
+================================
+FILE: C:\Users\HMT\anna-ai\types\access.ts
+================================
+
+export type HskProductCode =
+  | "hsk_1_free" | "hsk_2" | "hsk_3" | "hsk_4" | "hsk_5"
+  | "hsk_6" | "hsk_7" | "hsk_8" | "hsk_9" | "hsk_full";
+
+export interface HskProduct {
+  code: HskProductCode;
+  level: number | null;
+  name: string;
+  description: string;
+  priceMmk: number;
+  originalPriceMmk: number | null;
+  lifetime: boolean;
+  isFree: boolean;
+  active: boolean;
+}
+
+export interface UserHskAccess {
+  id: string;
+  user_id: string;
+  product_code: HskProductCode;
+  level: number | null;
+  lifetime: boolean;
+  granted_at: string;
+}
+
+export interface VoiceTrialStatus {
+  startedAt: string | null;
+  expiresAt: string | null;
+  secondsLimit: number;
+  secondsUsed: number;
+  secondsRemaining: number;
+  expired: boolean;
+  exhausted: boolean;
+  available: boolean;
+}
+
+
+================================
+FILE: C:\Users\HMT\anna-ai\components\pwa\PwaBottomNav.tsx
+================================
+
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+type NavItem = {
+  label: string;
+  href: string;
+  icon: string;
+  matches: (pathname: string) => boolean;
+};
+
+const NAV_ITEMS: NavItem[] = [
+  {
+    label: "Home",
+    href: "/app-home",
+    icon: "⌂",
+    matches: (pathname) =>
+      pathname === "/app-home",
+  },
+  {
+    label: "HSK",
+    href: "/hsk",
+    icon: "▣",
+    matches: (pathname) =>
+      pathname.startsWith("/hsk"),
+  },
+  {
+    label: "Speaking",
+    href: "/dashboard/ai/talk",
+    icon: "●",
+    matches: (pathname) =>
+      pathname === "/dashboard/ai/talk" ||
+      pathname.startsWith(
+        "/dashboard/ai/sentence-builder",
+      ),
+  },
+  {
+    label: "Laoshi",
+    href: "/dashboard/ai/laoshi",
+    icon: "学",
+    matches: (pathname) =>
+      pathname.startsWith(
+        "/dashboard/ai/laoshi",
+      ) ||
+      pathname.startsWith(
+        "/dashboard/ai/pronunciation",
+      ) ||
+      pathname.startsWith(
+        "/dashboard/ai/lessons",
+      ) ||
+      pathname.startsWith(
+        "/dashboard/ai/grammar",
+      ),
+  },
+  {
+    label: "Account",
+    href: "/dashboard",
+    icon: "人",
+    matches: (pathname) =>
+      pathname === "/dashboard" ||
+      pathname.startsWith(
+        "/dashboard/payments",
+      ),
+  },
+];
+
+function shouldShowNavigation(
+  pathname: string,
+): boolean {
+  if (
+    pathname === "/" ||
+    pathname === "/login" ||
+    pathname === "/register" ||
+    pathname === "/maintenance" ||
+    pathname.startsWith("/admin")
+  ) {
+    return false;
+  }
+
+  return (
+    pathname === "/app-home" ||
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/hsk")
+  );
+}
+
+export default function PwaBottomNav() {
+  const pathname = usePathname();
+
+  if (!shouldShowNavigation(pathname)) {
+    return null;
+  }
+
+  return (
+    <>
+      {/* Prevent page content from hiding behind nav */}
+      <div
+        aria-hidden="true"
+        className="h-[92px]"
+      />
+
+      <nav
+        aria-label="Anna AI navigation"
+        className="
+          fixed
+          inset-x-0
+          bottom-0
+          z-[90]
+          border-t
+          border-[#2b1838]
+          bg-[#12091c]/95
+          pt-2
+          backdrop-blur-xl
+          pb-[max(10px,env(safe-area-inset-bottom))]
+        "
+      >
+        <div
+          className="
+            mx-auto
+            grid
+            w-full
+            max-w-lg
+            grid-cols-5
+            px-2
+          "
+        >
+          {NAV_ITEMS.map((item) => {
+            const active =
+              item.matches(pathname);
+
+            return (
+              <Link
+                key={item.label}
+                href={item.href}
+                className="
+                  flex
+                  min-h-[58px]
+                  flex-col
+                  items-center
+                  justify-center
+                  gap-1
+                  rounded-xl
+                  px-1
+                  text-center
+                  transition
+                  active:scale-95
+                "
+              >
+                <span
+                  className={[
+                    "flex h-7 w-7 items-center justify-center rounded-lg text-[18px] font-black transition",
+                    active
+                      ? "bg-fuchsia-500/15 text-fuchsia-400"
+                      : "text-[#796b82]",
+                  ].join(" ")}
+                >
+                  {item.icon}
+                </span>
+
+                <span
+                  className={[
+                    "text-[10px] font-semibold transition",
+                    active
+                      ? "text-fuchsia-400"
+                      : "text-[#796b82]",
+                  ].join(" ")}
+                >
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+    </>
+  );
+}

@@ -55,10 +55,10 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     label: "Account",
-    href: "/dashboard",
+    href: "/app-account",
     icon: "人",
     matches: (pathname) =>
-      pathname === "/dashboard" ||
+      pathname === "/app-account" ||
       pathname.startsWith(
         "/dashboard/payments",
       ),
