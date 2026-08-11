@@ -59,10 +59,10 @@ export const metadata:
 
   icons: {
     icon:
-      "/pwa/anna-ai-logo.jpg",
+      "/images/anna-ai-logo.jpg",
 
     apple:
-      "/pwa/anna-ai-logo.jpg",
+      "/images/anna-ai-logo.jpg",
   },
 };
 

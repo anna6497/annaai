@@ -26,7 +26,7 @@ export default function manifest():
 
     icons: [
       {
-        src: "/pwa/anna-ai-logo.jpg",
+        src: "/images/anna-ai-logo.jpg",
         sizes: "512x512",
         type: "image/jpeg",
         purpose: "any",

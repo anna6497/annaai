@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
+
   userChoice: Promise<{
     outcome: "accepted" | "dismissed";
     platform: string;
@@ -20,13 +21,18 @@ declare global {
   }
 }
 
+const ANNA_APP_LOGO =
+  "/images/anna-ai-logo.jpg";
+
 function isIos() {
   if (typeof navigator === "undefined") {
     return false;
   }
 
   return (
-    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    /iPad|iPhone|iPod/.test(
+      navigator.userAgent,
+    ) ||
     (navigator.platform === "MacIntel" &&
       navigator.maxTouchPoints > 1)
   );
@@ -38,25 +44,42 @@ function isStandalone() {
   }
 
   return (
-    window.matchMedia("(display-mode: standalone)").matches ||
+    window.matchMedia(
+      "(display-mode: standalone)",
+    ).matches ||
     Boolean(navigator.standalone)
   );
 }
 
 export default function InstallAnnaAI() {
-  const [promptEvent, setPromptEvent] =
-    useState<BeforeInstallPromptEvent | null>(null);
+  const [
+    promptEvent,
+    setPromptEvent,
+  ] =
+    useState<BeforeInstallPromptEvent | null>(
+      null,
+    );
 
-  const [showIosGuide, setShowIosGuide] =
+  const [
+    showIosGuide,
+    setShowIosGuide,
+  ] =
     useState(false);
 
-  const [installed, setInstalled] =
+  const [
+    installed,
+    setInstalled,
+  ] =
     useState(false);
 
   useEffect(() => {
-    setInstalled(isStandalone());
+    setInstalled(
+      isStandalone(),
+    );
 
-    if ("serviceWorker" in navigator) {
+    if (
+      "serviceWorker" in navigator
+    ) {
       navigator.serviceWorker
         .register("/sw.js")
         .catch((error) => {
@@ -67,23 +90,30 @@ export default function InstallAnnaAI() {
         });
     }
 
-    const handleBeforeInstall = (event: Event) => {
+    const handleBeforeInstall = (
+      event: Event,
+    ) => {
       event.preventDefault();
 
       const installEvent =
         event as BeforeInstallPromptEvent;
 
-      setPromptEvent(installEvent);
+      setPromptEvent(
+        installEvent,
+      );
+
       window.deferredAnnaInstallPrompt =
         installEvent;
     };
 
-    const handleInstalled = () => {
-      setInstalled(true);
-      setPromptEvent(null);
-      window.deferredAnnaInstallPrompt =
-        undefined;
-    };
+    const handleInstalled =
+      () => {
+        setInstalled(true);
+        setPromptEvent(null);
+
+        window.deferredAnnaInstallPrompt =
+          undefined;
+      };
 
     window.addEventListener(
       "beforeinstallprompt",
@@ -125,16 +155,20 @@ export default function InstallAnnaAI() {
       const result =
         await promptEvent.userChoice;
 
-      if (result.outcome === "accepted") {
+      if (
+        result.outcome ===
+        "accepted"
+      ) {
         setInstalled(true);
       }
 
       setPromptEvent(null);
+
       return;
     }
 
     alert(
-      "Open your browser menu and choose Install app or Add to Home Screen.",
+      "Browser menu ကိုဖွင့်ပြီး Install app သို့မဟုတ် Add to Home Screen ကိုရွေးပါ။",
     );
   }
 
@@ -144,53 +178,105 @@ export default function InstallAnnaAI() {
 
   return (
     <>
+      {/* Install button */}
       <button
         type="button"
         onClick={install}
         className="
-          fixed bottom-24 right-4 z-[100] md:bottom-5 md:right-5
-          flex items-center gap-3
+          fixed
+          bottom-24
+          right-4
+          z-[100]
+
+          flex
+          items-center
+          gap-3
+
           rounded-2xl
-          border border-fuchsia-400/30
+          border
+          border-fuchsia-400/30
+
           bg-[#180823]/95
-          px-4 py-3
+          px-4
+          py-3
+
           shadow-2xl
           backdrop-blur-xl
+
+          md:bottom-24
+          md:right-5
         "
       >
         <img
-          src="/pwa/anna-ai-icon.png"
+          src={ANNA_APP_LOGO}
           alt="Anna AI"
-          className="h-11 w-11 rounded-xl"
+          className="
+            h-12
+            w-12
+            rounded-xl
+            object-cover
+            shadow-lg
+          "
         />
 
         <span className="text-left">
-          <span className="block text-[10px] font-black uppercase tracking-[0.16em] text-fuchsia-300">
+          <span
+            className="
+              block
+              text-[10px]
+              font-black
+              uppercase
+              tracking-[0.16em]
+              text-fuchsia-300
+            "
+          >
             Install App
           </span>
 
-          <span className="block text-sm font-black text-white">
+          <span
+            className="
+              block
+              text-sm
+              font-black
+              text-white
+            "
+          >
             Install Anna AI
           </span>
         </span>
       </button>
 
+      {/* iPhone install guide */}
       {showIosGuide ? (
         <div
           className="
-            fixed inset-0 z-[200]
-            flex items-end justify-center
-            bg-black/70 p-4
+            fixed
+            inset-0
+            z-[200]
+
+            flex
+            items-end
+            justify-center
+
+            bg-black/70
+            p-4
             backdrop-blur-sm
+
             sm:items-center
           "
-          onClick={() => setShowIosGuide(false)}
+          onClick={() =>
+            setShowIosGuide(false)
+          }
         >
           <div
             className="
-              w-full max-w-md
+              w-full
+              max-w-md
+
               rounded-[28px]
-              border border-white/10
+              border
+              border-white/10
+
               bg-[#15091d]
               p-6
             "
@@ -198,65 +284,148 @@ export default function InstallAnnaAI() {
               event.stopPropagation()
             }
           >
-            <div className="flex items-center gap-3">
+            <div
+              className="
+                flex
+                items-center
+                gap-3
+              "
+            >
               <img
-                src="/pwa/anna-ai-icon.png"
+                src={ANNA_APP_LOGO}
                 alt="Anna AI"
-                className="h-14 w-14 rounded-2xl"
+                className="
+                  h-16
+                  w-16
+                  rounded-2xl
+                  object-cover
+                  shadow-lg
+                "
               />
 
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.16em] text-fuchsia-300">
+                <p
+                  className="
+                    text-xs
+                    font-black
+                    uppercase
+                    tracking-[0.16em]
+                    text-fuchsia-300
+                  "
+                >
                   Anna AI
                 </p>
 
-                <h2 className="mt-1 text-xl font-black text-white">
+                <h2
+                  className="
+                    mt-1
+                    text-xl
+                    font-black
+                    text-white
+                  "
+                >
                   Install on iPhone
                 </h2>
               </div>
             </div>
 
-            <div className="mt-6 space-y-4">
-              <div className="rounded-2xl bg-white/[0.04] p-4">
-                <p className="font-bold text-white">
+            <div
+              className="
+                mt-6
+                space-y-4
+              "
+            >
+              <div
+                className="
+                  rounded-2xl
+                  bg-white/[0.04]
+                  p-4
+                "
+              >
+                <p
+                  className="
+                    font-bold
+                    text-white
+                  "
+                >
                   1. Share ကိုနှိပ်ပါ
                 </p>
 
                 <p
                   lang="my"
-                  className="mt-1 text-sm leading-6 text-white/55"
+                  className="
+                    mt-1
+                    text-sm
+                    leading-6
+                    text-white/55
+                  "
                 >
-                  Safari အောက်ဘက်က Share icon
-                  (□ + ↑) ကိုနှိပ်ပါ။
+                  Safari အောက်ဘက်က
+                  Share icon (□ + ↑)
+                  ကိုနှိပ်ပါ။
                 </p>
               </div>
 
-              <div className="rounded-2xl bg-white/[0.04] p-4">
-                <p className="font-bold text-white">
+              <div
+                className="
+                  rounded-2xl
+                  bg-white/[0.04]
+                  p-4
+                "
+              >
+                <p
+                  className="
+                    font-bold
+                    text-white
+                  "
+                >
                   2. Add to Home Screen
                 </p>
 
                 <p
                   lang="my"
-                  className="mt-1 text-sm leading-6 text-white/55"
+                  className="
+                    mt-1
+                    text-sm
+                    leading-6
+                    text-white/55
+                  "
                 >
                   Share menu ထဲက
-                  “Add to Home Screen” ကိုရွေးပါ။
+                  “Add to Home Screen”
+                  ကိုရွေးပါ။
                 </p>
               </div>
 
-              <div className="rounded-2xl bg-white/[0.04] p-4">
-                <p className="font-bold text-white">
+              <div
+                className="
+                  rounded-2xl
+                  bg-white/[0.04]
+                  p-4
+                "
+              >
+                <p
+                  className="
+                    font-bold
+                    text-white
+                  "
+                >
                   3. Add
                 </p>
 
                 <p
                   lang="my"
-                  className="mt-1 text-sm leading-6 text-white/55"
+                  className="
+                    mt-1
+                    text-sm
+                    leading-6
+                    text-white/55
+                  "
                 >
                   Anna AI logo နဲ့
-                  Anna AI နာမည်ပေါ်လာရင်
-                  Add ကိုနှိပ်ပါ။
+                  Anna AI နာမည်
+                  ပေါ်လာရင် Add
+                  ကိုနှိပ်ပါ။
                 </p>
               </div>
             </div>
@@ -267,10 +436,15 @@ export default function InstallAnnaAI() {
                 setShowIosGuide(false)
               }
               className="
-                mt-5 h-12 w-full
+                mt-5
+                h-12
+                w-full
+
                 rounded-2xl
                 bg-fuchsia-600
-                font-black text-white
+
+                font-black
+                text-white
               "
             >
               Got it
