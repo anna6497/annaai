@@ -18,6 +18,16 @@ const NAV_ITEMS: NavItem[] = [
     matches: (pathname) =>
       pathname === "/app-home",
   },
+
+  {
+    label: "Library",
+    href: "/library",
+    icon: "📚",
+    matches: (pathname) =>
+      pathname === "/library" ||
+      pathname.startsWith("/library/"),
+  },
+
   {
     label: "HSK",
     href: "/hsk",
@@ -25,6 +35,7 @@ const NAV_ITEMS: NavItem[] = [
     matches: (pathname) =>
       pathname.startsWith("/hsk"),
   },
+
   {
     label: "Speaking",
     href: "/dashboard/ai/talk",
@@ -35,6 +46,7 @@ const NAV_ITEMS: NavItem[] = [
         "/dashboard/ai/sentence-builder",
       ),
   },
+
   {
     label: "Laoshi",
     href: "/dashboard/ai/laoshi",
@@ -53,6 +65,7 @@ const NAV_ITEMS: NavItem[] = [
         "/dashboard/ai/grammar",
       ),
   },
+
   {
     label: "Account",
     href: "/app-account",
@@ -80,8 +93,10 @@ function shouldShowNavigation(
 
   return (
     pathname === "/app-home" ||
+    pathname === "/app-account" ||
     pathname.startsWith("/dashboard") ||
-    pathname.startsWith("/hsk")
+    pathname.startsWith("/hsk") ||
+    pathname.startsWith("/library")
   );
 }
 
@@ -94,7 +109,7 @@ export default function PwaBottomNav() {
 
   return (
     <>
-      {/* Prevent page content from hiding behind nav */}
+      {/* Prevent page content from hiding behind bottom navigation */}
       <div
         aria-hidden="true"
         className="h-[92px]"
@@ -121,8 +136,8 @@ export default function PwaBottomNav() {
             grid
             w-full
             max-w-lg
-            grid-cols-5
-            px-2
+            grid-cols-6
+            px-1
           "
         >
           {NAV_ITEMS.map((item) => {
@@ -136,12 +151,13 @@ export default function PwaBottomNav() {
                 className="
                   flex
                   min-h-[58px]
+                  min-w-0
                   flex-col
                   items-center
                   justify-center
                   gap-1
                   rounded-xl
-                  px-1
+                  px-0.5
                   text-center
                   transition
                   active:scale-95
@@ -149,7 +165,7 @@ export default function PwaBottomNav() {
               >
                 <span
                   className={[
-                    "flex h-7 w-7 items-center justify-center rounded-lg text-[18px] font-black transition",
+                    "flex h-7 w-7 items-center justify-center rounded-lg text-[17px] font-black transition",
                     active
                       ? "bg-fuchsia-500/15 text-fuchsia-400"
                       : "text-[#796b82]",
@@ -160,7 +176,7 @@ export default function PwaBottomNav() {
 
                 <span
                   className={[
-                    "text-[10px] font-semibold transition",
+                    "w-full truncate text-[9px] font-semibold transition",
                     active
                       ? "text-fuchsia-400"
                       : "text-[#796b82]",

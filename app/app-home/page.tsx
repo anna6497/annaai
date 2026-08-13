@@ -1,666 +1,993 @@
 "use client";
 
 import Link from "next/link";
+
 import {
-  useCallback,
   useEffect,
   useMemo,
   useState,
 } from "react";
 
-import { createClient } from "@/lib/supabase/client";
 import {
-  getUserHskAccess,
-  hasHskLevelAccess,
-} from "@/lib/hsk-access";
+  createClient,
+} from "@/lib/supabase/client";
 
-import type {
-  UserHskAccess,
-} from "@/types/access";
 
-type AiAccess = {
-  active: boolean;
-  planCode: string | null;
-  planTitle: string | null;
-  durationLabel: string | null;
-  startsAt: string | null;
-  expiresAt: string | null;
-  lifetime: boolean;
-};
-
-const HSK_LEVELS = [
-  1, 2, 3, 4, 5, 6, 7, 8, 9,
-] as const;
-
-const EMPTY_AI_ACCESS: AiAccess = {
-  active: false,
-  planCode: null,
-  planTitle: null,
-  durationLabel: null,
-  startsAt: null,
-  expiresAt: null,
-  lifetime: false,
-};
-
-export default function AppAccountPage() {
-  const supabase = useMemo(
-    () => createClient(),
-    [],
-  );
-
-  const [email, setEmail] =
-    useState("");
-
-  const [aiAccess, setAiAccess] =
-    useState<AiAccess>(
-      EMPTY_AI_ACCESS,
+export default function PwaHomePage() {
+  const supabase =
+    useMemo(
+      () =>
+        createClient(),
+      [],
     );
 
-  const [hskAccess, setHskAccess] =
-    useState<UserHskAccess[]>([]);
 
-  const [loading, setLoading] =
-    useState(true);
+  const [
+    loading,
+    setLoading,
+  ] =
+    useState(
+      true,
+    );
 
-  const [refreshing, setRefreshing] =
-    useState(false);
 
-  const [loggingOut, setLoggingOut] =
-    useState(false);
+  const [
+    name,
+    setName,
+  ] =
+    useState(
+      "Anna Learner",
+    );
 
-  const [error, setError] =
-    useState("");
 
-  const loadAccount = useCallback(
-    async (silent = false) => {
-      if (!silent) {
-        setLoading(true);
-      }
+  const [
+    email,
+    setEmail,
+  ] =
+    useState(
+      "",
+    );
 
-      setError("");
 
-      try {
-        const {
-          data: { user },
-          error: userError,
-        } =
-          await supabase.auth.getUser();
+  useEffect(
+    () => {
+      let active =
+        true;
 
-        if (userError || !user) {
+
+      async function loadUser() {
+        try {
+          const {
+            data: {
+              user,
+            },
+            error:
+              userError,
+          } =
+            await supabase.auth
+              .getUser();
+
+
+          if (
+            userError ||
+            !user
+          ) {
+            window.location.replace(
+              "/login?next=/app-home",
+            );
+
+            return;
+          }
+
+
+          const {
+            data:
+              profile,
+            error:
+              profileError,
+          } =
+            await supabase
+              .from(
+                "profiles",
+              )
+              .select(
+                "name,email",
+              )
+              .eq(
+                "id",
+                user.id,
+              )
+              .maybeSingle();
+
+
+          if (
+            profileError
+          ) {
+            console.error(
+              "Failed to load PWA profile:",
+              profileError,
+            );
+          }
+
+
+          if (
+            !active
+          ) {
+            return;
+          }
+
+
+          const profileName =
+            typeof profile?.name ===
+              "string" &&
+            profile.name
+              .trim()
+              .length >
+              0
+              ? profile.name.trim()
+              : "Anna Learner";
+
+
+          const profileEmail =
+            typeof profile?.email ===
+              "string" &&
+            profile.email
+              .trim()
+              .length >
+              0
+              ? profile.email.trim()
+              : user.email ??
+                "";
+
+
+          setName(
+            profileName,
+          );
+
+          setEmail(
+            profileEmail,
+          );
+        } catch (
+          error
+        ) {
+          console.error(
+            "Failed to load PWA user:",
+            error,
+          );
+
+
           window.location.replace(
-            "/login?next=/app-account",
+            "/login?next=/app-home",
           );
-          return;
+        } finally {
+          if (
+            active
+          ) {
+            setLoading(
+              false,
+            );
+          }
         }
-
-        setEmail(user.email ?? "");
-
-        const [
-          aiResult,
-          hskResult,
-        ] = await Promise.allSettled([
-          fetch("/api/account/ai-access", {
-            method: "GET",
-            cache: "no-store",
-          }).then(async (response) => {
-            if (!response.ok) {
-              throw new Error(
-                "AI Speaking access request failed.",
-              );
-            }
-
-            return (
-              await response.json()
-            ) as AiAccess;
-          }),
-
-          getUserHskAccess(),
-        ]);
-
-        if (
-          aiResult.status ===
-          "fulfilled"
-        ) {
-          setAiAccess(
-            aiResult.value,
-          );
-        } else {
-          console.error(
-            "AI access load failed:",
-            aiResult.reason,
-          );
-        }
-
-        if (
-          hskResult.status ===
-          "fulfilled"
-        ) {
-          setHskAccess(
-            hskResult.value,
-          );
-        } else {
-          console.error(
-            "HSK access load failed:",
-            hskResult.reason,
-          );
-        }
-
-        if (
-          aiResult.status ===
-            "rejected" &&
-          hskResult.status ===
-            "rejected"
-        ) {
-          setError(
-            "Unable to refresh account access. Please try again.",
-          );
-        }
-      } catch (loadError) {
-        console.error(
-          "Account load failed:",
-          loadError,
-        );
-
-        setError(
-          loadError instanceof Error
-            ? loadError.message
-            : "Unable to load account.",
-        );
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
       }
+
+
+      void loadUser();
+
+
+      return () => {
+        active =
+          false;
+      };
     },
-    [supabase],
+    [
+      supabase,
+    ],
   );
 
-  useEffect(() => {
-    void loadAccount();
-  }, [loadAccount]);
 
-  const activeHskLevels =
-    HSK_LEVELS.filter((level) =>
-      hasHskLevelAccess(
-        level,
-        hskAccess,
-      ),
+  if (
+    loading
+  ) {
+    return (
+      <main
+        className="
+          flex
+          min-h-screen
+          items-center
+          justify-center
+          bg-[#09030f]
+          text-white
+        "
+      >
+        <div
+          className="
+            text-center
+          "
+        >
+          <div
+            className="
+              mx-auto
+              h-10
+              w-10
+              animate-spin
+              rounded-full
+              border-4
+              border-white/10
+              border-t-fuchsia-500
+            "
+          />
+
+          <p
+            className="
+              mt-4
+              text-sm
+              text-white/50
+            "
+          >
+            Opening Anna AI...
+          </p>
+        </div>
+      </main>
     );
-
-  const fullPackage =
-    hskAccess.some(
-      (row) =>
-        row.product_code ===
-        "hsk_full",
-    );
-
-  function refresh() {
-    if (refreshing) {
-      return;
-    }
-
-    setRefreshing(true);
-    void loadAccount(true);
   }
 
-  async function logout() {
-    if (loggingOut) {
-      return;
-    }
-
-    setLoggingOut(true);
-    setError("");
-
-    try {
-      const { error: logoutError } =
-        await supabase.auth.signOut();
-
-      if (logoutError) {
-        throw logoutError;
-      }
-
-      window.location.replace(
-        "/login",
-      );
-    } catch (logoutError) {
-      console.error(
-        "Logout failed:",
-        logoutError,
-      );
-
-      setError(
-        "Logout failed. Please try again.",
-      );
-
-      setLoggingOut(false);
-    }
-  }
 
   return (
     <main
       className="
         min-h-screen
         bg-[#09030f]
-        px-5
-        pb-8
-        pt-[max(30px,env(safe-area-inset-top))]
+        px-[14px]
+        pb-28
+        pt-5
         text-white
       "
     >
-      <div
+      <section
         className="
           mx-auto
           w-full
-          max-w-md
+          max-w-lg
         "
       >
-        {/* ACCOUNT HEADER */}
+        {/* Header */}
+        <div
+          className="
+            flex
+            items-center
+            justify-between
+            px-1
+          "
+        >
+          <div>
+            <h1
+              className="
+                text-[22px]
+                font-black
+              "
+            >
+              Anna AI
+            </h1>
 
-        <section className="text-center">
-          <div
+            <p
+              className="
+                mt-1
+                text-[10px]
+                text-[#7e6c89]
+              "
+            >
+              中文学习 · AI Speaking
+            </p>
+          </div>
+
+
+          <Link
+            href="/app-account"
+            aria-label="Open account"
             className="
-              mx-auto
               flex
-              h-[82px]
-              w-[82px]
+              h-[45px]
+              w-[45px]
               items-center
               justify-center
               rounded-full
-              bg-purple-500
-              text-[38px]
+              bg-fuchsia-500
+              text-xl
               font-black
-              shadow-[0_0_40px_rgba(168,85,247,0.25)]
+              text-white
             "
           >
             安
-          </div>
+          </Link>
+        </div>
 
-          <h1
+
+        {/* User */}
+        <div
+          className="
+            mt-5
+            rounded-2xl
+            border
+            border-white/[0.06]
+            bg-white/[0.025]
+            px-4
+            py-3
+          "
+        >
+          <p
             className="
-              mt-4
-              text-2xl
-              font-extrabold
+              text-[9px]
+              font-black
+              uppercase
+              tracking-[0.16em]
+              text-fuchsia-300
             "
           >
-            Anna AI Account
-          </h1>
+            Welcome back
+          </p>
 
           <p
             className="
               mt-1
-              text-[13px]
-              text-[#8f8099]
+              text-sm
+              font-bold
+              text-white
             "
           >
-            {email ||
-              "Anna AI User"}
+            {name}
           </p>
-        </section>
 
-        {loading ? (
-          <div
-            className="
-              mt-6
-              flex
-              min-h-[70px]
-              items-center
-              justify-center
-              gap-3
-              rounded-[17px]
-              bg-[#130a1b]
-              text-xs
-              text-[#9b8aa4]
-            "
-          >
-            <span
+          {email ? (
+            <p
               className="
-                h-5
-                w-5
-                animate-spin
-                rounded-full
-                border-2
-                border-fuchsia-400/20
-                border-t-fuchsia-400
+                mt-1
+                truncate
+                text-[10px]
+                text-white/35
               "
-            />
+            >
+              {email}
+            </p>
+          ) : null}
+        </div>
 
-            Checking your access...
-          </div>
-        ) : null}
 
-        {error ? (
-          <div
-            role="alert"
+        {/* Intro */}
+        <div
+          className="
+            mb-6
+            mt-8
+            px-3
+            text-center
+          "
+        >
+          <p
             className="
-              mt-4
-              rounded-2xl
-              border
-              border-red-400/20
-              bg-red-500/[0.08]
-              p-3
-              text-xs
-              leading-5
-              text-red-200
+              text-[9px]
+              font-black
+              tracking-[0.22em]
+              text-fuchsia-300
             "
           >
-            ⚠ {error}
-          </div>
-        ) : null}
+            ANNA AI LEARNING
+          </p>
 
-        {/* AI SPEAKING */}
+          <h2
+            className="
+              mt-3
+              text-[30px]
+              font-black
+              leading-[1.15]
+            "
+          >
+            Choose Your
+            <br />
+            Learning Path
+          </h2>
 
-        <section
+          <p
+            lang="my"
+            className="
+              mx-auto
+              mt-3
+              max-w-sm
+              text-[12px]
+              leading-5
+              text-[#95849e]
+            "
+          >
+            Anna နဲ့ Chinese
+            speaking လေ့ကျင့်ပြီး
+            HSK 1–9 vocabulary,
+            Writing နဲ့ Pronunciation
+            ကို တစ်နေရာတည်းမှာ
+            လေ့လာနိုင်ပါတယ်။
+          </p>
+        </div>
+
+
+        {/* Talk with Anna */}
+        <Link
+          href="/dashboard/ai/talk"
           className="
-            mt-5
-            rounded-[22px]
+            block
+            rounded-[27px]
             border
-            border-[#382044]
-            bg-[#160b20]
-            p-[19px]
+            border-[#66308a]
+            bg-[#280b46]
+            p-[22px]
+            transition
+            active:scale-[0.99]
           "
         >
           <div
             className="
               flex
-              items-center
-              gap-3
+              items-start
+              justify-between
+              gap-4
             "
           >
-            <div
-              className="
-                flex
-                h-[42px]
-                w-[42px]
-                items-center
-                justify-center
-                rounded-[13px]
-                bg-[#2b1436]
-                text-xl
-                text-fuchsia-300
-              "
-            >
-              ◆
-            </div>
-
-            <div className="min-w-0 flex-1">
+            <div>
               <p
                 className="
                   text-[9px]
                   font-black
-                  tracking-[0.14em]
-                  text-purple-200
+                  tracking-[0.2em]
+                  text-[#e9b7ff]
                 "
               >
-                AI SPEAKING
+                AI SPEAKING PLAN
               </p>
 
-              <p
-                className={[
-                  "mt-1 text-[8px] font-black",
-                  aiAccess.active
-                    ? "text-green-300"
-                    : "text-[#817189]",
-                ].join(" ")}
+              <h3
+                className="
+                  mt-2
+                  text-[25px]
+                  font-black
+                "
               >
-                {aiAccess.active
-                  ? "ACTIVE"
-                  : "NOT ACTIVE"}
-              </p>
+                Talk with Anna
+              </h3>
             </div>
 
-            <span
-              className={
-                aiAccess.active
-                  ? "text-2xl text-green-300"
-                  : "text-xl text-[#75677f]"
-              }
+
+            <div
+              className="
+                flex
+                h-[60px]
+                w-[60px]
+                items-center
+                justify-center
+                rounded-[18px]
+                bg-white/[0.06]
+                text-[28px]
+              "
             >
-              {aiAccess.active
-                ? "●"
-                : "🔒"}
-            </span>
+              💜
+            </div>
           </div>
 
-          <h2
-            className="
-              mt-4
-              text-[21px]
-              font-black
-            "
-          >
-            {aiAccess.active
-              ? aiAccess.planTitle ??
-                "Active AI Speaking Plan"
-              : "Free Account"}
-          </h2>
 
           <p
             className="
-              mt-2
-              text-xs
-              leading-5
-              text-[#9b8aa5]
+              mt-5
+              text-[13px]
+              leading-[22px]
+              text-[#b9a3c9]
             "
           >
-            {aiAccess.active
-              ? aiAccess.lifetime
-                ? "Lifetime AI Speaking access"
-                : aiAccess.durationLabel ??
-                  "AI Speaking access"
-              : "Unlock Talk with Anna, Sentence Builder, pronunciation and premium speaking features."}
+            Practice natural Chinese
+            conversation using voice,
+            Hanzi, Pinyin and
+            conversation memory.
           </p>
 
-          {aiAccess.expiresAt &&
-          !aiAccess.lifetime ? (
-            <p
-              className="
-                mt-3
-                text-[11px]
-                text-violet-300
-              "
-            >
-              ◷ Expires{" "}
-              {new Date(
-                aiAccess.expiresAt,
-              ).toLocaleDateString()}
-            </p>
-          ) : null}
 
-          <Link
-            href="/dashboard/ai/pricing"
+          <div
             className="
-              mt-4
+              mt-[22px]
               flex
-              h-[49px]
+              h-[51px]
               items-center
               justify-center
-              gap-2
               rounded-[14px]
-              bg-purple-600
+              bg-[#c400ed]
               text-[13px]
-              font-extrabold
-              transition
-              active:scale-[0.98]
+              font-black
             "
           >
-            ◆
-            {aiAccess.active
-              ? "View / Extend Plans"
-              : "Buy AI Speaking Plan"}
-          </Link>
-        </section>
+            Start Talking →
+          </div>
+        </Link>
+
 
         {/* HSK */}
-
-        <section
+        <Link
+          href="/hsk"
           className="
-            mt-[14px]
-            rounded-[22px]
+            mt-4
+            block
+            rounded-[27px]
             border
-            border-[#173941]
-            bg-[#0c171e]
-            p-[18px]
+            border-[#155e75]
+            bg-[#06313b]
+            p-[22px]
+            transition
+            active:scale-[0.99]
           "
         >
           <div
             className="
               flex
-              items-center
-              gap-3
+              items-start
+              justify-between
+              gap-4
             "
           >
+            <div>
+              <p
+                className="
+                  text-[9px]
+                  font-black
+                  tracking-[0.2em]
+                  text-cyan-300
+                "
+              >
+                HSK LEARNING PLAN
+              </p>
+
+              <h3
+                className="
+                  mt-2
+                  text-[25px]
+                  font-black
+                "
+              >
+                HSK Flashcards
+              </h3>
+            </div>
+
+
             <div
               className="
                 flex
-                h-[42px]
-                w-[42px]
+                h-[60px]
+                w-[60px]
                 items-center
                 justify-center
-                rounded-[13px]
-                bg-[#10303a]
-                text-xl
+                rounded-[18px]
+                bg-white/[0.06]
+                text-[29px]
                 text-cyan-300
               "
             >
               ▣
             </div>
-
-            <div className="flex-1">
-              <p
-                className="
-                  text-[8px]
-                  font-black
-                  tracking-[0.12em]
-                  text-cyan-300
-                "
-              >
-                HSK LEARNING
-              </p>
-
-              <h2
-                className="
-                  mt-1
-                  text-base
-                  font-black
-                "
-              >
-                Flashcards + Writing
-              </h2>
-            </div>
-
-            {fullPackage ? (
-              <span
-                className="
-                  rounded-lg
-                  bg-green-500/10
-                  px-2
-                  py-1
-                  text-[8px]
-                  font-black
-                  text-green-300
-                "
-              >
-                FULL
-              </span>
-            ) : null}
           </div>
+
 
           <p
             className="
-              mt-3
-              text-[11px]
-              leading-[18px]
-              text-[#789097]
+              mt-5
+              text-[13px]
+              leading-[22px]
+              text-[#9cbabe]
             "
           >
-            HSK 1 is free. Purchased
-            levels unlock both
+            Study HSK 1–9
+            vocabulary with
             Flashcards and Writing.
+            HSK 1 is free.
           </p>
+
 
           <div
             className="
-              mt-4
-              grid
-              grid-cols-3
-              gap-2
+              mt-[22px]
+              flex
+              h-[51px]
+              items-center
+              justify-center
+              rounded-[14px]
+              bg-cyan-500
+              text-[13px]
+              font-black
             "
           >
-            {HSK_LEVELS.map(
-              (level) => {
-                const active =
-                  hasHskLevelAccess(
-                    level,
-                    hskAccess,
-                  );
+            Start HSK Learning →
+          </div>
+        </Link>
 
-                return (
-                  <Link
-                    key={level}
-                    href={
-                      active
-                        ? `/hsk/flashcards/${level}`
-                        : "/hsk/store"
-                    }
-                    className={[
-                      "flex min-h-[67px] flex-col items-center justify-center rounded-[14px] border",
-                      active
-                        ? "border-[#277b87] bg-[#10272d]"
-                        : "border-[#20333a] bg-[#111920]",
-                    ].join(" ")}
-                  >
-                    <span
-                      className={[
-                        "text-[21px] font-black",
-                        active
-                          ? "text-white"
-                          : "text-[#766f7b]",
-                      ].join(" ")}
-                    >
-                      {level}
-                    </span>
 
-                    {level === 1 ? (
-                      <span
-                        className="
-                          mt-0.5
-                          text-[7px]
-                          font-black
-                          text-green-300
-                        "
-                      >
-                        FREE
-                      </span>
-                    ) : active ? (
-                      <span
-                        className="
-                          text-xs
-                          text-green-300
-                        "
-                      >
-                        ●
-                      </span>
-                    ) : (
-                      <span
-                        className="
-                          text-[10px]
-                          text-[#675a6e]
-                        "
-                      >
-                        🔒
-                      </span>
-                    )}
-                  </Link>
-                );
-              },
-            )}
+        {/* Anna's Library */}
+        <Link
+          href="/library"
+          className="
+            mt-4
+            block
+            overflow-hidden
+            rounded-[27px]
+            border
+            border-[#5b296f]
+            bg-gradient-to-br
+            from-[#23102f]
+            via-[#170b22]
+            to-[#0e0814]
+            p-[22px]
+            transition
+            active:scale-[0.99]
+          "
+        >
+          <div
+            className="
+              flex
+              items-start
+              justify-between
+              gap-4
+            "
+          >
+            <div
+              className="
+                min-w-0
+              "
+            >
+              <p
+                className="
+                  text-[9px]
+                  font-black
+                  tracking-[0.2em]
+                  text-fuchsia-300
+                "
+              >
+                ANNA&apos;S LIBRARY
+              </p>
+
+              <h3
+                className="
+                  mt-2
+                  text-[25px]
+                  font-black
+                "
+              >
+                Chinese Library
+              </h3>
+            </div>
+
+
+            <div
+              className="
+                flex
+                h-[60px]
+                w-[60px]
+                shrink-0
+                items-center
+                justify-center
+                rounded-[18px]
+                border
+                border-fuchsia-400/20
+                bg-fuchsia-500/10
+                text-[28px]
+              "
+            >
+              📚
+            </div>
+          </div>
+
+
+          <p
+            className="
+              mt-5
+              text-[13px]
+              leading-[22px]
+              text-[#b9a3c9]
+            "
+          >
+            Explore Chinese notes,
+            worksheets, HSK resources
+            and downloadable PDF files.
+            Free and premium resources
+            are available.
+          </p>
+
+
+          <div
+            className="
+              mt-[22px]
+              flex
+              h-[51px]
+              items-center
+              justify-center
+              rounded-[14px]
+              border
+              border-fuchsia-400/20
+              bg-fuchsia-500/10
+              text-[13px]
+              font-black
+              text-fuchsia-200
+            "
+          >
+            Open Anna&apos;s Library →
+          </div>
+        </Link>
+
+
+        <h3
+          className="
+            mb-3
+            mt-7
+            text-[17px]
+            font-extrabold
+          "
+        >
+          Your learning tools
+        </h3>
+
+
+        <div
+          className="
+            grid
+            grid-cols-2
+            gap-[10px]
+          "
+        >
+          {/* Laoshi */}
+          <Link
+            href="/dashboard/ai/laoshi"
+            className="
+              min-h-[180px]
+              rounded-[19px]
+              border
+              border-[#2c1b36]
+              bg-[#130a1b]
+              p-[14px]
+            "
+          >
+            <div
+              className="
+                flex
+                h-[42px]
+                w-[42px]
+                items-center
+                justify-center
+                rounded-[13px]
+                bg-[#2b1237]
+                text-xl
+              "
+            >
+              学
+            </div>
+
+            <p
+              className="
+                mt-[13px]
+                text-[8px]
+                font-black
+                tracking-[0.12em]
+                text-purple-400
+              "
+            >
+              AI TEACHER
+            </p>
+
+            <p
+              className="
+                mt-2
+                text-[15px]
+                font-extrabold
+              "
+            >
+              Your Laoshi
+            </p>
+
+            <p
+              className="
+                mt-2
+                text-[11px]
+                leading-[17px]
+                text-[#85778e]
+              "
+            >
+              Pronunciation,
+              lessons, Smart Review
+              and progress.
+            </p>
+          </Link>
+
+
+          {/* HSK */}
+          <Link
+            href="/hsk"
+            className="
+              min-h-[180px]
+              rounded-[19px]
+              border
+              border-[#2c1b36]
+              bg-[#130a1b]
+              p-[14px]
+            "
+          >
+            <div
+              className="
+                flex
+                h-[42px]
+                w-[42px]
+                items-center
+                justify-center
+                rounded-[13px]
+                bg-[#2b1237]
+                text-xl
+              "
+            >
+              字
+            </div>
+
+            <p
+              className="
+                mt-[13px]
+                text-[8px]
+                font-black
+                tracking-[0.12em]
+                text-purple-400
+              "
+            >
+              HSK 1–9
+            </p>
+
+            <p
+              className="
+                mt-2
+                text-[15px]
+                font-extrabold
+              "
+            >
+              Vocabulary
+            </p>
+
+            <p
+              className="
+                mt-2
+                text-[11px]
+                leading-[17px]
+                text-[#85778e]
+              "
+            >
+              Review Chinese
+              vocabulary by HSK
+              level.
+            </p>
+          </Link>
+        </div>
+
+
+        {/* Sentence Builder */}
+        <Link
+          href="/dashboard/ai/sentence-builder"
+          className="
+            mt-3
+            flex
+            min-h-[91px]
+            items-center
+            gap-3
+            rounded-[18px]
+            border
+            border-[#183942]
+            bg-[#0c171e]
+            px-[14px]
+          "
+        >
+          <div
+            className="
+              flex
+              h-[47px]
+              w-[47px]
+              shrink-0
+              items-center
+              justify-center
+              rounded-[14px]
+              bg-[#10303a]
+              text-xl
+              text-cyan-300
+            "
+          >
+            ✎
           </div>
 
           <div
             className="
-              mt-4
-              border-t
-              border-[#173039]
-              pt-3
+              flex-1
+            "
+          >
+            <div
+              className="
+                flex
+                items-center
+                gap-2
+              "
+            >
+              <p
+                className="
+                  text-[15px]
+                  font-extrabold
+                "
+              >
+                Sentence Builder
+              </p>
+
+              <span
+                className="
+                  rounded-lg
+                  bg-[#342043]
+                  px-2
+                  py-1
+                  text-[7px]
+                  font-black
+                  text-purple-100
+                "
+              >
+                AI PLAN
+              </span>
+            </div>
+
+            <p
+              className="
+                mt-1
+                text-[11px]
+                text-[#849ca2]
+              "
+            >
+              Myanmar → natural
+              Mandarin with Hanzi
+              and Pinyin.
+            </p>
+          </div>
+
+          <span
+            className="
+              text-xl
+              text-[#70868c]
+            "
+          >
+            ›
+          </span>
+        </Link>
+
+
+        {/* Pronunciation */}
+        <Link
+          href="/dashboard/ai/pronunciation"
+          className="
+            mt-3
+            flex
+            min-h-[91px]
+            items-center
+            gap-3
+            rounded-[18px]
+            border
+            border-[#3b2146]
+            bg-[#180d22]
+            px-[14px]
+          "
+        >
+          <div
+            className="
+              flex
+              h-[47px]
+              w-[47px]
+              shrink-0
+              items-center
+              justify-center
+              rounded-[14px]
+              bg-[#2b1436]
+              text-xl
+            "
+          >
+            🎙
+          </div>
+
+          <div
+            className="
+              flex-1
             "
           >
             <p
@@ -668,202 +995,128 @@ export default function AppAccountPage() {
                 text-[8px]
                 font-black
                 tracking-[0.12em]
-                text-[#5f7a80]
+                text-purple-400
               "
             >
-              ACTIVE LEVELS
+              YOUR LAOSHI
             </p>
 
             <p
               className="
                 mt-1
-                text-xs
-                font-bold
-                leading-[18px]
-                text-[#d8f7fb]
+                text-[14px]
+                font-extrabold
               "
             >
-              {fullPackage
-                ? "HSK 1–9"
-                : activeHskLevels
-                    .map(
-                      (level) =>
-                        `HSK ${level}`,
-                    )
-                    .join(", ")}
+              Pronunciation
+            </p>
+
+            <p
+              className="
+                mt-1
+                text-[10px]
+                leading-4
+                text-[#81718a]
+              "
+            >
+              Listen, repeat and
+              check your Chinese
+              pronunciation.
             </p>
           </div>
 
-          <Link
-            href="/hsk/store"
-            className="
-              mt-4
-              flex
-              h-[45px]
-              items-center
-              justify-center
-              gap-2
-              rounded-[13px]
-              bg-[#10303a]
-              text-xs
-              font-extrabold
-              text-cyan-300
-            "
-          >
-            View HSK Plans →
-          </Link>
-        </section>
-
-        {/* PAYMENT */}
-
-        <section
-          className="
-            mt-[14px]
-            rounded-[22px]
-            border
-            border-[#302435]
-            bg-[#130d18]
-            p-[18px]
-          "
-        >
-          <p
-            className="
-              text-[8px]
-              font-black
-              tracking-[0.12em]
-              text-violet-300
-            "
-          >
-            PAYMENTS
-          </p>
-
-          <h2
-            className="
-              mt-1
-              text-[17px]
-              font-black
-            "
-          >
-            Payment Status
-          </h2>
-
-          <p
-            className="
-              mt-3
-              text-[11px]
-              leading-5
-              text-[#817589]
-            "
-          >
-            View your submitted payment
-            requests and approval status.
-          </p>
-
-          <Link
-            href="/dashboard/payments"
-            className="
-              mt-4
-              flex
-              h-[45px]
-              items-center
-              justify-center
-              rounded-[13px]
-              bg-white/[0.05]
-              text-xs
-              font-bold
-              text-violet-200
-            "
-          >
-            View Payment Status →
-          </Link>
-        </section>
-
-        {/* REFRESH */}
-
-        <button
-          type="button"
-          onClick={refresh}
-          disabled={refreshing}
-          className="
-            mt-[14px]
-            flex
-            h-[50px]
-            w-full
-            items-center
-            justify-center
-            gap-2
-            rounded-[15px]
-            border
-            border-[#3b2447]
-            bg-[#21132a]
-            font-bold
-            text-purple-200
-            disabled:opacity-50
-          "
-        >
           <span
-            className={
-              refreshing
-                ? "animate-spin"
-                : ""
-            }
+            className="
+              text-xl
+              text-[#75677f]
+            "
           >
-            ↻
+            ›
           </span>
+        </Link>
 
-          {refreshing
-            ? "Refreshing..."
-            : "Refresh Access"}
-        </button>
 
-        <p
-          lang="my"
+        {/* Plans */}
+        <Link
+          href="/dashboard/ai/pricing"
           className="
-            mt-2
-            px-4
-            text-center
-            text-[9px]
-            leading-[15px]
-            text-[#6f6376]
-          "
-        >
-          Admin approve လုပ်ပြီးရင်
-          Refresh Access နှိပ်ပါ။
-          AI Speaking နဲ့ HSK access ကို
-          ချက်ချင်းပြန်စစ်ပေးပါမယ်။
-        </p>
-
-        {/* LOGOUT */}
-
-        <button
-          type="button"
-          disabled={loggingOut}
-          onClick={() =>
-            void logout()
-          }
-          className="
-            mt-[14px]
+            mt-3
             flex
-            h-[52px]
-            w-full
+            min-h-[94px]
             items-center
-            justify-center
-            gap-2
-            rounded-[15px]
+            gap-3
+            rounded-[18px]
             border
-            border-red-400/25
-            bg-red-500/[0.08]
-            text-sm
-            font-bold
-            text-red-200
-            disabled:opacity-50
+            border-[#382047]
+            bg-[#180d22]
+            px-[14px]
           "
         >
-          {loggingOut
-            ? "Logging out..."
-            : "⇥  Logout"}
-        </button>
-      </div>
+          <div
+            className="
+              flex
+              h-[47px]
+              w-[47px]
+              shrink-0
+              items-center
+              justify-center
+              rounded-[14px]
+              bg-[#2b1436]
+              text-xl
+            "
+          >
+            ◆
+          </div>
+
+          <div
+            className="
+              flex-1
+            "
+          >
+            <p
+              className="
+                text-[8px]
+                font-black
+                tracking-[0.12em]
+                text-purple-400
+              "
+            >
+              PLANS & ACCESS
+            </p>
+
+            <p
+              className="
+                mt-1
+                text-[14px]
+                font-extrabold
+              "
+            >
+              AI Speaking & HSK Plans
+            </p>
+
+            <p
+              className="
+                mt-1
+                text-[10px]
+                leading-4
+                text-[#81718a]
+              "
+            >
+              View prices, upgrade AI Speaking
+              or unlock HSK levels.
+            </p>
+          </div>
+
+          <span
+            className="
+              text-xl
+              text-[#75677f]
+            "
+          >
+            ›
+          </span>
+        </Link>
+      </section>
     </main>
   );
 }
