@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import {
   ChangeEvent,
   FormEvent,
@@ -8,8 +10,6 @@ import {
   useMemo,
   useState,
 } from "react";
-
-import Link from "next/link";
 
 import {
   createClient,
@@ -35,6 +35,18 @@ type LibraryItem = {
   updated_at: string;
 };
 
+type ApiResult = {
+  ok?: boolean;
+  error?: string;
+
+  bucket?: string;
+  path?: string;
+  token?: string;
+
+  item?: LibraryItem;
+  items?: LibraryItem[];
+};
+
 const CATEGORIES = [
   "HSK",
   "Speaking",
@@ -43,6 +55,18 @@ const CATEGORIES = [
   "Mini Notes",
   "Worksheets",
   "Other",
+];
+
+const MAX_PDF_SIZE =
+  25 * 1024 * 1024;
+
+const MAX_COVER_SIZE =
+  5 * 1024 * 1024;
+
+const ALLOWED_COVER_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
 ];
 
 function formatFileSize(
@@ -204,6 +228,139 @@ export default function AdminLibraryPage() {
       [supabase],
     );
 
+  async function readApiResponse(
+    response: Response,
+  ): Promise<ApiResult> {
+    const text =
+      await response.text();
+
+    if (!text) {
+      return {};
+    }
+
+    try {
+      return JSON.parse(
+        text,
+      ) as ApiResult;
+    } catch {
+      throw new Error(
+        response.ok
+          ? "Server returned an invalid response."
+          : `Request failed (${response.status}): ${text.slice(
+              0,
+              180,
+            )}`,
+      );
+    }
+  }
+
+  async function requestSignedUpload(
+    token: string,
+    kind:
+      | "pdf"
+      | "cover",
+    file: File,
+  ) {
+    const response =
+      await fetch(
+        "/api/admin/library/upload-url",
+        {
+          method:
+            "POST",
+
+          headers: {
+            Authorization:
+              `Bearer ${token}`,
+
+            "Content-Type":
+              "application/json",
+          },
+
+          body:
+            JSON.stringify({
+              kind,
+
+              fileName:
+                file.name,
+
+              contentType:
+                file.type,
+
+              fileSize:
+                file.size,
+            }),
+        },
+      );
+
+    const result =
+      await readApiResponse(
+        response,
+      );
+
+    if (
+      !response.ok
+    ) {
+      throw new Error(
+        result.error ||
+          "Unable to prepare upload.",
+      );
+    }
+
+    if (
+      !result.bucket ||
+      !result.path ||
+      !result.token
+    ) {
+      throw new Error(
+        "Signed upload information is incomplete.",
+      );
+    }
+
+    return {
+      bucket:
+        result.bucket,
+
+      path:
+        result.path,
+
+      uploadToken:
+        result.token,
+    };
+  }
+
+  async function uploadToStorage(
+    bucket: string,
+    path: string,
+    uploadToken: string,
+    file: File,
+  ) {
+    const {
+      error:
+        uploadError,
+    } =
+      await supabase.storage
+        .from(
+          bucket,
+        )
+        .uploadToSignedUrl(
+          path,
+          uploadToken,
+          file,
+          {
+            contentType:
+              file.type,
+          },
+        );
+
+    if (
+      uploadError
+    ) {
+      throw new Error(
+        `File upload failed: ${uploadError.message}`,
+      );
+    }
+  }
+
   const loadItems =
     useCallback(
       async () => {
@@ -232,7 +389,9 @@ export default function AdminLibraryPage() {
             );
 
           const result =
-            await response.json();
+            await readApiResponse(
+              response,
+            );
 
           if (
             !response.ok
@@ -357,12 +516,16 @@ export default function AdminLibraryPage() {
         "library-cover",
       ) as HTMLInputElement | null;
 
-    if (pdfInput) {
+    if (
+      pdfInput
+    ) {
       pdfInput.value =
         "";
     }
 
-    if (coverInput) {
+    if (
+      coverInput
+    ) {
       coverInput.value =
         "";
     }
@@ -389,6 +552,7 @@ export default function AdminLibraryPage() {
       setError(
         "Title is required.",
       );
+
       return;
     }
 
@@ -396,7 +560,65 @@ export default function AdminLibraryPage() {
       setError(
         "Please choose a PDF file.",
       );
+
       return;
+    }
+
+    if (
+      pdf.type !==
+      "application/pdf"
+    ) {
+      setError(
+        "Only PDF files are allowed.",
+      );
+
+      return;
+    }
+
+    if (
+      pdf.size <= 0
+    ) {
+      setError(
+        "PDF file is empty.",
+      );
+
+      return;
+    }
+
+    if (
+      pdf.size >
+      MAX_PDF_SIZE
+    ) {
+      setError(
+        "PDF must be 25 MB or smaller.",
+      );
+
+      return;
+    }
+
+    if (cover) {
+      if (
+        !ALLOWED_COVER_TYPES.includes(
+          cover.type,
+        )
+      ) {
+        setError(
+          "Cover must be JPG, PNG or WEBP.",
+        );
+
+        return;
+      }
+
+      if (
+        cover.size >
+        MAX_COVER_SIZE
+      ) {
+        setError(
+          "Cover must be 5 MB or smaller.",
+        );
+
+        return;
+      }
     }
 
     setSubmitting(true);
@@ -405,53 +627,70 @@ export default function AdminLibraryPage() {
       const token =
         await getAccessToken();
 
-      const formData =
-        new FormData();
+      /*
+       * STEP 1
+       *
+       * Ask Anna API for a signed PDF upload token.
+       *
+       * Only tiny JSON metadata goes through Vercel.
+       */
+      const pdfUpload =
+        await requestSignedUpload(
+          token,
+          "pdf",
+          pdf,
+        );
 
-      formData.set(
-        "title",
-        title.trim(),
-      );
-
-      formData.set(
-        "description",
-        description.trim(),
-      );
-
-      formData.set(
-        "category",
-        category,
-      );
-
-      formData.set(
-        "access_type",
-        accessType,
-      );
-
-      formData.set(
-        "is_published",
-        String(
-          isPublished,
-        ),
-      );
-
-      formData.set(
-        "sort_order",
-        sortOrder || "0",
-      );
-
-      formData.set(
-        "pdf",
+      /*
+       * STEP 2
+       *
+       * Upload PDF directly:
+       *
+       * Browser -> Supabase Storage
+       *
+       * The PDF binary does NOT pass through
+       * /api/admin/library.
+       */
+      await uploadToStorage(
+        pdfUpload.bucket,
+        pdfUpload.path,
+        pdfUpload.uploadToken,
         pdf,
       );
 
+      /*
+       * STEP 3
+       *
+       * Optional cover image direct upload.
+       */
+      let coverPath = "";
+
       if (cover) {
-        formData.set(
-          "cover",
+        const coverUpload =
+          await requestSignedUpload(
+            token,
+            "cover",
+            cover,
+          );
+
+        await uploadToStorage(
+          coverUpload.bucket,
+          coverUpload.path,
+          coverUpload.uploadToken,
           cover,
         );
+
+        coverPath =
+          coverUpload.path;
       }
 
+      /*
+       * STEP 4
+       *
+       * PDF and cover are now in Supabase.
+       *
+       * Send ONLY metadata to Anna API.
+       */
       const response =
         await fetch(
           "/api/admin/library",
@@ -462,22 +701,59 @@ export default function AdminLibraryPage() {
             headers: {
               Authorization:
                 `Bearer ${token}`,
+
+              "Content-Type":
+                "application/json",
             },
 
             body:
-              formData,
+              JSON.stringify({
+                title:
+                  title.trim(),
+
+                description:
+                  description.trim(),
+
+                category,
+
+                access_type:
+                  accessType,
+
+                file_path:
+                  pdfUpload.path,
+
+                cover_path:
+                  coverPath,
+
+                file_name:
+                  pdf.name,
+
+                file_size_bytes:
+                  pdf.size,
+
+                is_published:
+                  isPublished,
+
+                sort_order:
+                  Number(
+                    sortOrder ||
+                      "0",
+                  ),
+              }),
           },
         );
 
       const result =
-        await response.json();
+        await readApiResponse(
+          response,
+        );
 
       if (
         !response.ok
       ) {
         throw new Error(
           result.error ||
-            "Upload failed.",
+            "Unable to save library resource.",
         );
       }
 
@@ -557,7 +833,9 @@ export default function AdminLibraryPage() {
         );
 
       const result =
-        await response.json();
+        await readApiResponse(
+          response,
+        );
 
       if (
         !response.ok

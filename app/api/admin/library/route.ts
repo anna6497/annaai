@@ -10,18 +10,6 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const MAX_PDF_SIZE =
-  25 * 1024 * 1024;
-
-const MAX_COVER_SIZE =
-  5 * 1024 * 1024;
-
-const ALLOWED_COVER_TYPES = [
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-];
-
 function getBearerToken(
   request: NextRequest,
 ) {
@@ -69,8 +57,11 @@ async function requireAdmin(
   }
 
   const {
-    data: { user },
-    error: userError,
+    data: {
+      user,
+    },
+    error:
+      userError,
   } =
     await admin.auth.getUser(
       token,
@@ -95,11 +86,15 @@ async function requireAdmin(
   }
 
   const {
-    data: profile,
-    error: profileError,
+    data:
+      profile,
+    error:
+      profileError,
   } =
     await admin
-      .from("profiles")
+      .from(
+        "profiles",
+      )
       .select(
         "id,email,role",
       )
@@ -109,7 +104,9 @@ async function requireAdmin(
       )
       .maybeSingle();
 
-  if (profileError) {
+  if (
+    profileError
+  ) {
     console.error(
       "Admin profile check failed:",
       profileError,
@@ -137,7 +134,10 @@ async function requireAdmin(
           .toLowerCase()
       : "";
 
-  if (role !== "admin") {
+  if (
+    role !==
+    "admin"
+  ) {
     return {
       error:
         NextResponse.json(
@@ -159,31 +159,6 @@ async function requireAdmin(
   };
 }
 
-function getExtension(
-  name: string,
-  fallback: string,
-) {
-  const extension =
-    name
-      .split(".")
-      .pop()
-      ?.toLowerCase();
-
-  if (
-    !extension ||
-    extension ===
-      name.toLowerCase()
-  ) {
-    return fallback;
-  }
-
-  return extension
-    .replace(
-      /[^a-z0-9]/g,
-      "",
-    ) || fallback;
-}
-
 export async function GET(
   request: NextRequest,
 ) {
@@ -193,7 +168,9 @@ export async function GET(
         request,
       );
 
-    if ("error" in auth) {
+    if (
+      "error" in auth
+    ) {
       return auth.error;
     }
 
@@ -245,9 +222,12 @@ export async function GET(
 
     return NextResponse.json({
       ok: true,
-      items: data ?? [],
+      items:
+        data ?? [],
     });
-  } catch (error) {
+  } catch (
+    error
+  ) {
     console.error(
       "Admin library GET error:",
       error,
@@ -256,7 +236,8 @@ export async function GET(
     return NextResponse.json(
       {
         error:
-          error instanceof Error
+          error instanceof
+          Error
             ? error.message
             : "Unable to load library.",
       },
@@ -270,16 +251,15 @@ export async function GET(
 export async function POST(
   request: NextRequest,
 ) {
-  let uploadedPdfPath = "";
-  let uploadedCoverPath = "";
-
   try {
     const auth =
       await requireAdmin(
         request,
       );
 
-    if ("error" in auth) {
+    if (
+      "error" in auth
+    ) {
       return auth.error;
     }
 
@@ -287,72 +267,78 @@ export async function POST(
       admin,
     } = auth;
 
-    const formData =
-      await request.formData();
+    const body =
+      await request.json();
 
     const title =
       String(
-        formData.get(
-          "title",
-        ) ?? "",
+        body?.title ??
+          "",
       ).trim();
 
     const description =
       String(
-        formData.get(
-          "description",
-        ) ?? "",
+        body?.description ??
+          "",
       ).trim();
 
     const category =
       String(
-        formData.get(
-          "category",
-        ) ?? "Other",
+        body?.category ??
+          "Other",
       ).trim() ||
       "Other";
 
     const accessType =
       String(
-        formData.get(
-          "access_type",
-        ) ?? "free",
+        body?.access_type ??
+          "free",
       ) === "paid"
         ? "paid"
         : "free";
 
-    const isPublished =
+    const filePath =
       String(
-        formData.get(
-          "is_published",
-        ) ?? "true",
-      ) !== "false";
+        body?.file_path ??
+          "",
+      ).trim();
 
-    const sortValue =
+    const coverPath =
+      String(
+        body?.cover_path ??
+          "",
+      ).trim();
+
+    const fileName =
+      String(
+        body?.file_name ??
+          "",
+      ).trim();
+
+    const fileSize =
       Number(
-        formData.get(
-          "sort_order",
-        ) ?? 0,
+        body?.file_size_bytes ??
+          0,
+      );
+
+    const isPublished =
+      body?.is_published !==
+      false;
+
+    const rawSortOrder =
+      Number(
+        body?.sort_order ??
+          0,
       );
 
     const sortOrder =
       Number.isFinite(
-        sortValue,
+        rawSortOrder,
       )
         ? Math.trunc(
-            sortValue,
+            rawSortOrder,
           )
         : 0;
-
-    const pdf =
-      formData.get(
-        "pdf",
-      );
-
-    const cover =
-      formData.get(
-        "cover",
-      );
 
     if (!title) {
       return NextResponse.json(
@@ -366,13 +352,11 @@ export async function POST(
       );
     }
 
-    if (
-      !(pdf instanceof File)
-    ) {
+    if (!filePath) {
       return NextResponse.json(
         {
           error:
-            "PDF file is required.",
+            "PDF file path is required.",
         },
         {
           status: 400,
@@ -381,13 +365,14 @@ export async function POST(
     }
 
     if (
-      pdf.type !==
-      "application/pdf"
+      !filePath.endsWith(
+        "/document.pdf",
+      )
     ) {
       return NextResponse.json(
         {
           error:
-            "Only PDF files are allowed.",
+            "Invalid PDF storage path.",
         },
         {
           status: 400,
@@ -396,12 +381,15 @@ export async function POST(
     }
 
     if (
-      pdf.size <= 0
+      !Number.isFinite(
+        fileSize,
+      ) ||
+      fileSize <= 0
     ) {
       return NextResponse.json(
         {
           error:
-            "PDF file is empty.",
+            "Invalid PDF file size.",
         },
         {
           status: 400,
@@ -410,8 +398,10 @@ export async function POST(
     }
 
     if (
-      pdf.size >
-      MAX_PDF_SIZE
+      fileSize >
+      25 *
+        1024 *
+        1024
     ) {
       return NextResponse.json(
         {
@@ -424,148 +414,73 @@ export async function POST(
       );
     }
 
-    if (
-      cover instanceof File &&
-      cover.size > 0
-    ) {
-      if (
-        !ALLOWED_COVER_TYPES.includes(
-          cover.type,
-        )
-      ) {
-        return NextResponse.json(
-          {
-            error:
-              "Cover must be JPG, PNG or WEBP.",
-          },
-          {
-            status: 400,
-          },
-        );
-      }
-
-      if (
-        cover.size >
-        MAX_COVER_SIZE
-      ) {
-        return NextResponse.json(
-          {
-            error:
-              "Cover must be 5 MB or smaller.",
-          },
-          {
-            status: 400,
-          },
-        );
-      }
-    }
-
-    const itemId =
-      crypto.randomUUID();
-
-    uploadedPdfPath =
-      `${itemId}/document.pdf`;
-
-    const pdfBuffer =
-      Buffer.from(
-        await pdf.arrayBuffer(),
-      );
-
+    /*
+     * Confirm that the PDF was actually uploaded
+     * before creating the database record.
+     */
     const {
+      data:
+        pdfInfo,
       error:
-        pdfUploadError,
+        pdfInfoError,
     } =
       await admin.storage
         .from(
           "library-files",
         )
-        .upload(
-          uploadedPdfPath,
-          pdfBuffer,
-          {
-            contentType:
-              "application/pdf",
-
-            cacheControl:
-              "3600",
-
-            upsert:
-              false,
-          },
+        .info(
+          filePath,
         );
 
-    if (pdfUploadError) {
-      throw new Error(
-        `PDF upload failed: ${pdfUploadError.message}`,
+    if (
+      pdfInfoError ||
+      !pdfInfo
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Uploaded PDF could not be verified.",
+        },
+        {
+          status: 400,
+        },
       );
     }
 
-    if (
-      cover instanceof File &&
-      cover.size > 0
-    ) {
-      const extension =
-        getExtension(
-          cover.name,
-          cover.type ===
-            "image/png"
-            ? "png"
-            : cover.type ===
-                "image/webp"
-              ? "webp"
-              : "jpg",
-        );
-
-      uploadedCoverPath =
-        `${itemId}/cover.${extension}`;
-
-      const coverBuffer =
-        Buffer.from(
-          await cover.arrayBuffer(),
-        );
-
+    if (coverPath) {
       const {
+        data:
+          coverInfo,
         error:
-          coverUploadError,
+          coverInfoError,
       } =
         await admin.storage
           .from(
             "library-covers",
           )
-          .upload(
-            uploadedCoverPath,
-            coverBuffer,
-            {
-              contentType:
-                cover.type,
-
-              cacheControl:
-                "3600",
-
-              upsert:
-                false,
-            },
+          .info(
+            coverPath,
           );
 
       if (
-        coverUploadError
+        coverInfoError ||
+        !coverInfo
       ) {
-        await admin.storage
-          .from(
-            "library-files",
-          )
-          .remove([
-            uploadedPdfPath,
-          ]);
-
-        throw new Error(
-          `Cover upload failed: ${coverUploadError.message}`,
+        return NextResponse.json(
+          {
+            error:
+              "Uploaded cover could not be verified.",
+          },
+          {
+            status: 400,
+          },
         );
       }
     }
 
     const {
-      data: item,
+      data:
+        item,
       error:
         insertError,
     } =
@@ -574,9 +489,6 @@ export async function POST(
           "library_items",
         )
         .insert({
-          id:
-            itemId,
-
           title,
 
           description:
@@ -589,17 +501,18 @@ export async function POST(
             accessType,
 
           file_path:
-            uploadedPdfPath,
+            filePath,
 
           cover_path:
-            uploadedCoverPath ||
+            coverPath ||
             null,
 
           file_name:
-            pdf.name,
+            fileName ||
+            "document.pdf",
 
           file_size_bytes:
-            pdf.size,
+            fileSize,
 
           is_published:
             isPublished,
@@ -626,24 +539,31 @@ export async function POST(
         )
         .single();
 
-    if (insertError) {
+    if (
+      insertError
+    ) {
+      /*
+       * Database insert failed:
+       * remove newly uploaded objects
+       * so orphan files are not left behind.
+       */
       await admin.storage
         .from(
           "library-files",
         )
         .remove([
-          uploadedPdfPath,
+          filePath,
         ]);
 
       if (
-        uploadedCoverPath
+        coverPath
       ) {
         await admin.storage
           .from(
             "library-covers",
           )
           .remove([
-            uploadedCoverPath,
+            coverPath,
           ]);
       }
 
@@ -659,7 +579,9 @@ export async function POST(
         status: 201,
       },
     );
-  } catch (error) {
+  } catch (
+    error
+  ) {
     console.error(
       "Admin library POST error:",
       error,
@@ -668,9 +590,10 @@ export async function POST(
     return NextResponse.json(
       {
         error:
-          error instanceof Error
+          error instanceof
+          Error
             ? error.message
-            : "Unable to upload library item.",
+            : "Unable to create library item.",
       },
       {
         status: 500,
@@ -688,7 +611,9 @@ export async function DELETE(
         request,
       );
 
-    if ("error" in auth) {
+    if (
+      "error" in auth
+    ) {
       return auth.error;
     }
 
@@ -703,7 +628,9 @@ export async function DELETE(
 
     const id =
       url.searchParams
-        .get("id")
+        .get(
+          "id",
+        )
         ?.trim();
 
     if (!id) {
@@ -719,7 +646,8 @@ export async function DELETE(
     }
 
     const {
-      data: item,
+      data:
+        item,
       error:
         loadError,
     } =
@@ -740,7 +668,9 @@ export async function DELETE(
         )
         .maybeSingle();
 
-    if (loadError) {
+    if (
+      loadError
+    ) {
       throw loadError;
     }
 
@@ -770,7 +700,9 @@ export async function DELETE(
           id,
         );
 
-    if (deleteError) {
+    if (
+      deleteError
+    ) {
       throw deleteError;
     }
 
@@ -801,7 +733,9 @@ export async function DELETE(
     return NextResponse.json({
       ok: true,
     });
-  } catch (error) {
+  } catch (
+    error
+  ) {
     console.error(
       "Admin library DELETE error:",
       error,
@@ -810,7 +744,8 @@ export async function DELETE(
     return NextResponse.json(
       {
         error:
-          error instanceof Error
+          error instanceof
+          Error
             ? error.message
             : "Unable to delete library item.",
       },
