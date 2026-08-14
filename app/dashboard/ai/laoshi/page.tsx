@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import LaoshiCard from "@/components/speaking-practice/LaoshiCard";
-import { getAiSpeakingAccess } from "@/lib/ai-speaking-access";
+import { getLaoshiAccess } from "@/lib/laoshi-access";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +12,8 @@ export const metadata = {
 };
 
 export default async function YourLaoshiPage() {
-  const access = await getAiSpeakingAccess();
+  const access =
+    await getLaoshiAccess();
 
   if (!access.active) {
     return (
@@ -21,17 +22,35 @@ export default async function YourLaoshiPage() {
           <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full border border-cyan-300/20 bg-cyan-400/10 text-4xl">
             🎓
           </div>
-          <h1 className="mt-6 text-3xl font-black">Active Plan Required</h1>
-          <p lang="my" className="mt-4 text-sm leading-8 text-white/55">
-            Your Laoshi features တွေကို အသုံးပြုရန် active AI Speaking
-            plan လိုအပ်ပါတယ်။
-          </p>
-          <Link
-            href="/dashboard/ai/pricing"
-            className="mt-7 flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-emerald-500 to-cyan-500 px-5 py-4 font-black"
+
+          <h1 className="mt-6 text-3xl font-black">
+            Active Plan Required
+          </h1>
+
+          <p
+            lang="my"
+            className="mt-4 text-sm leading-8 text-white/55"
           >
-            View AI Speaking Plans
-          </Link>
+            Your Laoshi features တွေကို အသုံးပြုရန်
+            AI Speaking Plan သို့မဟုတ် Paid HSK Plan
+            လိုအပ်ပါတယ်။
+          </p>
+
+          <div className="mt-7 grid gap-3 sm:grid-cols-2">
+            <Link
+              href="/dashboard/ai/pricing"
+              className="flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-emerald-500 to-cyan-500 px-5 py-4 font-black"
+            >
+              View AI Speaking Plans
+            </Link>
+
+            <Link
+              href="/hsk/store"
+              className="flex w-full items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-400/10 px-5 py-4 font-black text-cyan-100"
+            >
+              View HSK Plans
+            </Link>
+          </div>
         </section>
       </main>
     );
@@ -41,6 +60,7 @@ export default async function YourLaoshiPage() {
     <main className="relative min-h-screen overflow-hidden bg-[#071018] px-4 py-8 text-white sm:px-6 lg:px-8">
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-cyan-500/15 blur-[120px]" />
+
         <div className="absolute -right-32 top-1/4 h-96 w-96 rounded-full bg-emerald-500/15 blur-[120px]" />
       </div>
 
@@ -52,6 +72,7 @@ export default async function YourLaoshiPage() {
           >
             ← Choose AI Partner
           </Link>
+
           <Link
             href="/dashboard/ai/talk"
             className="rounded-xl border border-fuchsia-300/20 bg-fuchsia-400/10 px-4 py-2 text-sm font-bold text-fuchsia-100"
@@ -64,13 +85,32 @@ export default async function YourLaoshiPage() {
           <p className="text-xs font-black uppercase tracking-[0.3em] text-cyan-300">
             Anna AI Teacher
           </p>
+
           <h1 className="mt-4 text-4xl font-black tracking-tight sm:text-5xl">
             🎓 Your Laoshi
           </h1>
-          <p lang="my" className="mt-5 max-w-2xl text-base leading-8 text-white/58">
+
+          <p
+            lang="my"
+            className="mt-5 max-w-2xl text-base leading-8 text-white/58"
+          >
             Pronunciation၊ HSK speaking lessons၊ Smart Review နဲ့
             progress tracking တွေကို တစ်နေရာတည်းမှာ လေ့ကျင့်ပါ။
           </p>
+
+          <div className="mt-6 flex flex-wrap gap-2">
+            {access.aiSpeaking ? (
+              <span className="rounded-full border border-fuchsia-300/20 bg-fuchsia-400/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-fuchsia-100">
+                AI Speaking Access
+              </span>
+            ) : null}
+
+            {access.hskPaid ? (
+              <span className="rounded-full border border-cyan-300/20 bg-cyan-400/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-cyan-100">
+                HSK Paid Access
+              </span>
+            ) : null}
+          </div>
         </header>
 
         <div className="mt-8 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
