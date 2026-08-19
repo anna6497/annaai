@@ -1,587 +1,244 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
 
-import {
-  getUserHskAccess,
-  hasHskLevelAccess,
-} from "@/lib/hsk-access";
+type LearningCategory = {
+  title: string;
+  subtitle: string;
+  description: string;
+  icon: string;
+  href: string;
+  badge?: string;
+};
 
-import type {
-  UserHskAccess,
-} from "@/types/access";
-
-
-const LEVELS = [
-  1, 2, 3, 4, 5, 6, 7, 8, 9,
-] as const;
-
+const categories: LearningCategory[] = [
+  {
+    title: "Flashcards",
+    subtitle: "Vocabulary Flashcards",
+    description:
+      "HSK 1–9 vocabulary ကို Hanzi, Pinyin, Myanmar & English meanings နဲ့ လေ့လာပါ။",
+    icon: "🗂️",
+    href: "/hsk/flashcards",
+    badge: "HSK 1–9",
+  },
+  {
+    title: "Writing",
+    subtitle: "Chinese Characters",
+    description:
+      "HSK level အလိုက် Chinese characters ရေးနည်း၊ stroke practice နဲ့ writing lessons လေ့လာပါ။",
+    icon: "✍️",
+    href: "/hsk/writing",
+    badge: "HSK 1–9",
+  },
+  {
+    title: "Reading & Listening",
+    subtitle: "Stories + Audio",
+    description:
+      "HSK level အလိုက် Chinese stories ဖတ်ပြီး Pinyin, Myanmar translation နဲ့ native-style audio နားထောင်ပါ။",
+    icon: "📖",
+    href: "/hsk/reading",
+    badge: "180 Stories",
+  },
+  {
+    title: "Dictionary",
+    subtitle: "Chinese Dictionary",
+    description:
+      "Hanzi, Pinyin, Myanmar သို့မဟုတ် English နဲ့ Chinese vocabulary ကိုရှာပါ။",
+    icon: "🔎",
+    href: "/hsk/dictionary",
+    badge: "Search",
+  },
+];
 
 export default function HskPage() {
-  const [rows, setRows] =
-    useState<UserHskAccess[]>([]);
-
-  const [loading, setLoading] =
-    useState(true);
-
-
-  useEffect(() => {
-    let active = true;
-
-    getUserHskAccess()
-      .then((data) => {
-        if (active) {
-          setRows(data);
-        }
-      })
-      .catch((error) => {
-        console.error(
-          "Unable to load HSK access:",
-          error,
-        );
-      })
-      .finally(() => {
-        if (active) {
-          setLoading(false);
-        }
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-
   return (
-    <main
-      className="
-        min-h-screen
-        bg-[#09030f]
-        px-5
-        pb-28
-        pt-6
-        text-white
-      "
-    >
-      <section
-        className="
-          mx-auto
-          w-full
-          max-w-lg
-        "
-      >
-        {/* Header */}
-        <header
-          className="
-            flex
-            items-center
-            gap-[14px]
-          "
-        >
-          <div
-            className="
-              flex
-              h-14
-              w-14
-              shrink-0
-              items-center
-              justify-center
-              rounded-[18px]
-              bg-[#281237]
-              text-[26px]
-              text-fuchsia-300
-            "
-          >
-            ▣
+    <main className="min-h-screen bg-[#080011] px-4 pb-32 pt-6 text-white">
+      <div className="mx-auto w-full max-w-3xl">
+
+        {/* =================================================
+            HEADER
+        ================================================= */}
+
+        <header>
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex min-w-0 items-center gap-4">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-fuchsia-300/10 bg-fuchsia-500/15 text-2xl shadow-lg shadow-fuchsia-950/20">
+                学
+              </div>
+
+              <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-fuchsia-300">
+                  HSK 3.0
+                </p>
+
+                <h1 className="mt-1 text-3xl font-black tracking-tight sm:text-4xl">
+                  HSK Learning
+                </h1>
+              </div>
+            </div>
+
+            <Link
+              href="/hsk/store"
+              className="shrink-0 rounded-xl border border-fuchsia-300/20 bg-fuchsia-500/10 px-4 py-2.5 text-xs font-black uppercase tracking-wide text-fuchsia-200 transition hover:bg-fuchsia-500/20"
+            >
+              Store
+            </Link>
           </div>
 
-          <div className="flex-1">
-            <p
-              className="
-                text-[11px]
-                font-extrabold
-                tracking-[0.15em]
-                text-purple-300
-              "
-            >
-              HSK 3.0
-            </p>
-
-            <h1
-              className="
-                mt-[3px]
-                text-[27px]
-                font-extrabold
-                leading-tight
-              "
-            >
-              HSK Learning
-            </h1>
-          </div>
-
-          <Link
-            href="/hsk/store"
-            className="
-              rounded-xl
-              border
-              border-fuchsia-400/20
-              bg-fuchsia-500/10
-              px-3
-              py-2
-              text-[10px]
-              font-black
-              text-fuchsia-200
-            "
+          <p
+            lang="my"
+            className="mt-5 max-w-2xl text-sm font-medium leading-7 text-white/50"
           >
-            STORE
-          </Link>
+            Chinese vocabulary, writing, reading,
+            listening နဲ့ dictionary ကို
+            category အလိုက် လွယ်လွယ်ကူကူ
+            လေ့လာနိုင်ပါတယ်။
+          </p>
         </header>
 
+        {/* =================================================
+            FREE INFORMATION
+        ================================================= */}
 
-        {/* Description */}
-        <p
-          lang="my"
-          className="
-            mt-5
-            text-[14px]
-            leading-[22px]
-            text-[#9c8ca6]
-          "
-        >
-          Hanzi, Pinyin, Myanmar နဲ့
-          English meanings ပါတဲ့ HSK
-          vocabulary တွေကို Flashcards
-          နဲ့ Writing နှစ်မျိုးလုံး
-          လေ့ကျင့်နိုင်ပါတယ်။
-        </p>
+        <section className="mt-6 rounded-[22px] border border-emerald-400/20 bg-emerald-500/[0.07] p-4">
+          <div className="flex items-start gap-4">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-xl">
+              🎁
+            </div>
 
-
-        {/* Free Banner */}
-        <div
-          className="
-            mb-[22px]
-            mt-[19px]
-            flex
-            items-center
-            gap-[11px]
-            rounded-[18px]
-            border
-            border-green-500/20
-            bg-green-500/[0.07]
-            p-[15px]
-          "
-        >
-          <div
-            className="
-              flex
-              h-10
-              w-10
-              shrink-0
-              items-center
-              justify-center
-              rounded-xl
-              bg-green-500/10
-              text-xl
-            "
-          >
-            🎁
-          </div>
-
-          <div className="flex-1">
-            <p
-              className="
-                text-[13px]
-                font-extrabold
-                text-green-200
-              "
-            >
-              HSK 1 is Free
-            </p>
-
-            <p
-              lang="my"
-              className="
-                mt-[3px]
-                text-[11px]
-                leading-[17px]
-                text-[#7fa48c]
-              "
-            >
-              HSK 2–9 ကို website မှာ
-              ဝယ်ထားတဲ့ account နဲ့
-              အလိုအလျောက် sync
-              ဖြစ်ပါတယ်။
-            </p>
-          </div>
-        </div>
-
-
-        {/* Loading */}
-        {loading ? (
-          <div
-            className="
-              flex
-              min-h-[300px]
-              items-center
-              justify-center
-            "
-          >
-            <div className="text-center">
-              <div
-                className="
-                  mx-auto
-                  h-9
-                  w-9
-                  animate-spin
-                  rounded-full
-                  border-4
-                  border-white/10
-                  border-t-fuchsia-400
-                "
-              />
-
-              <p
-                className="
-                  mt-3
-                  text-xs
-                  text-white/40
-                "
-              >
-                Checking your HSK access...
+            <div>
+              <p className="text-sm font-black text-emerald-300">
+                HSK 1 is Free
               </p>
-            </div>
-          </div>
-        ) : (
-          <>
-            {/* Level Grid */}
-            <div
-              className="
-                grid
-                grid-cols-3
-                gap-3
-              "
-            >
-              {LEVELS.map((level) => {
-                const unlocked =
-                  hasHskLevelAccess(
-                    level,
-                    rows,
-                  );
-
-                return (
-                  <Link
-                    key={level}
-                    href={
-                      unlocked
-                        ? `/hsk/flashcards/${level}`
-                        : "/hsk/store"
-                    }
-                    className="
-                      min-h-[158px]
-                      rounded-[19px]
-                      border
-                      border-[#33203d]
-                      bg-[#160b20]
-                      p-[13px]
-                      transition
-                      active:scale-[0.97]
-                      active:opacity-75
-                    "
-                  >
-                    <div
-                      className="
-                        flex
-                        items-center
-                        justify-between
-                      "
-                    >
-                      <p
-                        className="
-                          text-[10px]
-                          font-extrabold
-                          tracking-[0.14em]
-                          text-[#8e7b99]
-                        "
-                      >
-                        HSK
-                      </p>
-
-                      {level === 1 ? (
-                        <span
-                          className="
-                            rounded-lg
-                            bg-green-500/10
-                            px-[5px]
-                            py-[3px]
-                            text-[7px]
-                            font-black
-                            text-green-300
-                          "
-                        >
-                          FREE
-                        </span>
-                      ) : unlocked ? (
-                        <span
-                          className="
-                            flex
-                            h-5
-                            w-5
-                            items-center
-                            justify-center
-                            rounded-full
-                            bg-green-500/10
-                            text-[10px]
-                            text-green-300
-                          "
-                        >
-                          ✓
-                        </span>
-                      ) : (
-                        <span
-                          className="
-                            text-[13px]
-                            text-[#75677f]
-                          "
-                        >
-                          🔒
-                        </span>
-                      )}
-                    </div>
-
-
-                    <p
-                      className="
-                        mt-[10px]
-                        text-[38px]
-                        font-black
-                        leading-none
-                        text-fuchsia-300
-                      "
-                    >
-                      {level}
-                    </p>
-
-
-                    <p
-                      className="
-                        mt-2
-                        text-[11px]
-                        font-bold
-                        text-white
-                      "
-                    >
-                      {unlocked
-                        ? "Flashcards"
-                        : "Locked"}
-                    </p>
-
-
-                    <div
-                      className="
-                        mt-[10px]
-                        flex
-                        items-center
-                        gap-1
-                      "
-                    >
-                      <span
-                        className="
-                          text-[10px]
-                          font-bold
-                          text-purple-300
-                        "
-                      >
-                        {unlocked
-                          ? "Open"
-                          : "Unlock"}
-                      </span>
-
-                      <span
-                        className="
-                          text-[14px]
-                          text-purple-300
-                        "
-                      >
-                        →
-                      </span>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-
-
-            {/* Writing Section */}
-            <div
-              className="
-                mt-7
-                rounded-[22px]
-                border
-                border-[#33203d]
-                bg-[#130a1b]
-                p-5
-              "
-            >
-              <div
-                className="
-                  flex
-                  items-center
-                  gap-3
-                "
-              >
-                <div
-                  className="
-                    flex
-                    h-11
-                    w-11
-                    items-center
-                    justify-center
-                    rounded-[14px]
-                    bg-[#281237]
-                    text-xl
-                  "
-                >
-                  ✍️
-                </div>
-
-                <div>
-                  <p
-                    className="
-                      text-[9px]
-                      font-black
-                      tracking-[0.15em]
-                      text-fuchsia-300
-                    "
-                  >
-                    CHINESE CHARACTERS
-                  </p>
-
-                  <h2
-                    className="
-                      mt-1
-                      text-lg
-                      font-extrabold
-                    "
-                  >
-                    HSK Writing
-                  </h2>
-                </div>
-              </div>
 
               <p
                 lang="my"
-                className="
-                  mt-4
-                  text-[12px]
-                  leading-5
-                  text-[#8e7e98]
-                "
+                className="mt-1 text-xs font-medium leading-5 text-emerald-100/55"
               >
-                Stroke order ကိုကြည့်ပြီး
-                Chinese characters တွေကို
-                တစ်ဆင့်ချင်း လေ့ကျင့်ပါ။
+                HSK 1 Flashcards, Writing နဲ့ Reading
+                & Listening ကို free အသုံးပြုနိုင်ပါတယ်။
+                HSK 2–9 အတွက် ဝယ်ထားတဲ့ account နဲ့
+                access ရရှိပါမယ်။
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* =================================================
+            CATEGORY TITLE
+        ================================================= */}
+
+        <section className="mt-9">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30">
+            Learning Categories
+          </p>
+
+          <h2 className="mt-2 text-xl font-black">
+            What do you want to study?
+          </h2>
+        </section>
+
+        {/* =================================================
+            CATEGORY CARDS
+        ================================================= */}
+
+        <section className="mt-5 grid gap-4 sm:grid-cols-2">
+          {categories.map((category) => (
+            <Link
+              key={category.title}
+              href={category.href}
+              className="group relative overflow-hidden rounded-[26px] border border-white/10 bg-[#160820] p-5 transition duration-200 hover:-translate-y-0.5 hover:border-fuchsia-300/20 hover:bg-[#1b0a27]"
+            >
+              {/* glow */}
+
+              <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-fuchsia-500/[0.06] blur-3xl transition group-hover:bg-fuchsia-500/[0.12]" />
+
+              <div className="relative">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/5 bg-white/[0.05] text-2xl">
+                    {category.icon}
+                  </div>
+
+                  {category.badge ? (
+                    <span className="rounded-full border border-fuchsia-300/10 bg-fuchsia-400/[0.08] px-3 py-1 text-[9px] font-black uppercase tracking-wider text-fuchsia-200/80">
+                      {category.badge}
+                    </span>
+                  ) : null}
+                </div>
+
+                <h3 className="mt-5 text-xl font-black transition group-hover:text-fuchsia-200">
+                  {category.title}
+                </h3>
+
+                <p className="mt-1 text-xs font-bold text-fuchsia-300/55">
+                  {category.subtitle}
+                </p>
+
+                <p
+                  lang="my"
+                  className="mt-4 min-h-[60px] text-xs font-medium leading-6 text-white/40"
+                >
+                  {category.description}
+                </p>
+
+                <div className="mt-5 flex items-center justify-between border-t border-white/5 pt-4">
+                  <span className="text-xs font-black text-fuchsia-300">
+                    Open
+                  </span>
+
+                  <span className="text-lg text-fuchsia-300 transition-transform group-hover:translate-x-1">
+                    →
+                  </span>
+                </div>
+              </div>
+            </Link>
+          ))}
+        </section>
+
+        {/* =================================================
+            QUICK INFO
+        ================================================= */}
+
+        <section className="mt-8 rounded-[26px] border border-white/10 bg-white/[0.025] p-5">
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-white/35">
+            Anna AI HSK
+          </p>
+
+          <div className="mt-4 grid grid-cols-3 divide-x divide-white/10 text-center">
+            <div className="px-2">
+              <p className="text-xl font-black text-fuchsia-300">
+                9
               </p>
 
-              <Link
-                href="/hsk/writing"
-                className="
-                  mt-4
-                  flex
-                  h-12
-                  items-center
-                  justify-center
-                  rounded-[14px]
-                  border
-                  border-fuchsia-400/20
-                  bg-fuchsia-500/10
-                  text-[12px]
-                  font-black
-                  text-fuchsia-200
-                "
-              >
-                Open Writing Practice →
-              </Link>
+              <p className="mt-1 text-[10px] font-bold text-white/30">
+                HSK Levels
+              </p>
             </div>
 
+            <div className="px-2">
+              <p className="text-xl font-black text-fuchsia-300">
+                180
+              </p>
 
-            {/* Store */}
-            <Link
-              href="/hsk/store"
-              className="
-                mt-3
-                flex
-                min-h-[80px]
-                items-center
-                gap-3
-                rounded-[18px]
-                border
-                border-[#183942]
-                bg-[#0c171e]
-                px-[14px]
-              "
-            >
-              <div
-                className="
-                  flex
-                  h-11
-                  w-11
-                  shrink-0
-                  items-center
-                  justify-center
-                  rounded-[13px]
-                  bg-[#10303a]
-                  text-lg
-                "
-              >
-                ◆
-              </div>
+              <p className="mt-1 text-[10px] font-bold text-white/30">
+                Reading Stories
+              </p>
+            </div>
 
-              <div className="flex-1">
-                <p
-                  className="
-                    text-[8px]
-                    font-black
-                    tracking-[0.12em]
-                    text-cyan-300
-                  "
-                >
-                  HSK ACCESS
-                </p>
+            <div className="px-2">
+              <p className="text-xl font-black text-fuchsia-300">
+                4
+              </p>
 
-                <p
-                  className="
-                    mt-1
-                    text-[13px]
-                    font-extrabold
-                  "
-                >
-                  Unlock HSK 2–9
-                </p>
+              <p className="mt-1 text-[10px] font-bold text-white/30">
+                Study Tools
+              </p>
+            </div>
+          </div>
+        </section>
 
-                <p
-                  className="
-                    mt-1
-                    text-[10px]
-                    text-[#849ca2]
-                  "
-                >
-                  Individual levels or Full Package
-                </p>
-              </div>
-
-              <span
-                className="
-                  text-xl
-                  text-[#70868c]
-                "
-              >
-                ›
-              </span>
-            </Link>
-          </>
-        )}
-      </section>
+        <div className="h-10" />
+      </div>
     </main>
   );
 }
