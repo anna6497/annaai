@@ -70,9 +70,7 @@ export default async function WritingLessonPage({
               (character, characterIndex) => (
                 <Link
                   key={`${character.hanzi}-${characterIndex}`}
-                  href={`/hsk/writing/${level}/${encodeURIComponent(
-  character.hanzi,
-)}`}
+                  href={`/hsk/writing/${level}?lesson=${lessonNumber}&character=${characterIndex}`}
                   className="group rounded-2xl border border-slate-200 p-5 transition hover:border-indigo-300 hover:bg-indigo-50/40"
                 >
                   <div className="flex items-start gap-4">
