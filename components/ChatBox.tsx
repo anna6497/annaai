@@ -47,7 +47,7 @@ interface DisplayReply {
 }
 
 interface VoiceUsageStatus {
-  plan: "trial" | "monthly" | "yearly" | "premium";
+  plan: "monthly" | "yearly" | "premium" | "none";
   limitSeconds: number;
   usedSeconds: number;
   remainingSeconds: number;
@@ -1227,9 +1227,15 @@ export default function ChatBox({
       const remainingSeconds = Number(
         response.headers.get("X-Voice-Remaining-Seconds") || "0"
       );
-      const plan =
-        (response.headers.get("X-Voice-Plan") ||
-          "trial") as VoiceUsageStatus["plan"];
+      const rawPlan =
+        response.headers.get("X-Voice-Plan");
+
+      const plan: VoiceUsageStatus["plan"] =
+        rawPlan === "monthly" ||
+        rawPlan === "yearly" ||
+        rawPlan === "premium"
+          ? rawPlan
+          : "none";
 
       setVoiceUsage({
         plan,
@@ -2443,21 +2449,23 @@ export default function ChatBox({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-wide text-purple-300">
-              Daily Voice Usage
+              AI Speaking Usage
             </p>
 
             <p className="mt-2 text-sm text-white/65">
               {isLoadingUsage && !voiceUsage
                 ? "Usage စစ်နေပါတယ်…"
-                : voiceUsage
+                : voiceUsage?.plan &&
+                    voiceUsage.plan !== "none"
                   ? `${voiceUsage.plan.toUpperCase()} · ${formatUsageTime(
                       voiceUsage.remainingSeconds
                     )} ကျန်`
-                  : "Usage information မရသေးပါ။"}
+                  : "Paid AI Speaking plan required."}
             </p>
           </div>
 
-          {voiceUsage && (
+          {voiceUsage &&
+            voiceUsage.plan !== "none" && (
             <div className="min-w-40">
               <div className="h-2 overflow-hidden rounded-full bg-white/10">
                 <div

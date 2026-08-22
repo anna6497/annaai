@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { startVoiceUsage, stopVoiceUsage } from "../../../../lib/voice-usage";
+
+import {
+  startVoiceUsage,
+  stopVoiceUsage,
+} from "../../../../lib/voice-usage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,52 +40,112 @@ PUSH-TO-TALK BEHAVIOR:
 - Do not fill silence with extra speech.
 `.trim();
 
-export async function POST(request: Request) {
+export async function POST(
+  request: Request,
+) {
   let usageStarted = false;
 
   try {
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey =
+      process.env.OPENAI_API_KEY;
 
     if (!apiKey) {
       return NextResponse.json(
-        { error: "OPENAI_API_KEY မတွေ့ပါ။" },
-        { status: 500 }
+        {
+          error:
+            "OPENAI_API_KEY မတွေ့ပါ။",
+        },
+        {
+          status: 500,
+        },
       );
     }
 
-    const usage = await startVoiceUsage();
-    usageStarted = usage.allowed;
+    /*
+     * Paid-only voice access.
+     *
+     * startVoiceUsage() now returns:
+     *
+     * plan:
+     *   monthly | yearly | premium | null
+     *
+     * Trial / unknown plans are rejected
+     * inside voice-usage.ts.
+     */
+    const usage =
+      await startVoiceUsage();
 
-    if (!usage.allowed || usage.remainingSeconds <= 0) {
+    usageStarted =
+      usage.allowed;
+
+    /*
+     * No free trial.
+     *
+     * If user has no valid paid plan,
+     * stop here before creating an
+     * OpenAI Realtime session.
+     */
+    if (
+      !usage.allowed ||
+      !usage.plan ||
+      usage.remainingSeconds <= 0
+    ) {
       return NextResponse.json(
         {
           error:
-            "ဒီနေ့ Voice Usage limit ပြည့်သွားပါပြီ။ မနက်ဖြန် ပြန်သုံးနိုင်ပါတယ်။",
+            usage.plan
+              ? "ဒီနေ့ Voice Usage limit ပြည့်သွားပါပြီ။ မနက်ဖြန် ပြန်သုံးနိုင်ပါတယ်။"
+              : "AI Speaking သုံးရန် Paid Plan လိုအပ်ပါတယ်။",
+
           ...usage,
         },
-        { status: 429 }
+        {
+          status:
+            usage.plan
+              ? 429
+              : 403,
+        },
       );
     }
 
-    const sdp = await request.text();
+    const sdp =
+      await request.text();
 
     if (!sdp.trim()) {
-      await stopVoiceUsage();
+      if (usageStarted) {
+        await stopVoiceUsage();
+      }
+
       return NextResponse.json(
-        { error: "WebRTC SDP မတွေ့ပါ။" },
-        { status: 400 }
+        {
+          error:
+            "WebRTC SDP မတွေ့ပါ။",
+        },
+        {
+          status: 400,
+        },
       );
     }
 
     const sessionConfig = {
       type: "realtime",
-      model: "gpt-realtime-2.1",
-      instructions: ANNA_INSTRUCTIONS,
-      output_modalities: ["audio"],
+
+      model:
+        "gpt-realtime-2.1",
+
+      instructions:
+        ANNA_INSTRUCTIONS,
+
+      output_modalities: [
+        "audio",
+      ],
+
       audio: {
         input: {
           transcription: {
-            model: "gpt-4o-transcribe",
+            model:
+              "gpt-4o-transcribe",
+
             prompt: [
               "The speaker is speaking Mandarin Chinese.",
               "Transcribe the exact spoken words into Simplified Chinese.",
@@ -92,41 +156,77 @@ export async function POST(request: Request) {
               "Do not translate and do not add pinyin.",
             ].join(" "),
           },
+
           turn_detection: {
-            type: "server_vad",
-            threshold: 0.5,
-            prefix_padding_ms: 400,
-            silence_duration_ms: 550,
-            create_response: true,
-            interrupt_response: true,
+            type:
+              "server_vad",
+
+            threshold:
+              0.5,
+
+            prefix_padding_ms:
+              400,
+
+            silence_duration_ms:
+              550,
+
+            create_response:
+              true,
+
+            interrupt_response:
+              true,
           },
         },
+
         output: {
-          voice: "marin",
+          voice:
+            "marin",
         },
       },
     };
 
-    const formData = new FormData();
-    formData.set("sdp", sdp);
-    formData.set("session", JSON.stringify(sessionConfig));
+    const formData =
+      new FormData();
 
-    const response = await fetch(
-      "https://api.openai.com/v1/realtime/calls",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: formData,
-        cache: "no-store",
-      }
+    formData.set(
+      "sdp",
+      sdp,
     );
 
-    const body = await response.text();
+    formData.set(
+      "session",
+      JSON.stringify(
+        sessionConfig,
+      ),
+    );
+
+    const response =
+      await fetch(
+        "https://api.openai.com/v1/realtime/calls",
+        {
+          method:
+            "POST",
+
+          headers: {
+            Authorization:
+              `Bearer ${apiKey}`,
+          },
+
+          body:
+            formData,
+
+          cache:
+            "no-store",
+        },
+      );
+
+    const body =
+      await response.text();
 
     if (!response.ok) {
-      await stopVoiceUsage();
+      if (usageStarted) {
+        await stopVoiceUsage();
+      }
 
       return NextResponse.json(
         {
@@ -134,32 +234,58 @@ export async function POST(request: Request) {
             body ||
             `Realtime session မဖွင့်နိုင်ပါ။ (${response.status})`,
         },
-        { status: response.status }
+        {
+          status:
+            response.status,
+        },
       );
     }
 
-    return new NextResponse(body, {
-      status: 200,
-      headers: {
-        "Content-Type": "application/sdp",
-        "Cache-Control": "no-store, max-age=0",
-        "X-Voice-Plan": usage.plan,
-        "X-Voice-Limit-Seconds": String(
-          usage.limitSeconds
-        ),
-        "X-Voice-Used-Seconds": String(
-          usage.usedSeconds
-        ),
-        "X-Voice-Remaining-Seconds": String(
-          usage.remainingSeconds
-        ),
+    /*
+     * usage.plan is guaranteed
+     * to be non-null here because
+     * the paid-plan guard above
+     * already returned otherwise.
+     */
+    return new NextResponse(
+      body,
+      {
+        status: 200,
+
+        headers: {
+          "Content-Type":
+            "application/sdp",
+
+          "Cache-Control":
+            "no-store, max-age=0",
+
+          "X-Voice-Plan":
+            usage.plan,
+
+          "X-Voice-Limit-Seconds":
+            String(
+              usage.limitSeconds,
+            ),
+
+          "X-Voice-Used-Seconds":
+            String(
+              usage.usedSeconds,
+            ),
+
+          "X-Voice-Remaining-Seconds":
+            String(
+              usage.remainingSeconds,
+            ),
+        },
       },
-    });
+    );
   } catch (error) {
     if (usageStarted) {
       try {
         await stopVoiceUsage();
-      } catch {}
+      } catch {
+        // Ignore cleanup failure.
+      }
     }
 
     const message =
@@ -170,14 +296,18 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error:
-          message === "UNAUTHORIZED"
+          message ===
+          "UNAUTHORIZED"
             ? "Login ဝင်ပြီးမှ Voice သုံးနိုင်ပါတယ်။"
             : message,
       },
       {
         status:
-          message === "UNAUTHORIZED" ? 401 : 500,
-      }
+          message ===
+          "UNAUTHORIZED"
+            ? 401
+            : 500,
+      },
     );
   }
 }
