@@ -1,4 +1,4 @@
-import Link from "next/link";
+	import Link from "next/link";
 
 import PurchaseRequired from "@/components/access/PurchaseRequired";
 import {
@@ -145,11 +145,9 @@ export default async function WritingLessonsPage({
                 <Link
                   href={
                     firstWord
-                      ? `/hsk/writing/${level}?word=${encodeURIComponent(
-                          firstWord.hanzi,
-                        )}&vocabId=${encodeURIComponent(
-                          String(firstWord.id),
-                        )}&lesson=${lesson.id}`
+                      ? `/hsk/writing/${level}/${encodeURIComponent(
+                          firstWord.hanzi, 
+                        )}`
                       : `/hsk/writing/${level}`
                   }
                   className="mt-6 block rounded-2xl bg-fuchsia-600 px-5 py-3 text-center font-black hover:bg-fuchsia-500"

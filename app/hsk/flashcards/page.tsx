@@ -1,22 +1,223 @@
 import Link from "next/link";
 
-export default function FlashcardsPage() {
-  return (
-    <main className="min-h-screen bg-[#090014] text-white p-10">
-      <h1 className="text-4xl font-bold mb-8">
-        HSK Flashcards
-      </h1>
+import {
+  getServerHskAccessMap,
+} from "@/lib/server-hsk-access";
 
-      <div className="grid grid-cols-3 gap-4">
-        {Array.from({ length: 9 }).map((_, i) => (
-          <Link
-            key={i}
-            href={`/hsk/flashcards/${i + 1}`}
-            className="rounded-xl bg-blue-600 p-6 text-center hover:bg-blue-500"
-          >
-            HSK {i + 1}
-          </Link>
-        ))}
+const HSK_LEVELS = [
+  {
+    level: 1,
+    label: "Beginner",
+    description:
+      "Start with essential Chinese vocabulary.",
+  },
+  {
+    level: 2,
+    label: "Beginner",
+    description:
+      "Build your everyday vocabulary.",
+  },
+  {
+    level: 3,
+    label: "Elementary",
+    description:
+      "Learn more useful daily Chinese words.",
+  },
+  {
+    level: 4,
+    label: "Intermediate",
+    description:
+      "Expand your practical Chinese vocabulary.",
+  },
+  {
+    level: 5,
+    label: "Intermediate",
+    description:
+      "Develop stronger vocabulary for real situations.",
+  },
+  {
+    level: 6,
+    label: "Upper Intermediate",
+    description:
+      "Practice more advanced Chinese vocabulary.",
+  },
+  {
+    level: 7,
+    label: "Advanced",
+    description:
+      "Study advanced Chinese vocabulary.",
+  },
+  {
+    level: 8,
+    label: "Advanced",
+    description:
+      "Strengthen high-level Chinese vocabulary.",
+  },
+  {
+    level: 9,
+    label: "Advanced",
+    description:
+      "Master advanced HSK vocabulary.",
+  },
+] as const;
+
+export default async function FlashcardsPage() {
+  const accessMap =
+    await getServerHskAccessMap();
+
+  return (
+    <main className="min-h-screen bg-[#080011] px-4 pb-32 pt-6 text-white">
+      <div className="mx-auto w-full max-w-4xl">
+
+        <header>
+          <div className="flex items-center justify-between gap-4">
+            <Link
+              href="/hsk"
+              className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold text-white/60 transition hover:bg-white/10 hover:text-white"
+            >
+              ← HSK
+            </Link>
+
+            <span className="rounded-full border border-fuchsia-300/10 bg-fuchsia-500/[0.08] px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-fuchsia-200">
+              Flashcards
+            </span>
+          </div>
+
+          <div className="mt-8">
+            <div className="flex items-center gap-4">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-fuchsia-300/10 bg-fuchsia-500/10 text-2xl">
+                🃏
+              </div>
+
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-fuchsia-300">
+                  HSK 3.0
+                </p>
+
+                <h1 className="mt-1 text-2xl font-black sm:text-3xl">
+                  HSK Flashcards
+                </h1>
+              </div>
+            </div>
+
+            <p
+              lang="my"
+              className="mt-4 max-w-2xl text-sm font-medium leading-7 text-white/45"
+            >
+              HSK Level 1 မှ 9 အထိ vocabulary
+              တွေကို Flashcards နဲ့ လေ့လာနိုင်ပါတယ်။
+              လေ့လာချင်တဲ့ HSK Level ကိုရွေးပါ။
+            </p>
+          </div>
+        </header>
+
+        <section className="mt-7 rounded-[22px] border border-fuchsia-300/10 bg-gradient-to-r from-fuchsia-500/[0.08] to-purple-500/[0.03] px-5 py-4">
+          <div className="flex items-start gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-fuchsia-500/10">
+              💡
+            </div>
+
+            <div>
+              <p className="text-xs font-black text-fuchsia-200">
+                Choose your HSK level
+              </p>
+
+              <p
+                lang="my"
+                className="mt-1 text-[11px] font-medium leading-5 text-white/40"
+              >
+                FREE / UNLOCKED / LOCKED status ကို
+                account access အတိုင်းပြထားပါတယ်။
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section className="mt-7">
+          <div className="mb-4 flex items-end justify-between">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-fuchsia-300">
+                Levels
+              </p>
+
+              <h2 className="mt-1 text-lg font-black">
+                HSK 1–9
+              </h2>
+            </div>
+
+            <span className="text-[10px] font-bold text-white/25">
+              9 Levels
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {HSK_LEVELS.map((item) => {
+              const unlocked =
+                accessMap[item.level];
+
+              const isFree =
+                item.level === 1;
+
+              return (
+                <Link
+                  key={item.level}
+                  href={`/hsk/flashcards/${item.level}`}
+                  className="group relative min-h-[185px] overflow-hidden rounded-[24px] border border-white/10 bg-[#16091f] p-5 transition duration-200 hover:-translate-y-1 hover:border-fuchsia-300/25 hover:bg-[#1c0b27]"
+                >
+                  <div className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-fuchsia-500/10 blur-2xl transition group-hover:bg-fuchsia-500/20" />
+
+                  <div className="relative flex items-start justify-between">
+                    <span className="text-[9px] font-black uppercase tracking-[0.15em] text-white/35">
+                      HSK
+                    </span>
+
+                    {isFree ? (
+                      <span className="rounded-full border border-emerald-300/10 bg-emerald-500/10 px-2 py-1 text-[8px] font-black uppercase text-emerald-300">
+                        FREE
+                      </span>
+                    ) : unlocked ? (
+                      <span className="rounded-full border border-emerald-300/10 bg-emerald-500/10 px-2 py-1 text-[8px] font-black uppercase text-emerald-300">
+                        ✓ UNLOCKED
+                      </span>
+                    ) : (
+                      <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[8px] font-black uppercase text-white/35">
+                        🔒 LOCKED
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="relative mt-3">
+                    <p className="bg-gradient-to-r from-fuchsia-300 to-purple-300 bg-clip-text text-4xl font-black text-transparent">
+                      {item.level}
+                    </p>
+
+                    <p className="mt-1 text-xs font-black text-white/85">
+                      {item.label}
+                    </p>
+                  </div>
+
+                  <p className="relative mt-3 line-clamp-2 text-[10px] font-medium leading-5 text-white/30">
+                    {item.description}
+                  </p>
+
+                  <div className="relative mt-4 flex items-center justify-between">
+                    <span className="text-[10px] font-black text-fuchsia-300">
+                      {unlocked
+                        ? "Open Flashcards"
+                        : "View Access"}
+                    </span>
+
+                    <span className="text-fuchsia-300 transition-transform group-hover:translate-x-1">
+                      →
+                    </span>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+
+        <div className="h-10" />
       </div>
     </main>
   );

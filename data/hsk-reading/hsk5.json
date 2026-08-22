@@ -1,0 +1,862 @@
+[
+  {
+    "id": "hsk5-reading-001",
+    "level": 5,
+    "order": 1,
+    "title": "选择适合自己的生活",
+    "pinyinTitle": "Xuǎnzé shìhé zìjǐ de shēnghuó",
+    "myanmarTitle": "ကိုယ့်နဲ့သင့်တော်တဲ့ ဘဝရွေးချယ်ခြင်း",
+    "category": "daily-life",
+    "difficulty": "medium",
+    "estimatedMinutes": 6,
+    "paragraphs": [
+      "大学毕业以后，我身边的朋友都开始走上不同的生活道路。有的人进入大公司，有的人继续读书，也有人决定回家乡工作。那时候我常常拿自己的生活和别人比较。",
+      "看到朋友升职或者赚得更多，我会怀疑自己是不是走得太慢。后来我才慢慢发现，每个人想要的生活其实并不一样。有些人喜欢稳定，有些人更看重自由，还有些人希望把更多时间留给家人。",
+      "我开始认真问自己，什么样的生活才会让我长期感到舒服。最后我发现，我并不需要完全按照别人的标准来安排自己的人生。",
+      "现在我仍然会关注别人的发展，但是不会像以前那样因为比较而焦虑。对我来说，真正重要的不是走得比别人快，而是清楚自己为什么选择现在这条路。"
+    ],
+    "pinyinParagraphs": [
+      "Dàxué bìyè yǐhòu, wǒ shēnbiān de péngyou dōu kāishǐ zǒushàng bùtóng de shēnghuó dàolù. Yǒu de rén jìnrù dà gōngsī, yǒu de rén jìxù dúshū, yě yǒu rén juédìng huí jiāxiāng gōngzuò. Nà shíhou wǒ chángcháng ná zìjǐ de shēnghuó hé biérén bǐjiào.",
+      "Kàndào péngyou shēngzhí huòzhě zhuàn de gèng duō, wǒ huì huáiyí zìjǐ shì bú shì zǒu de tài màn. Hòulái wǒ cái mànmàn fāxiàn, měi ge rén xiǎng yào de shēnghuó qíshí bìng bù yíyàng. Yǒuxiē rén xǐhuan wěndìng, yǒuxiē rén gèng kànzhòng zìyóu, hái yǒuxiē rén xīwàng bǎ gèng duō shíjiān liú gěi jiārén.",
+      "Wǒ kāishǐ rènzhēn wèn zìjǐ, shénme yàng de shēnghuó cái huì ràng wǒ chángqī gǎndào shūfu. Zuìhòu wǒ fāxiàn, wǒ bìng bù xūyào wánquán ànzhào biérén de biāozhǔn lái ānpái zìjǐ de rénshēng.",
+      "Xiànzài wǒ réngrán huì guānzhù biérén de fāzhǎn, dàn bú huì xiàng yǐqián nàyàng yīnwèi bǐjiào ér jiāolǜ. Duì wǒ láishuō, zhēnzhèng zhòngyào de bú shì zǒu de bǐ biérén kuài, ér shì qīngchu zìjǐ wèishénme xuǎnzé xiànzài zhè tiáo lù."
+    ],
+    "myanmarParagraphs": [
+      "တက္ကသိုလ်ပြီးတော့ ကျွန်မပတ်ဝန်းကျင်ကသူငယ်ချင်းတွေ ဘဝလမ်းကြောင်းမတူတာတွေ စသွားကြတယ်။ တချို့ company ကြီးဝင်တယ်၊ တချို့ ဆက်ပညာသင်တယ်၊ တချို့က ကိုယ့်ဇာတိကိုပြန်ပြီး အလုပ်လုပ်တယ်။ အဲဒီအချိန် ကျွန်မက ကိုယ့်ဘဝကို သူများနဲ့ မကြာခဏနှိုင်းယှဉ်တတ်တယ်။",
+      "သူငယ်ချင်းရာထူးတိုးတာ၊ ဝင်ငွေပိုကောင်းတာမြင်ရင် ကိုယ်ကနှေးနေသလားလို့ သံသယဝင်တယ်။ နောက်မှ လူတိုင်းလိုချင်တဲ့ဘဝ မတူဘူးဆိုတာ တဖြည်းဖြည်းနားလည်လာတယ်။ တချို့က တည်ငြိမ်မှုကိုကြိုက်တယ်၊ တချို့က လွတ်လပ်မှုကိုပိုတန်ဖိုးထားတယ်၊ တချို့က မိသားစုအတွက် အချိန်ပိုထားချင်တယ်။",
+      "နောက်တော့ ဘယ်လိုဘဝမျိုးက ကိုယ့်ကို ရေရှည်သက်တောင့်သက်သာဖြစ်စေမလဲဆိုတာ ကိုယ့်ကိုယ်ကို သေချာမေးလာတယ်။ နောက်ဆုံး သူများရဲ့စံနှုန်းအတိုင်း ကိုယ့်ဘဝကို အပြည့်အဝမစီစဉ်ဖို့လိုဘူးဆိုတာ သိလာတယ်။",
+      "အခုလည်း သူများတိုးတက်တာကြည့်ပေမယ့် အရင်လိုနှိုင်းယှဉ်ပြီး စိတ်ပူတော့မနေဘူး။ ကိုယ့်အတွက် အရေးကြီးတာက သူများထက်မြန်ဖို့မဟုတ်ဘဲ ဘာကြောင့် ဒီလမ်းကိုရွေးထားလဲဆိုတာ ကိုယ်တိုင်ရှင်းလင်းဖို့ပါ။"
+    ],
+    "keywords": [
+      "选择",
+      "生活",
+      "道路",
+      "升职",
+      "比较",
+      "稳定",
+      "自由",
+      "标准",
+      "焦虑",
+      "发展"
+    ],
+    "audioUrl": "/audio/hsk-reading/hsk5/hsk5-reading-001.mp3",
+    "audioText": "大学毕业以后，我身边的朋友都开始走上不同的生活道路。有的人进入大公司，有的人继续读书，也有人决定回家乡工作。那时候我常常拿自己的生活和别人比较。看到朋友升职或者赚得更多，我会怀疑自己是不是走得太慢。后来我才慢慢发现，每个人想要的生活其实并不一样。有些人喜欢稳定，有些人更看重自由，还有些人希望把更多时间留给家人。我开始认真问自己，什么样的生活才会让我长期感到舒服。最后我发现，我并不需要完全按照别人的标准来安排自己的人生。现在我仍然会关注别人的发展，但是不会像以前那样因为比较而焦虑。对我来说，真正重要的不是走得比别人快，而是清楚自己为什么选择现在这条路。"
+  },
+  {
+    "id": "hsk5-reading-002",
+    "level": 5,
+    "order": 2,
+    "title": "一次失败带来的改变",
+    "pinyinTitle": "Yí cì shībài dàilái de gǎibiàn",
+    "myanmarTitle": "ရှုံးနိမ့်မှုတစ်ခုက ယူလာတဲ့ပြောင်းလဲမှု",
+    "category": "daily-life",
+    "difficulty": "medium",
+    "estimatedMinutes": 6,
+    "paragraphs": [
+      "几年前，我申请过一份自己非常想要的工作。为了那次面试，我准备了很长时间，甚至已经开始想象如果被录取以后，新的生活会是什么样子。",
+      "可是最后，公司选择了另外一个人。收到结果的时候，我非常失望，一度觉得自己的能力不够，也不想继续找工作。",
+      "冷静下来以后，我重新回顾了面试过程。我发现自己虽然准备了很多资料，但是在回答问题的时候太紧张，没有很好地表达自己的经验。",
+      "后来我开始专门练习面试表达，也请朋友帮我指出问题。几个月以后，我得到了另一份更适合自己的工作。现在回头看，那次失败虽然让我难过，却也逼着我认真面对自己的不足。"
+    ],
+    "pinyinParagraphs": [
+      "Jǐ nián qián, wǒ shēnqǐng guo yí fèn zìjǐ fēicháng xiǎng yào de gōngzuò. Wèile nà cì miànshì, wǒ zhǔnbèi le hěn cháng shíjiān, shènzhì yǐjīng kāishǐ xiǎngxiàng rúguǒ bèi lùqǔ yǐhòu, xīn de shēnghuó huì shì shénme yàngzi.",
+      "Kěshì zuìhòu, gōngsī xuǎnzé le lìngwài yí ge rén. Shōudào jiéguǒ de shíhou, wǒ fēicháng shīwàng, yídù juéde zìjǐ de nénglì bú gòu, yě bù xiǎng jìxù zhǎo gōngzuò.",
+      "Lěngjìng xiàlái yǐhòu, wǒ chóngxīn huígù le miànshì guòchéng. Wǒ fāxiàn zìjǐ suīrán zhǔnbèi le hěn duō zīliào, dànshì zài huídá wèntí de shíhou tài jǐnzhāng, méiyǒu hěn hǎo de biǎodá zìjǐ de jīngyàn.",
+      "Hòulái wǒ kāishǐ zhuānmén liànxí miànshì biǎodá, yě qǐng péngyou bāng wǒ zhǐchū wèntí. Jǐ ge yuè yǐhòu, wǒ dédào le lìng yí fèn gèng shìhé zìjǐ de gōngzuò. Xiànzài huítóu kàn, nà cì shībài suīrán ràng wǒ nánguò, què yě bīzhe wǒ rènzhēn miànduì zìjǐ de bùzú."
+    ],
+    "myanmarParagraphs": [
+      "လွန်ခဲ့တဲ့နှစ်အနည်းငယ်က ကိုယ်အရမ်းလိုချင်တဲ့အလုပ်တစ်ခုကို လျှောက်ဖူးတယ်။ Interview အတွက် အချိန်အများကြီးပြင်ပြီး အလုပ်ရရင် ဘဝအသစ်ဘယ်လိုဖြစ်မလဲတောင် စိတ်ကူးနေပြီ။",
+      "ဒါပေမယ့် နောက်ဆုံး company က တခြားလူတစ်ယောက်ကိုရွေးလိုက်တယ်။ Result သိရချိန်မှာ အရမ်းစိတ်ပျက်ပြီး ကိုယ့်စွမ်းရည်မလုံလောက်ဘူးလို့ထင်ကာ အလုပ်တောင်ဆက်မရှာချင်တော့ဘူး။",
+      "စိတ်အေးလာတော့ interview process ကိုပြန်စဉ်းစားတယ်။ စာရွက်စာတမ်းအများကြီးပြင်ထားပေမယ့် မေးခွန်းဖြေချိန်မှာ စိတ်လှုပ်ရှားလွန်းလို့ ကိုယ့်အတွေ့အကြုံကို ကောင်းကောင်းမဖော်ပြနိုင်ခဲ့တာသိလာတယ်။",
+      "နောက်တော့ interview speaking ကို သီးသန့်လေ့ကျင့်ပြီး သူငယ်ချင်းတွေကိုလည်း အားနည်းချက်ပြောပေးဖို့တောင်းတယ်။ လအနည်းငယ်ကြာတော့ ကိုယ့်နဲ့ပိုကိုက်တဲ့အလုပ်တစ်ခုရတယ်။ အခု ပြန်ကြည့်ရင် အဲဒီရှုံးနိမ့်မှုက ဝမ်းနည်းစေခဲ့ပေမယ့် ကိုယ့်အားနည်းချက်ကို တကယ်ရင်ဆိုင်စေခဲ့တယ်။"
+    ],
+    "keywords": [
+      "失败",
+      "申请",
+      "录取",
+      "结果",
+      "失望",
+      "冷静",
+      "回顾",
+      "表达",
+      "经验",
+      "不足"
+    ],
+    "audioUrl": "/audio/hsk-reading/hsk5/hsk5-reading-002.mp3",
+    "audioText": "几年前，我申请过一份自己非常想要的工作。为了那次面试，我准备了很长时间，甚至已经开始想象如果被录取以后，新的生活会是什么样子。可是最后，公司选择了另外一个人。收到结果的时候，我非常失望，一度觉得自己的能力不够，也不想继续找工作。冷静下来以后，我重新回顾了面试过程。我发现自己虽然准备了很多资料，但是在回答问题的时候太紧张，没有很好地表达自己的经验。后来我开始专门练习面试表达，也请朋友帮我指出问题。几个月以后，我得到了另一份更适合自己的工作。现在回头看，那次失败虽然让我难过，却也逼着我认真面对自己的不足。"
+  },
+  {
+    "id": "hsk5-reading-003",
+    "level": 5,
+    "order": 3,
+    "title": "我为什么坚持学习中文",
+    "pinyinTitle": "Wǒ wèishénme jiānchí xuéxí Zhōngwén",
+    "myanmarTitle": "တရုတ်စာကို ဘာကြောင့်ဆက်လေ့လာနေလဲ",
+    "category": "school",
+    "difficulty": "medium",
+    "estimatedMinutes": 6,
+    "paragraphs": [
+      "刚开始学习中文的时候，我只是因为觉得这门语言很有意思。可是学了一段时间以后，我才发现真正坚持下来并不容易。",
+      "有时候我会觉得自己学了很多，却还是听不懂别人自然的对话。也有时候，我明明知道很多词，说话的时候却突然想不起来。",
+      "我曾经想过暂停一段时间，但是每次真正放下以后，又会想念学习中文的感觉。因为通过这门语言，我认识了新的朋友，也接触到了以前不了解的文化和生活方式。",
+      "现在我不再要求自己每天都明显进步。我更希望把中文变成生活的一部分。只要每天还能听一点、读一点、说一点，我就愿意继续走下去。"
+    ],
+    "pinyinParagraphs": [
+      "Gāng kāishǐ xuéxí Zhōngwén de shíhou, wǒ zhǐshì yīnwèi juéde zhè mén yǔyán hěn yǒuyìsi. Kěshì xué le yí duàn shíjiān yǐhòu, wǒ cái fāxiàn zhēnzhèng jiānchí xiàlái bìng bù róngyì.",
+      "Yǒu shíhou wǒ huì juéde zìjǐ xué le hěn duō, què háishi tīng bù dǒng biérén zìrán de duìhuà. Yě yǒu shíhou, wǒ míngmíng zhīdào hěn duō cí, shuōhuà de shíhou què tūrán xiǎng bù qǐlái.",
+      "Wǒ céngjīng xiǎng guo zàntíng yí duàn shíjiān, dànshì měi cì zhēnzhèng fàngxià yǐhòu, yòu huì xiǎngniàn xuéxí Zhōngwén de gǎnjué. Yīnwèi tōngguò zhè mén yǔyán, wǒ rènshi le xīn de péngyou, yě jiēchù dào le yǐqián bù liǎojiě de wénhuà hé shēnghuó fāngshì.",
+      "Xiànzài wǒ bú zài yāoqiú zìjǐ měitiān dōu míngxiǎn jìnbù. Wǒ gèng xīwàng bǎ Zhōngwén biàn chéng shēnghuó de yí bùfen. Zhǐyào měitiān hái néng tīng yìdiǎn, dú yìdiǎn, shuō yìdiǎn, wǒ jiù yuànyì jìxù zǒu xiàqù."
+    ],
+    "myanmarParagraphs": [
+      "တရုတ်စာစလေ့လာတုန်းက ဒီဘာသာစကားစိတ်ဝင်စားဖို့ကောင်းလို့ပဲ သင်ခဲ့တယ်။ ဒါပေမယ့် အချိန်ကြာလာတော့ တကယ်မပျက်မကွက်ဆက်လုပ်ဖို့ မလွယ်ဘူးဆိုတာ သိလာတယ်။",
+      "တစ်ခါတလေ အများကြီးသင်ထားပေမယ့် native conversation နားမလည်သေးဘူးလို့ ခံစားရတယ်။ တစ်ခါတလေ စကားလုံးအများကြီးသိပေမယ့် ပြောချိန်ရောက်တော့ ချက်ချင်းမမှတ်မိဘူး။",
+      "ခဏရပ်ဖို့တောင် စဉ်းစားဖူးပေမယ့် တကယ်နားလိုက်ရင် တရုတ်စာလေ့လာရတဲ့ခံစားချက်ကို ပြန်လွမ်းတယ်။ ဒီဘာသာစကားကြောင့် သူငယ်ချင်းအသစ်တွေ၊ ယဉ်ကျေးမှုအသစ်တွေ၊ နေထိုင်ပုံအသစ်တွေ သိလာခဲ့တယ်။",
+      "အခုတော့ နေ့တိုင်းတိုးတက်ရမယ်ဆိုပြီး ကိုယ့်ကိုဖိအားမပေးတော့ဘူး။ တရုတ်စာကို နေ့စဉ်ဘဝထဲက အစိတ်အပိုင်းတစ်ခုဖြစ်ချင်တယ်။ နေ့တိုင်း နည်းနည်းနားထောင်၊ ဖတ်၊ ပြောနိုင်နေသေးရင် ဆက်သင်ချင်တယ်။"
+    ],
+    "keywords": [
+      "坚持",
+      "自然",
+      "对话",
+      "暂停",
+      "接触",
+      "文化",
+      "方式",
+      "明显",
+      "要求",
+      "部分"
+    ],
+    "audioUrl": "/audio/hsk-reading/hsk5/hsk5-reading-003.mp3",
+    "audioText": "刚开始学习中文的时候，我只是因为觉得这门语言很有意思。可是学了一段时间以后，我才发现真正坚持下来并不容易。有时候我会觉得自己学了很多，却还是听不懂别人自然的对话。也有时候，我明明知道很多词，说话的时候却突然想不起来。我曾经想过暂停一段时间，但是每次真正放下以后，又会想念学习中文的感觉。因为通过这门语言，我认识了新的朋友，也接触到了以前不了解的文化和生活方式。现在我不再要求自己每天都明显进步。我更希望把中文变成生活的一部分。只要每天还能听一点、读一点、说一点，我就愿意继续走下去。"
+  },
+  {
+    "id": "hsk5-reading-004",
+    "level": 5,
+    "order": 4,
+    "title": "陌生城市里的温暖",
+    "pinyinTitle": "Mòshēng chéngshì lǐ de wēnnuǎn",
+    "myanmarTitle": "မရင်းနှီးတဲ့မြို့က နွေးထွေးမှု",
+    "category": "travel",
+    "difficulty": "medium",
+    "estimatedMinutes": 6,
+    "paragraphs": [
+      "第一次一个人去国外旅行的时候，我对那个城市完全不熟悉。虽然提前准备了地图和交通信息，但是到了以后还是遇到了不少问题。",
+      "有一天晚上，我坐错了车，下车以后发现自己离酒店很远。手机的电也快没有了，周围的店大部分已经关门。",
+      "我正不知道怎么办的时候，一位当地的阿姨走过来问我是不是需要帮助。她虽然不会说英语，但还是耐心地用手机地图帮我找到正确的车站。",
+      "最后她甚至陪我走了十几分钟。我和她只见过那一次，以后可能也不会再见面，但是那天的帮助让我对那个陌生城市留下了非常温暖的记忆。"
+    ],
+    "pinyinParagraphs": [
+      "Dì yī cì yí ge rén qù guówài lǚxíng de shíhou, wǒ duì nàge chéngshì wánquán bù shúxī. Suīrán tíqián zhǔnbèi le dìtú hé jiāotōng xìnxī, dànshì dào le yǐhòu háishi yùdào le bù shǎo wèntí.",
+      "Yǒu yì tiān wǎnshang, wǒ zuò cuò le chē, xià chē yǐhòu fāxiàn zìjǐ lí jiǔdiàn hěn yuǎn. Shǒujī de diàn yě kuài méiyǒu le, zhōuwéi de diàn dà bùfen yǐjīng guānmén.",
+      "Wǒ zhèng bù zhīdào zěnme bàn de shíhou, yí wèi dāngdì de āyí zǒu guòlái wèn wǒ shì bú shì xūyào bāngzhù. Tā suīrán bú huì shuō Yīngyǔ, dàn háishi nàixīn de yòng shǒujī dìtú bāng wǒ zhǎodào zhèngquè de chēzhàn.",
+      "Zuìhòu tā shènzhì péi wǒ zǒu le shí jǐ fēnzhōng. Wǒ hé tā zhǐ jiàn guo nà yí cì, yǐhòu kěnéng yě bú huì zài jiànmiàn, dànshì nà tiān de bāngzhù ràng wǒ duì nàge mòshēng chéngshì liúxià le fēicháng wēnnuǎn de jìyì."
+    ],
+    "myanmarParagraphs": [
+      "ပထမဆုံး နိုင်ငံခြားကို တစ်ယောက်တည်းခရီးသွားတုန်းက အဲဒီမြို့ကိုလုံးဝမသိဘူး။ မြေပုံနဲ့ သယ်ယူပို့ဆောင်ရေးအချက်အလက်တွေ ကြိုပြင်ထားပေမယ့် ရောက်တော့ ပြဿနာတချို့ကြုံတယ်။",
+      "တစ်ညမှာ ကားမှားစီးပြီး ဆင်းချိန်မှာ ဟိုတယ်နဲ့အရမ်းဝေးနေတယ်။ ဖုန်း battery လည်းကုန်တော့မယ်၊ အနားကဆိုင်အများစုလည်းပိတ်နေပြီ။",
+      "ဘာလုပ်ရမလဲမသိတဲ့အချိန် ဒေသခံအဒေါ်တစ်ယောက်လာပြီး အကူအညီလိုလားမေးတယ်။ အင်္ဂလိပ်မပြောတတ်ပေမယ့် ဖုန်းမြေပုံနဲ့ ဘူတာမှန်ကို စိတ်ရှည်ရှည်ကူရှာပေးတယ်။",
+      "နောက်ဆုံး မိနစ် ၁၀ ကျော်တောင် အတူလိုက်ပေးတယ်။ တစ်ခါပဲတွေ့ဖူးပြီး နောက်ထပ်မတွေ့နိုင်ပေမယ့် အဲဒီအကူအညီကြောင့် မရင်းနှီးတဲ့မြို့တစ်မြို့အပေါ် နွေးထွေးတဲ့အမှတ်တရကျန်ခဲ့တယ်။"
+    ],
+    "keywords": [
+      "陌生",
+      "国外",
+      "交通",
+      "周围",
+      "当地",
+      "耐心",
+      "正确",
+      "甚至",
+      "记忆",
+      "温暖"
+    ],
+    "audioUrl": "/audio/hsk-reading/hsk5/hsk5-reading-004.mp3",
+    "audioText": "第一次一个人去国外旅行的时候，我对那个城市完全不熟悉。虽然提前准备了地图和交通信息，但是到了以后还是遇到了不少问题。有一天晚上，我坐错了车，下车以后发现自己离酒店很远。手机的电也快没有了，周围的店大部分已经关门。我正不知道怎么办的时候，一位当地的阿姨走过来问我是不是需要帮助。她虽然不会说英语，但还是耐心地用手机地图帮我找到正确的车站。最后她甚至陪我走了十几分钟。我和她只见过那一次，以后可能也不会再见面，但是那天的帮助让我对那个陌生城市留下了非常温暖的记忆。"
+  },
+  {
+    "id": "hsk5-reading-005",
+    "level": 5,
+    "order": 5,
+    "title": "重新开始并不晚",
+    "pinyinTitle": "Chóngxīn kāishǐ bìng bù wǎn",
+    "myanmarTitle": "ပြန်စဖို့ နောက်မကျသေးဘူး",
+    "category": "daily-life",
+    "difficulty": "medium",
+    "estimatedMinutes": 6,
+    "paragraphs": [
+      "三十岁那年，我认识了一位刚开始学习画画的朋友。她以前从来没有接受过专业训练，只是一直喜欢画画。",
+      "开始的时候，她很担心自己是不是太晚了。因为网上很多优秀的画家从小时候就开始学习，她觉得自己永远追不上他们。",
+      "后来她决定不再想“来不来得及”，而是先每天画一点。几年以后，她虽然没有成为专业画家，却已经可以画出让自己满意的作品。",
+      "她的经历也影响了我。我们常常因为年龄、经验或者过去的选择觉得自己没有机会了，但很多事情真正的问题不是开始得晚，而是根本没有开始。"
+    ],
+    "pinyinParagraphs": [
+      "Sānshí suì nà nián, wǒ rènshi le yí wèi gāng kāishǐ xuéxí huàhuà de péngyou. Tā yǐqián cónglái méiyǒu jiēshòu guo zhuānyè xùnliàn, zhǐshì yìzhí xǐhuan huàhuà.",
+      "Kāishǐ de shíhou, tā hěn dānxīn zìjǐ shì bú shì tài wǎn le. Yīnwèi wǎngshàng hěn duō yōuxiù de huàjiā cóng xiǎoshíhou jiù kāishǐ xuéxí, tā juéde zìjǐ yǒngyuǎn zhuī bù shàng tāmen.",
+      "Hòulái tā juédìng bú zài xiǎng 'lái bù lái de jí', ér shì xiān měitiān huà yìdiǎn. Jǐ nián yǐhòu, tā suīrán méiyǒu chéngwéi zhuānyè huàjiā, què yǐjīng kěyǐ huà chū ràng zìjǐ mǎnyì de zuòpǐn.",
+      "Tā de jīnglì yě yǐngxiǎng le wǒ. Wǒmen chángcháng yīnwèi niánlíng, jīngyàn huòzhě guòqù de xuǎnzé juéde zìjǐ méiyǒu jīhuì le, dàn hěn duō shìqing zhēnzhèng de wèntí bú shì kāishǐ de wǎn, ér shì gēnběn méiyǒu kāishǐ."
+    ],
+    "myanmarParagraphs": [
+      "အသက် ၃၀ မှာ ပန်းချီစသင်တဲ့သူငယ်ချင်းတစ်ယောက်နဲ့ ရင်းနှီးခဲ့တယ်။ အရင်က professional training လုံးဝမယူဖူးဘဲ ပန်းချီကိုကြိုက်တာပဲရှိတယ်။",
+      "အစမှာ နောက်ကျနေပြီလားဆိုပြီး အရမ်းစိုးရိမ်တယ်။ Online က အနုပညာရှင်ကောင်းတော်တော်များများက ကလေးဘဝကတည်းက စသင်ထားကြလို့ သူတို့ကို ဘယ်တော့မှမမီနိုင်ဘူးလို့ထင်တယ်။",
+      "နောက်တော့ “နောက်ကျသလား” ဆိုတာမစဉ်းစားဘဲ နေ့တိုင်းနည်းနည်းဆွဲဖို့ဆုံးဖြတ်တယ်။ နှစ်အနည်းငယ်ကြာတော့ professional မဖြစ်သေးပေမယ့် ကိုယ်တိုင်ကျေနပ်ရတဲ့ ပန်းချီတွေထုတ်နိုင်လာတယ်။",
+      "သူ့အတွေ့အကြုံက ကျွန်မကိုလည်း သက်ရောက်စေတယ်။ အသက်၊ အတွေ့အကြုံ၊ အရင်ဆုံးဖြတ်ချက်တွေကြောင့် အခွင့်အရေးမရှိတော့ဘူးလို့ထင်တတ်ပေမယ့် တကယ့်ပြဿနာက နောက်ကျမှစတာမဟုတ်ဘဲ လုံးဝမစတာပါ။"
+    ],
+    "keywords": [
+      "重新",
+      "专业",
+      "训练",
+      "优秀",
+      "追上",
+      "满意",
+      "作品",
+      "影响",
+      "年龄",
+      "根本"
+    ],
+    "audioUrl": "/audio/hsk-reading/hsk5/hsk5-reading-005.mp3",
+    "audioText": "三十岁那年，我认识了一位刚开始学习画画的朋友。她以前从来没有接受过专业训练，只是一直喜欢画画。开始的时候，她很担心自己是不是太晚了。因为网上很多优秀的画家从小时候就开始学习，她觉得自己永远追不上他们。后来她决定不再想来不来得及，而是先每天画一点。几年以后，她虽然没有成为专业画家，却已经可以画出让自己满意的作品。她的经历也影响了我。我们常常因为年龄、经验或者过去的选择觉得自己没有机会了，但很多事情真正的问题不是开始得晚，而是根本没有开始。"
+  },
+  {
+    "id": "hsk5-reading-006",
+    "level": 5,
+    "order": 6,
+    "title": "一次重要的职业选择",
+    "pinyinTitle": "Yí cì zhòngyào de zhíyè xuǎnzé",
+    "myanmarTitle": "အရေးကြီးတဲ့ အလုပ်အကိုင်ရွေးချယ်မှု",
+    "category": "daily-life",
+    "difficulty": "medium",
+    "estimatedMinutes": 6,
+    "paragraphs": [
+      "工作几年以后，我同时收到过两个工作机会。第一家公司工资比较高，职位听起来也更好；第二家公司工资一般，但是工作内容更符合我的兴趣。",
+      "刚开始，我几乎马上想选第一份工作。毕竟更高的收入看起来是一个很明显的优点。",
+      "可是认真了解以后，我发现第一份工作的加班很多，而且学习空间不大。第二家公司虽然工资低一些，却能让我接触新的项目，也有机会跟经验丰富的人一起工作。",
+      "最后我选择了第二份工作。这个决定并没有让我立刻赚更多钱，但是几年以后，我发现当时学到的经验给我带来了更多机会。职业选择有时候不能只看眼前的数字。"
+    ],
+    "pinyinParagraphs": [
+      "Gōngzuò jǐ nián yǐhòu, wǒ tóngshí shōudào guo liǎng ge gōngzuò jīhuì. Dì yī jiā gōngsī gōngzī bǐjiào gāo, zhíwèi tīng qǐlái yě gèng hǎo; dì èr jiā gōngsī gōngzī yìbān, dànshì gōngzuò nèiróng gèng fúhé wǒ de xìngqù.",
+      "Gāng kāishǐ, wǒ jīhū mǎshàng xiǎng xuǎn dì yī fèn gōngzuò. Bìjìng gèng gāo de shōurù kàn qǐlái shì yí ge hěn míngxiǎn de yōudiǎn.",
+      "Kěshì rènzhēn liǎojiě yǐhòu, wǒ fāxiàn dì yī fèn gōngzuò de jiābān hěn duō, érqiě xuéxí kōngjiān bú dà. Dì èr jiā gōngsī suīrán gōngzī dī yìxiē, què néng ràng wǒ jiēchù xīn de xiàngmù, yě yǒu jīhuì gēn jīngyàn fēngfù de rén yìqǐ gōngzuò.",
+      "Zuìhòu wǒ xuǎnzé le dì èr fèn gōngzuò. Zhège juédìng bìng méiyǒu ràng wǒ lìkè zhuàn gèng duō qián, dànshì jǐ nián yǐhòu, wǒ fāxiàn dāngshí xué dào de jīngyàn gěi wǒ dàilái le gèng duō jīhuì. Zhíyè xuǎnzé yǒu shíhou bù néng zhǐ kàn yǎnqián de shùzì."
+    ],
+    "myanmarParagraphs": [
+      "အလုပ်လုပ်တာနှစ်အနည်းငယ်ကြာတော့ အလုပ်အခွင့်အရေးနှစ်ခု တစ်ချိန်တည်းရဖူးတယ်။ ပထမ company က လစာပိုများပြီး position လည်းကောင်းတယ်။ ဒုတိယ company က လစာပုံမှန်ပေမယ့် အလုပ်က ကိုယ့်စိတ်ဝင်စားမှုနဲ့ပိုကိုက်တယ်။",
+      "အစမှာတော့ ပထမအလုပ်ကို ချက်ချင်းရွေးချင်ခဲ့တယ်။ ဝင်ငွေပိုများတာက အားသာချက်ကြီးတစ်ခုလိုမြင်ရတယ်။",
+      "ဒါပေမယ့် သေချာလေ့လာတော့ ပထမအလုပ်က overtime များပြီး အသစ်သင်ဖို့နေရာနည်းတယ်။ ဒုတိယအလုပ်က လစာနည်းပေမယ့် project အသစ်တွေ၊ အတွေ့အကြုံရှိသူတွေနဲ့အလုပ်လုပ်ခွင့်ရှိတယ်။",
+      "နောက်ဆုံး ဒုတိယအလုပ်ကိုရွေးတယ်။ ချက်ချင်းပိုက်ဆံပိုမရပေမယ့် နှစ်အနည်းငယ်ကြာတော့ အဲဒီအတွေ့အကြုံက အခွင့်အရေးပိုများလာစေတယ်။ Career ရွေးချယ်ရာမှာ လက်ရှိနံပါတ်ပဲကြည့်လို့မရဘူး။"
+    ],
+    "keywords": [
+      "职业",
+      "同时",
+      "职位",
+      "符合",
+      "收入",
+      "空间",
+      "项目",
+      "丰富",
+      "眼前",
+      "机会"
+    ],
+    "audioUrl": "/audio/hsk-reading/hsk5/hsk5-reading-006.mp3",
+    "audioText": "工作几年以后，我同时收到过两个工作机会。第一家公司工资比较高，职位听起来也更好；第二家公司工资一般，但是工作内容更符合我的兴趣。刚开始，我几乎马上想选第一份工作。毕竟更高的收入看起来是一个很明显的优点。可是认真了解以后，我发现第一份工作的加班很多，而且学习空间不大。第二家公司虽然工资低一些，却能让我接触新的项目，也有机会跟经验丰富的人一起工作。最后我选择了第二份工作。这个决定并没有让我立刻赚更多钱，但是几年以后，我发现当时学到的经验给我带来了更多机会。职业选择有时候不能只看眼前的数字。"
+  },
+  {
+    "id": "hsk5-reading-007",
+    "level": 5,
+    "order": 7,
+    "title": "与不同的人相处",
+    "pinyinTitle": "Yǔ bùtóng de rén xiāngchǔ",
+    "myanmarTitle": "မတူညီတဲ့လူတွေနဲ့ ပေါင်းသင်းခြင်း",
+    "category": "friends",
+    "difficulty": "medium",
+    "estimatedMinutes": 6,
+    "paragraphs": [
+      "刚开始工作的时候，我以为只要大家都认真做事，就很容易合作。后来才发现，每个人的性格、习惯和表达方式都不同。",
+      "有的同事喜欢直接说问题，有的人说话比较委婉；有的人做事情很快，有的人则习惯反复检查。",
+      "以前遇到和自己不同的人，我会觉得对方很难相处。后来我慢慢学会先了解对方为什么这样做，而不是马上判断对错。",
+      "我发现，当我们愿意调整自己的沟通方式以后，很多原来觉得很大的矛盾其实会变小。和不同的人相处，本身也是一种需要学习的能力。"
+    ],
+    "pinyinParagraphs": [
+      "Gāng kāishǐ gōngzuò de shíhou, wǒ yǐwéi zhǐyào dàjiā dōu rènzhēn zuòshì, jiù hěn róngyì hézuò. Hòulái cái fāxiàn, měi ge rén de xìnggé, xíguàn hé biǎodá fāngshì dōu bùtóng.",
+      "Yǒu de tóngshì xǐhuan zhíjiē shuō wèntí, yǒu de rén shuōhuà bǐjiào wěiwǎn; yǒu de rén zuò shìqing hěn kuài, yǒu de rén zé xíguàn fǎnfù jiǎnchá.",
+      "Yǐqián yùdào hé zìjǐ bùtóng de rén, wǒ huì juéde duìfāng hěn nán xiāngchǔ. Hòulái wǒ mànmàn xuéhuì xiān liǎojiě duìfāng wèishénme zhèyàng zuò, ér bú shì mǎshàng pànduàn duìcuò.",
+      "Wǒ fāxiàn, dāng wǒmen yuànyì tiáozhěng zìjǐ de gōutōng fāngshì yǐhòu, hěn duō yuánlái juéde hěn dà de máodùn qíshí huì biàn xiǎo. Hé bùtóng de rén xiāngchǔ, běnshēn yě shì yì zhǒng xūyào xuéxí de nénglì."
+    ],
+    "myanmarParagraphs": [
+      "အလုပ်စဝင်တုန်းက လူတိုင်းအလုပ်ကိုစိတ်ထားရင် အတူလုပ်ဖို့လွယ်မယ်ထင်တယ်။ နောက်မှ လူတိုင်းရဲ့ personality, habit နဲ့ ပြောဆိုပုံမတူဘူးဆိုတာ သိလာတယ်။",
+      "တချို့လူက ပြဿနာကို တိုက်ရိုက်ပြောတယ်၊ တချို့က ပျော့ပျော့ပြောတယ်။ တချို့က မြန်မြန်လုပ်တယ်၊ တချို့ကတော့ ပြန်စစ်ပြီးမှအလုပ်ပြီးချင်တယ်။",
+      "အရင်က ကိုယ်နဲ့မတူတဲ့လူတွေ့ရင် အတူနေဖို့ခက်တယ်လို့ထင်တယ်။ နောက်တော့ တစ်ဖက်လူဘာကြောင့်ဒီလိုလုပ်လဲ အရင်နားလည်ဖို့ သင်ယူလာတယ်။",
+      "ကိုယ့်ဆက်သွယ်ပုံကိုပြောင်းလဲနိုင်ရင် မူလကကြီးမားတဲ့အငြင်းပွားမှုတွေ သေးသွားတတ်တယ်။ မတူညီတဲ့လူတွေနဲ့အတူနေတတ်ခြင်းကလည်း သင်ယူရတဲ့စွမ်းရည်တစ်ခုပါ။"
+    ],
+    "keywords": [
+      "相处",
+      "性格",
+      "表达",
+      "委婉",
+      "反复",
+      "判断",
+      "调整",
+      "沟通",
+      "矛盾",
+      "合作"
+    ],
+    "audioUrl": "/audio/hsk-reading/hsk5/hsk5-reading-007.mp3",
+    "audioText": "刚开始工作的时候，我以为只要大家都认真做事，就很容易合作。后来才发现，每个人的性格、习惯和表达方式都不同。有的同事喜欢直接说问题，有的人说话比较委婉；有的人做事情很快，有的人则习惯反复检查。以前遇到和自己不同的人，我会觉得对方很难相处。后来我慢慢学会先了解对方为什么这样做，而不是马上判断对错。我发现，当我们愿意调整自己的沟通方式以后，很多原来觉得很大的矛盾其实会变小。和不同的人相处，本身也是一种需要学习的能力。"
+  },
+  {
+    "id": "hsk5-reading-008",
+    "level": 5,
+    "order": 8,
+    "title": "独自旅行让我学到的事",
+    "pinyinTitle": "Dúzì lǚxíng ràng wǒ xué dào de shì",
+    "myanmarTitle": "တစ်ယောက်တည်းခရီးက သင်ပေးခဲ့တာ",
+    "category": "travel",
+    "difficulty": "medium",
+    "estimatedMinutes": 6,
+    "paragraphs": [
+      "以前旅行的时候，我总希望有人陪着。因为有人一起讨论路线、找餐厅、解决问题，会让我觉得更安心。",
+      "后来有一次，我不得不一个人完成原来计划好的旅行。开始的时候，我每天都特别小心，连去哪里吃饭都要提前想很久。",
+      "可是几天以后，我慢慢习惯了自己做决定。走错路的时候自己想办法，想休息的时候就停下来，也不用担心别人是不是喜欢同样的安排。",
+      "那次旅行以后，我并没有变成只喜欢一个人旅行的人。但是我发现，独自旅行让我更相信自己的判断，也让我明白一个人并不一定代表孤单。"
+    ],
+    "pinyinParagraphs": [
+      "Yǐqián lǚxíng de shíhou, wǒ zǒng xīwàng yǒu rén péizhe. Yīnwèi yǒu rén yìqǐ tǎolùn lùxiàn, zhǎo cāntīng, jiějué wèntí, huì ràng wǒ juéde gèng ānxīn.",
+      "Hòulái yǒu yí cì, wǒ bùdébù yí ge rén wánchéng yuánlái jìhuà hǎo de lǚxíng. Kāishǐ de shíhou, wǒ měitiān dōu tèbié xiǎoxīn, lián qù nǎli chīfàn dōu yào tíqián xiǎng hěn jiǔ.",
+      "Kěshì jǐ tiān yǐhòu, wǒ mànmàn xíguàn le zìjǐ zuò juédìng. Zǒu cuò lù de shíhou zìjǐ xiǎng bànfǎ, xiǎng xiūxi de shíhou jiù tíng xiàlái, yě búyòng dānxīn biérén shì bú shì xǐhuan tóngyàng de ānpái.",
+      "Nà cì lǚxíng yǐhòu, wǒ bìng méiyǒu biàn chéng zhǐ xǐhuan yí ge rén lǚxíng de rén. Dànshì wǒ fāxiàn, dúzì lǚxíng ràng wǒ gèng xiāngxìn zìjǐ de pànduàn, yě ràng wǒ míngbai yí ge rén bìng bù yídìng dàibiǎo gūdān."
+    ],
+    "myanmarParagraphs": [
+      "အရင်က ခရီးသွားရင် အတူသွားမယ့်သူရှိချင်တယ်။ လမ်းကြောင်း၊ စားသောက်ဆိုင်၊ ပြဿနာတွေကို အတူဖြေရှင်းလို့ ပိုစိတ်ချရတယ်။",
+      "တစ်ခါတော့ စီစဉ်ထားတဲ့ခရီးကို တစ်ယောက်တည်းသွားရတဲ့အခြေအနေဖြစ်လာတယ်။ အစမှာ နေ့တိုင်းသတိထားပြီး ဘယ်မှာစားမလဲတောင် ကြိုစဉ်းစားတယ်။",
+      "ရက်အနည်းငယ်ကြာတော့ ကိုယ်တိုင်ဆုံးဖြတ်တာနဲ့ ရင်းနှီးလာတယ်။ လမ်းမှားရင် ကိုယ်တိုင်ဖြေရှင်းတယ်၊ နားချင်ရင်နားတယ်၊ တစ်ဖက်လူအကြိုက်ကိုစဉ်းစားစရာလည်းမလိုဘူး။",
+      "ဒီခရီးပြီးတော့ တစ်ယောက်တည်းခရီးပဲကြိုက်သွားတာမဟုတ်ဘူး။ ဒါပေမယ့် ကိုယ့်ဆုံးဖြတ်ချက်ကို ပိုယုံကြည်လာပြီး တစ်ယောက်တည်းရှိတာနဲ့ အထီးကျန်တာ မတူဘူးဆိုတာနားလည်လာတယ်။"
+    ],
+    "keywords": [
+      "独自",
+      "路线",
+      "安心",
+      "不得不",
+      "小心",
+      "判断",
+      "安排",
+      "代表",
+      "孤单",
+      "旅行"
+    ],
+    "audioUrl": "/audio/hsk-reading/hsk5/hsk5-reading-008.mp3",
+    "audioText": "以前旅行的时候，我总希望有人陪着。因为有人一起讨论路线、找餐厅、解决问题，会让我觉得更安心。后来有一次，我不得不一个人完成原来计划好的旅行。开始的时候，我每天都特别小心，连去哪里吃饭都要提前想很久。可是几天以后，我慢慢习惯了自己做决定。走错路的时候自己想办法，想休息的时候就停下来，也不用担心别人是不是喜欢同样的安排。那次旅行以后，我并没有变成只喜欢一个人旅行的人。但是我发现，独自旅行让我更相信自己的判断，也让我明白一个人并不一定代表孤单。"
+  },
+  {
+    "id": "hsk5-reading-009",
+    "level": 5,
+    "order": 9,
+    "title": "改变一个习惯",
+    "pinyinTitle": "Gǎibiàn yí ge xíguàn",
+    "myanmarTitle": "အလေ့အကျင့်တစ်ခု ပြောင်းလဲခြင်း",
+    "category": "daily-life",
+    "difficulty": "medium",
+    "estimatedMinutes": 6,
+    "paragraphs": [
+      "以前我睡觉以前总要看很久手机。本来只想看几分钟，结果常常一个小时过去了还没有睡。",
+      "第二天早上，我总是觉得没精神，但是到了晚上又会重复同样的事情。我知道这个习惯不好，却一直没有真正改变。",
+      "后来我给自己定了一个很简单的规则：睡觉前半个小时把手机放到房间外面。刚开始几天很不习惯，总觉得少了什么。",
+      "坚持几个星期以后，我发现自己更容易睡着了，早上也不那么累。改变习惯最难的往往不是不知道应该做什么，而是能不能把一个简单的决定重复足够长的时间。"
+    ],
+    "pinyinParagraphs": [
+      "Yǐqián wǒ shuìjiào yǐqián zǒng yào kàn hěn jiǔ shǒujī. Běnlái zhǐ xiǎng kàn jǐ fēnzhōng, jiéguǒ chángcháng yí ge xiǎoshí guòqù le hái méiyǒu shuì.",
+      "Dì èr tiān zǎoshang, wǒ zǒng shì juéde méi jīngshén, dànshì dào le wǎnshang yòu huì chóngfù tóngyàng de shìqing. Wǒ zhīdào zhège xíguàn bù hǎo, què yìzhí méiyǒu zhēnzhèng gǎibiàn.",
+      "Hòulái wǒ gěi zìjǐ dìng le yí ge hěn jiǎndān de guīzé: shuìjiào qián bàn ge xiǎoshí bǎ shǒujī fàng dào fángjiān wàimiàn. Gāng kāishǐ jǐ tiān hěn bù xíguàn, zǒng juéde shǎo le shénme.",
+      "Jiānchí jǐ ge xīngqī yǐhòu, wǒ fāxiàn zìjǐ gèng róngyì shuìzháo le, zǎoshang yě bú nàme lèi. Gǎibiàn xíguàn zuì nán de wǎngwǎng bú shì bù zhīdào yīnggāi zuò shénme, ér shì néng bù néng bǎ yí ge jiǎndān de juédìng chóngfù zúgòu cháng de shíjiān."
+    ],
+    "myanmarParagraphs": [
+      "အရင်က အိပ်မယ့်အရင် ဖုန်းအကြာကြီးကြည့်တတ်တယ်။ မိနစ်နည်းနည်းပဲကြည့်မယ်ဆိုပေမယ့် တစ်နာရီလောက်ကြာသွားတတ်တယ်။",
+      "နောက်နေ့မနက် အားမရှိပေမယ့် ညရောက်ရင် ထပ်လုပ်နေတုန်းပဲ။ ဒီ habit မကောင်းတာသိပေမယ့် တကယ်မပြောင်းဖြစ်ဘူး။",
+      "နောက်တော့ ရိုးရှင်းတဲ့ rule တစ်ခုချတယ်။ အိပ်ချိန်မတိုင်ခင် နာရီဝက်မှာ ဖုန်းကို အခန်းအပြင်ထားတယ်။ အစမှာ တစ်ခုခုမရှိသလို ထူးဆန်းတယ်။",
+      "အပတ်အနည်းငယ်ကြာတော့ ပိုလွယ်လွယ်အိပ်ပျော်ပြီး မနက်လည်းသိပ်မပင်ပန်းတော့ဘူး။ Habit ပြောင်းရာမှာ အခက်ဆုံးက ဘာလုပ်ရမလဲမသိတာမဟုတ်ဘဲ လွယ်တဲ့ဆုံးဖြတ်ချက်တစ်ခုကို အချိန်ကြာကြာထပ်လုပ်နိုင်မနိုင်ပါ။"
+    ],
+    "keywords": [
+      "习惯",
+      "重复",
+      "精神",
+      "规则",
+      "睡着",
+      "改变",
+      "坚持",
+      "足够",
+      "决定",
+      "手机"
+    ],
+    "audioUrl": "/audio/hsk-reading/hsk5/hsk5-reading-009.mp3",
+    "audioText": "以前我睡觉以前总要看很久手机。本来只想看几分钟，结果常常一个小时过去了还没有睡。第二天早上，我总是觉得没精神，但是到了晚上又会重复同样的事情。我知道这个习惯不好，却一直没有真正改变。后来我给自己定了一个很简单的规则：睡觉前半个小时把手机放到房间外面。刚开始几天很不习惯，总觉得少了什么。坚持几个星期以后，我发现自己更容易睡着了，早上也不那么累。改变习惯最难的往往不是不知道应该做什么，而是能不能把一个简单的决定重复足够长的时间。"
+  },
+  {
+    "id": "hsk5-reading-010",
+    "level": 5,
+    "order": 10,
+    "title": "面对工作压力",
+    "pinyinTitle": "Miànduì gōngzuò yālì",
+    "myanmarTitle": "အလုပ်ဖိအားကို ရင်ဆိုင်ခြင်း",
+    "category": "daily-life",
+    "difficulty": "medium",
+    "estimatedMinutes": 6,
+    "paragraphs": [
+      "有一段时间，公司同时进行几个项目，我每天都有做不完的事情。即使下班回家，我脑子里还是想着工作。",
+      "开始的时候，我觉得只要再努力一点就能解决问题，所以不断延长工作时间。可是几个星期以后，我发现自己越来越累，效率反而更低。",
+      "后来经理建议我把任务按照重要程度重新安排，也告诉我不是每件事都必须当天完成。我开始学会和同事沟通时间，而不是一个人把所有压力都留下来。",
+      "工作压力不可能完全消失，但我现在更知道什么时候应该努力，什么时候应该停下来。真正有效率并不代表永远不停地工作。"
+    ],
+    "pinyinParagraphs": [
+      "Yǒu yí duàn shíjiān, gōngsī tóngshí jìnxíng jǐ ge xiàngmù, wǒ měitiān dōu yǒu zuò bù wán de shìqing. Jíshǐ xiàbān huí jiā, wǒ nǎozi lǐ háishi xiǎngzhe gōngzuò.",
+      "Kāishǐ de shíhou, wǒ juéde zhǐyào zài nǔlì yìdiǎn jiù néng jiějué wèntí, suǒyǐ bùduàn yáncháng gōngzuò shíjiān. Kěshì jǐ ge xīngqī yǐhòu, wǒ fāxiàn zìjǐ yuèláiyuè lèi, xiàolǜ fǎn'ér gèng dī.",
+      "Hòulái jīnglǐ jiànyì wǒ bǎ rènwu ànzhào zhòngyào chéngdù chóngxīn ānpái, yě gàosu wǒ bú shì měi jiàn shì dōu bìxū dāngtiān wánchéng. Wǒ kāishǐ xuéhuì hé tóngshì gōutōng shíjiān, ér bú shì yí ge rén bǎ suǒyǒu yālì dōu liú xiàlái.",
+      "Gōngzuò yālì bù kěnéng wánquán xiāoshī, dàn wǒ xiànzài gèng zhīdào shénme shíhou yīnggāi nǔlì, shénme shíhou yīnggāi tíng xiàlái. Zhēnzhèng yǒu xiàolǜ bìng bù dàibiǎo yǒngyuǎn bù tíng de gōngzuò."
+    ],
+    "myanmarParagraphs": [
+      "ကာလတစ်ခုမှာ company project အများကြီးတစ်ပြိုင်တည်းလုပ်လို့ နေ့တိုင်းမပြီးနိုင်တဲ့အလုပ်တွေရှိတယ်။ အလုပ်ဆင်းပြီးအိမ်ရောက်တောင် အလုပ်အကြောင်းပဲစဉ်းစားနေတယ်။",
+      "အစမှာ ပိုကြိုးစားရင်ပြဿနာပြီးမယ်ထင်လို့ အလုပ်ချိန်ကိုတိုးတယ်။ ဒါပေမယ့် အပတ်အနည်းငယ်ကြာတော့ ပိုပင်ပန်းပြီး productivity ပိုကျလာတယ်။",
+      "နောက်တော့ manager က task ကို အရေးပါမှုအလိုက်ပြန်စီဖို့ပြောတယ်။ အလုပ်တိုင်းကိုတစ်နေ့တည်းပြီးဖို့မလိုဘူးလို့လည်းပြောတယ်။ အဲဒီနောက် deadline ကို လုပ်ဖော်ကိုင်ဖက်တွေနဲ့ဆွေးနွေးပြီး ဖိအားအားလုံးကို ကိုယ်တစ်ယောက်တည်းမခံတော့ဘူး။",
+      "အလုပ်ဖိအားကို လုံးဝပျောက်အောင်မလုပ်နိုင်ပေမယ့် ဘယ်အချိန်ကြိုးစားသင့်လဲ၊ ဘယ်အချိန်ရပ်သင့်လဲ ပိုသိလာတယ်။ Efficient ဖြစ်တာက အမြဲမနားဘဲလုပ်နေတာမဟုတ်ဘူး။"
+    ],
+    "keywords": [
+      "压力",
+      "项目",
+      "不断",
+      "延长",
+      "效率",
+      "程度",
+      "任务",
+      "消失",
+      "沟通",
+      "有效率"
+    ],
+    "audioUrl": "/audio/hsk-reading/hsk5/hsk5-reading-010.mp3",
+    "audioText": "有一段时间，公司同时进行几个项目，我每天都有做不完的事情。即使下班回家，我脑子里还是想着工作。开始的时候，我觉得只要再努力一点就能解决问题，所以不断延长工作时间。可是几个星期以后，我发现自己越来越累，效率反而更低。后来经理建议我把任务按照重要程度重新安排，也告诉我不是每件事都必须当天完成。我开始学会和同事沟通时间，而不是一个人把所有压力都留下来。工作压力不可能完全消失，但我现在更知道什么时候应该努力，什么时候应该停下来。真正有效率并不代表永远不停地工作。"
+  },
+  {
+    "id": "hsk5-reading-011",
+    "level": 5,
+    "order": 11,
+    "title": "真正的朋友",
+    "pinyinTitle": "Zhēnzhèng de péngyou",
+    "myanmarTitle": "တကယ့်သူငယ်ချင်း",
+    "category": "friends",
+    "difficulty": "medium",
+    "estimatedMinutes": 6,
+    "paragraphs": [
+      "年轻的时候，我以为朋友越多越好。手机里联系人很多，周末总有人一起出去，就觉得自己的人际关系很好。",
+      "后来生活发生变化，大家忙着工作、搬家或者建立自己的家庭，真正能经常见面的朋友越来越少。",
+      "有一段很困难的时间，我才发现真正愿意听我说话、在我需要帮助的时候出现的人其实只有几个。",
+      "从那以后，我不再太在意朋友的数量。真正的朋友不一定每天聊天，也不一定总是同意你的看法，但是在重要的时候，他们会让你知道自己不是一个人。"
+    ],
+    "pinyinParagraphs": [
+      "Niánqīng de shíhou, wǒ yǐwéi péngyou yuè duō yuè hǎo. Shǒujī lǐ liánxìrén hěn duō, zhōumò zǒng yǒu rén yìqǐ chūqù, jiù juéde zìjǐ de rénjì guānxì hěn hǎo.",
+      "Hòulái shēnghuó fāshēng biànhuà, dàjiā mángzhe gōngzuò, bānjiā huòzhě jiànlì zìjǐ de jiātíng, zhēnzhèng néng jīngcháng jiànmiàn de péngyou yuèláiyuè shǎo.",
+      "Yǒu yí duàn hěn kùnnan de shíjiān, wǒ cái fāxiàn zhēnzhèng yuànyì tīng wǒ shuōhuà, zài wǒ xūyào bāngzhù de shíhou chūxiàn de rén qíshí zhǐ yǒu jǐ ge.",
+      "Cóng nà yǐhòu, wǒ bú zài tài zàiyì péngyou de shùliàng. Zhēnzhèng de péngyou bù yídìng měitiān liáotiān, yě bù yídìng zǒng shì tóngyì nǐ de kànfǎ, dànshì zài zhòngyào de shíhou, tāmen huì ràng nǐ zhīdào zìjǐ bú shì yí ge rén."
+    ],
+    "myanmarParagraphs": [
+      "ငယ်တုန်းက သူငယ်ချင်းများလေလေကောင်းလေလေလို့ ထင်တယ်။ ဖုန်းထဲ contact များပြီး ပိတ်ရက်တိုင်းအတူထွက်မယ့်သူရှိရင် social relationship ကောင်းတယ်လို့ထင်တယ်။",
+      "နောက်ပိုင်း ဘဝပြောင်းလာတယ်။ လူတိုင်းအလုပ်၊ အိမ်ပြောင်း၊ မိသားစုစတာတွေနဲ့ မကြာခဏတွေ့နိုင်တဲ့သူနည်းလာတယ်။",
+      "အခက်အခဲကြီးတစ်ခါကြုံတော့ ကိုယ်ပြောတာတကယ်နားထောင်ပြီး လိုတဲ့အချိန်အနားမှာရှိတဲ့သူက အနည်းငယ်ပဲဆိုတာသိလာတယ်။",
+      "အဲဒီနောက် သူငယ်ချင်းအရေအတွက်ကို သိပ်မစဉ်းစားတော့ဘူး။ တကယ့်သူငယ်ချင်းက နေ့တိုင်းစကားမပြောရလည်းရတယ်၊ အမြဲကိုယ့်အမြင်နဲ့တူဖို့လည်းမလိုဘူး။ အရေးကြီးတဲ့အချိန်မှာ ကိုယ်တစ်ယောက်တည်းမဟုတ်ဘူးဆိုတာ ခံစားစေမယ့်သူပဲ။"
+    ],
+    "keywords": [
+      "真正",
+      "人际关系",
+      "建立",
+      "困难",
+      "出现",
+      "数量",
+      "同意",
+      "看法",
+      "联系人",
+      "重要"
+    ],
+    "audioUrl": "/audio/hsk-reading/hsk5/hsk5-reading-011.mp3",
+    "audioText": "年轻的时候，我以为朋友越多越好。手机里联系人很多，周末总有人一起出去，就觉得自己的人际关系很好。后来生活发生变化，大家忙着工作、搬家或者建立自己的家庭，真正能经常见面的朋友越来越少。有一段很困难的时间，我才发现真正愿意听我说话、在我需要帮助的时候出现的人其实只有几个。从那以后，我不再太在意朋友的数量。真正的朋友不一定每天聊天，也不一定总是同意你的看法，但是在重要的时候，他们会让你知道自己不是一个人。"
+  },
+  {
+    "id": "hsk5-reading-012",
+    "level": 5,
+    "order": 12,
+    "title": "学习中的低谷",
+    "pinyinTitle": "Xuéxí zhōng de dīgǔ",
+    "myanmarTitle": "လေ့လာရေးအခက်အခဲကာလ",
+    "category": "school",
+    "difficulty": "medium",
+    "estimatedMinutes": 6,
+    "paragraphs": [
+      "学习一件事情久了以后，常常会遇到一个阶段：虽然还在努力，但是感觉自己好像没有任何进步。",
+      "我学习中文的时候也经历过这样的时期。以前每个月都能明显感觉自己学会了新的东西，后来却觉得听力、口语都停在同一个水平。",
+      "那时候我差点以为自己的方法完全错了。老师告诉我，有些进步不是马上能感觉到的，大脑需要时间整理和熟悉新的知识。",
+      "于是我没有完全换掉学习方法，而是稍微减少学习量，让自己继续保持接触。几个月后，我突然发现以前听不懂的内容变得容易多了。学习中的低谷并不一定代表停止进步。"
+    ],
+    "pinyinParagraphs": [
+      "Xuéxí yí jiàn shìqing jiǔ le yǐhòu, chángcháng huì yùdào yí ge jiēduàn: suīrán hái zài nǔlì, dànshì gǎnjué zìjǐ hǎoxiàng méiyǒu rènhé jìnbù.",
+      "Wǒ xuéxí Zhōngwén de shíhou yě jīnglì guo zhèyàng de shíqī. Yǐqián měi ge yuè dōu néng míngxiǎn gǎnjué zìjǐ xuéhuì le xīn de dōngxi, hòulái què juéde tīnglì, kǒuyǔ dōu tíng zài tóng yí ge shuǐpíng.",
+      "Nà shíhou wǒ chàdiǎn yǐwéi zìjǐ de fāngfǎ wánquán cuò le. Lǎoshī gàosu wǒ, yǒuxiē jìnbù bú shì mǎshàng néng gǎnjué dào de, dànǎo xūyào shíjiān zhěnglǐ hé shúxī xīn de zhīshi.",
+      "Yúshì wǒ méiyǒu wánquán huàn diào xuéxí fāngfǎ, ér shì shāowēi jiǎnshǎo xuéxí liàng, ràng zìjǐ jìxù bǎochí jiēchù. Jǐ ge yuè hòu, wǒ tūrán fāxiàn yǐqián tīng bù dǒng de nèiróng biàn de róngyì duō le. Xuéxí zhōng de dīgǔ bìng bù yídìng dàibiǎo tíngzhǐ jìnbù."
+    ],
+    "myanmarParagraphs": [
+      "တစ်ခုခုကို အချိန်ကြာကြာလေ့လာရင် ကြိုးစားနေတုန်းပေမယ့် တိုးတက်မှုမရှိသလိုခံစားရတဲ့ကာလတစ်ခု ကြုံတတ်တယ်။",
+      "တရုတ်စာသင်ရင်းလည်း ဒီလိုကာလကြုံဖူးတယ်။ အရင်က လတိုင်းအသစ်တွေသိလာတာမြင်ရပေမယ့် နောက်ပိုင်း listening နဲ့ speaking က အဆင့်တစ်ခုတည်းမှာ ရပ်နေသလိုဖြစ်တယ်။",
+      "အဲဒီအချိန်မှာ ကိုယ့်နည်းလမ်းမှားနေပြီလို့တောင် ထင်မိတယ်။ ဆရာက တိုးတက်မှုအချို့ကို ချက်ချင်းမခံစားရဘဲ ဦးနှောက်က အသစ်တွေကို နားလည်ဖို့အချိန်လိုတယ်လို့ပြောတယ်။",
+      "ဒါကြောင့် နည်းလမ်းကိုအကုန်မပြောင်းဘဲ လေ့လာမှုနည်းနည်းလျှော့ပြီး ဆက်ထိတွေ့နေတယ်။ လအနည်းငယ်ကြာတော့ အရင်နားမလည်တာတွေ လွယ်လာတာတွေ့တယ်။ Learning low point ဆိုတာ တိုးတက်မှုရပ်သွားတာမဟုတ်ဘူး။"
+    ],
+    "keywords": [
+      "低谷",
+      "阶段",
+      "任何",
+      "水平",
+      "时期",
+      "大脑",
+      "知识",
+      "减少",
+      "保持",
+      "代表"
+    ],
+    "audioUrl": "/audio/hsk-reading/hsk5/hsk5-reading-012.mp3",
+    "audioText": "学习一件事情久了以后，常常会遇到一个阶段：虽然还在努力，但是感觉自己好像没有任何进步。我学习中文的时候也经历过这样的时期。以前每个月都能明显感觉自己学会了新的东西，后来却觉得听力、口语都停在同一个水平。那时候我差点以为自己的方法完全错了。老师告诉我，有些进步不是马上能感觉到的，大脑需要时间整理和熟悉新的知识。于是我没有完全换掉学习方法，而是稍微减少学习量，让自己继续保持接触。几个月后，我突然发现以前听不懂的内容变得容易多了。学习中的低谷并不一定代表停止进步。"
+  },
+  {
+    "id": "hsk5-reading-013",
+    "level": 5,
+    "order": 13,
+    "title": "第一次公开表达自己",
+    "pinyinTitle": "Dì yī cì gōngkāi biǎodá zìjǐ",
+    "myanmarTitle": "ပထမဆုံး လူရှေ့မှာ ကိုယ့်အမြင်ပြောခြင်း",
+    "category": "school",
+    "difficulty": "medium",
+    "estimatedMinutes": 6,
+    "paragraphs": [
+      "以前在很多人面前，我不太敢表达不同的意见。即使心里有自己的想法，也常常选择不说。",
+      "有一次，公司开会讨论一个新计划。大家都认为原来的做法没有问题，但是我发现其中有一个可能影响客户的地方。",
+      "我犹豫了很久，最后还是举手说明了自己的看法。说完以后，我担心别人会觉得我故意反对。",
+      "没想到经理认真听完以后，让大家重新检查了那个部分，最后真的发现了问题。那一次让我明白，表达不同意见并不等于制造冲突，关键是能不能有理由、尊重地说出来。"
+    ],
+    "pinyinParagraphs": [
+      "Yǐqián zài hěn duō rén miànqián, wǒ bú tài gǎn biǎodá bùtóng de yìjiàn. Jíshǐ xīnlǐ yǒu zìjǐ de xiǎngfǎ, yě chángcháng xuǎnzé bù shuō.",
+      "Yǒu yí cì, gōngsī kāihuì tǎolùn yí ge xīn jìhuà. Dàjiā dōu rènwéi yuánlái de zuòfǎ méiyǒu wèntí, dànshì wǒ fāxiàn qízhōng yǒu yí ge kěnéng yǐngxiǎng kèhù de dìfang.",
+      "Wǒ yóuyù le hěn jiǔ, zuìhòu háishi jǔshǒu shuōmíng le zìjǐ de kànfǎ. Shuō wán yǐhòu, wǒ dānxīn biérén huì juéde wǒ gùyì fǎnduì.",
+      "Méi xiǎngdào jīnglǐ rènzhēn tīng wán yǐhòu, ràng dàjiā chóngxīn jiǎnchá le nàge bùfen, zuìhòu zhēnde fāxiàn le wèntí. Nà yí cì ràng wǒ míngbai, biǎodá bùtóng yìjiàn bìng bù děngyú zhìzào chōngtū, guānjiàn shì néng bù néng yǒu lǐyóu, zūnzhòng de shuō chūlái."
+    ],
+    "myanmarParagraphs": [
+      "အရင်က လူအများရှေ့မှာ မတူတဲ့အမြင်ပြောဖို့ မရဲဘူး။ ကိုယ့်မှာအတွေးရှိရင်တောင် မပြောဘဲနေတာများတယ်။",
+      "တစ်ခါ company meeting မှာ plan အသစ်ဆွေးနွေးတယ်။ အားလုံးက အရင်နည်းလမ်းအဆင်ပြေတယ်ထင်ပေမယ့် client ကိုထိခိုက်နိုင်တဲ့အချက်တစ်ခု ကျွန်မမြင်တယ်။",
+      "အချိန်တော်တော်ကြာတွန့်ဆုတ်ပြီး နောက်ဆုံး လက်ထောင်ပြီး ကိုယ့်အမြင်ပြောတယ်။ ပြောပြီးတော့ လူတွေက ကိုယ်တမင်အတိုက်အခံလုပ်တယ်ထင်မှာစိုးတယ်။",
+      "မထင်မှတ်ဘဲ manager က သေချာနားထောင်ပြီး အဲဒီပိုင်းကိုပြန်စစ်ခိုင်းတယ်။ နောက်ဆုံး ပြဿနာတကယ်ရှိတာတွေ့တယ်။ မတူတဲ့အမြင်ပြောတာက အငြင်းပွားမှုဖန်တီးတာမဟုတ်ဘဲ အကြောင်းပြချက်နဲ့ လေးစားမှုရှိရှိပြောနိုင်ဖို့ပဲအရေးကြီးတယ်။"
+    ],
+    "keywords": [
+      "公开",
+      "表达",
+      "意见",
+      "犹豫",
+      "故意",
+      "反对",
+      "冲突",
+      "关键",
+      "尊重",
+      "影响"
+    ],
+    "audioUrl": "/audio/hsk-reading/hsk5/hsk5-reading-013.mp3",
+    "audioText": "以前在很多人面前，我不太敢表达不同的意见。即使心里有自己的想法，也常常选择不说。有一次，公司开会讨论一个新计划。大家都认为原来的做法没有问题，但是我发现其中有一个可能影响客户的地方。我犹豫了很久，最后还是举手说明了自己的看法。说完以后，我担心别人会觉得我故意反对。没想到经理认真听完以后，让大家重新检查了那个部分，最后真的发现了问题。那一次让我明白，表达不同意见并不等于制造冲突，关键是能不能有理由、尊重地说出来。"
+  },
+  {
+    "id": "hsk5-reading-014",
+    "level": 5,
+    "order": 14,
+    "title": "金钱和幸福",
+    "pinyinTitle": "Jīnqián hé xìngfú",
+    "myanmarTitle": "ငွေနဲ့ ပျော်ရွှင်မှု",
+    "category": "daily-life",
+    "difficulty": "medium",
+    "estimatedMinutes": 6,
+    "paragraphs": [
+      "以前我觉得，如果收入更高，生活一定会更幸福。所以刚开始工作的时候，我特别重视工资。",
+      "后来收入确实提高了，但是工作时间也越来越长。我可以买更多东西，却发现自己很少有时间真正享受生活。",
+      "这并不表示金钱不重要。稳定的收入可以减少很多生活压力，也能给人更多选择。只是金钱并不能自动解决所有问题。",
+      "现在我更希望在收入、时间、健康和关系之间找到平衡。对我来说，幸福不是拥有最多，而是自己重视的东西没有一直被牺牲。"
+    ],
+    "pinyinParagraphs": [
+      "Yǐqián wǒ juéde, rúguǒ shōurù gèng gāo, shēnghuó yídìng huì gèng xìngfú. Suǒyǐ gāng kāishǐ gōngzuò de shíhou, wǒ tèbié zhòngshì gōngzī.",
+      "Hòulái shōurù quèshí tígāo le, dànshì gōngzuò shíjiān yě yuèláiyuè cháng. Wǒ kěyǐ mǎi gèng duō dōngxi, què fāxiàn zìjǐ hěn shǎo yǒu shíjiān zhēnzhèng xiǎngshòu shēnghuó.",
+      "Zhè bìng bù biǎoshì jīnqián bù zhòngyào. Wěndìng de shōurù kěyǐ jiǎnshǎo hěn duō shēnghuó yālì, yě néng gěi rén gèng duō xuǎnzé. Zhǐshì jīnqián bìng bù néng zìdòng jiějué suǒyǒu wèntí.",
+      "Xiànzài wǒ gèng xīwàng zài shōurù, shíjiān, jiànkāng hé guānxì zhījiān zhǎodào pínghéng. Duì wǒ láishuō, xìngfú bú shì yōngyǒu zuì duō, ér shì zìjǐ zhòngshì de dōngxi méiyǒu yìzhí bèi xīshēng."
+    ],
+    "myanmarParagraphs": [
+      "အရင်က ဝင်ငွေပိုများရင် ဘဝပိုပျော်မယ်လို့ထင်တယ်။ ဒါကြောင့် အလုပ်စဝင်တုန်းက လစာကိုအရမ်းအလေးထားတယ်။",
+      "နောက်ပိုင်း ဝင်ငွေတကယ်တက်လာပေမယ့် အလုပ်ချိန်လည်းပိုရှည်လာတယ်။ ပစ္စည်းပိုဝယ်နိုင်ပေမယ့် ဘဝကိုတကယ်ခံစားဖို့အချိန်နည်းလာတယ်။",
+      "ဒါက ငွေမအရေးကြီးဘူးလို့ မဆိုလိုဘူး။ တည်ငြိမ်တဲ့ဝင်ငွေက ဖိအားလျှော့ပြီး ရွေးချယ်စရာပိုပေးတယ်။ ဒါပေမယ့် ငွေက ပြဿနာတိုင်းကို အလိုအလျောက်မဖြေရှင်းပေးနိုင်ဘူး။",
+      "အခုတော့ ဝင်ငွေ၊ အချိန်၊ ကျန်းမာရေးနဲ့ ဆက်ဆံရေးကြား balance ရချင်တယ်။ ကျွန်မအတွက် ပျော်ရွှင်မှုက အများဆုံးပိုင်ဆိုင်တာမဟုတ်ဘဲ ကိုယ်တန်ဖိုးထားတာတွေကို အမြဲတမ်းစွန့်လွှတ်နေရတာမဖြစ်ဖို့ပါ။"
+    ],
+    "keywords": [
+      "金钱",
+      "幸福",
+      "收入",
+      "重视",
+      "享受",
+      "减少",
+      "自动",
+      "平衡",
+      "拥有",
+      "牺牲"
+    ],
+    "audioUrl": "/audio/hsk-reading/hsk5/hsk5-reading-014.mp3",
+    "audioText": "以前我觉得，如果收入更高，生活一定会更幸福。所以刚开始工作的时候，我特别重视工资。后来收入确实提高了，但是工作时间也越来越长。我可以买更多东西，却发现自己很少有时间真正享受生活。这并不表示金钱不重要。稳定的收入可以减少很多生活压力，也能给人更多选择。只是金钱并不能自动解决所有问题。现在我更希望在收入、时间、健康和关系之间找到平衡。对我来说，幸福不是拥有最多，而是自己重视的东西没有一直被牺牲。"
+  },
+  {
+    "id": "hsk5-reading-015",
+    "level": 5,
+    "order": 15,
+    "title": "离开熟悉的环境",
+    "pinyinTitle": "Líkāi shúxī de huánjìng",
+    "myanmarTitle": "ရင်းနှီးတဲ့ပတ်ဝန်းကျင်က ထွက်ခွာခြင်း",
+    "category": "travel",
+    "difficulty": "medium",
+    "estimatedMinutes": 6,
+    "paragraphs": [
+      "搬到国外工作以前，我在同一个城市生活了很多年。朋友、家人、常去的店和每天的路线都很熟悉。",
+      "真正离开以后，我才发现熟悉的环境会给人很强的安全感。在新的地方，连去医院、银行或者买生活用品都需要重新学习。",
+      "开始的几个月，我常常想回到原来的生活。但是随着时间过去，我认识了新的朋友，也慢慢建立起新的习惯。",
+      "现在我明白，离开熟悉的地方确实会带来不安，但也会逼着我们学习原来不会做的事情。有些成长只有走出熟悉的环境以后才会发生。"
+    ],
+    "pinyinParagraphs": [
+      "Bān dào guówài gōngzuò yǐqián, wǒ zài tóng yí ge chéngshì shēnghuó le hěn duō nián. Péngyou, jiārén, cháng qù de diàn hé měitiān de lùxiàn dōu hěn shúxī.",
+      "Zhēnzhèng líkāi yǐhòu, wǒ cái fāxiàn shúxī de huánjìng huì gěi rén hěn qiáng de ānquángǎn. Zài xīn de dìfang, lián qù yīyuàn, yínháng huòzhě mǎi shēnghuó yòngpǐn dōu xūyào chóngxīn xuéxí.",
+      "Kāishǐ de jǐ ge yuè, wǒ chángcháng xiǎng huídào yuánlái de shēnghuó. Dànshì suízhe shíjiān guòqù, wǒ rènshi le xīn de péngyou, yě mànmàn jiànlì qǐ xīn de xíguàn.",
+      "Xiànzài wǒ míngbai, líkāi shúxī de dìfang quèshí huì dàilái bù'ān, dàn yě huì bīzhe wǒmen xuéxí yuánlái bú huì zuò de shìqing. Yǒuxiē chéngzhǎng zhǐyǒu zǒuchū shúxī de huánjìng yǐhòu cái huì fāshēng."
+    ],
+    "myanmarParagraphs": [
+      "နိုင်ငံခြားကို အလုပ်မပြောင်းခင် မြို့တစ်မြို့တည်းမှာ နှစ်များစွာနေခဲ့တယ်။ သူငယ်ချင်း၊ မိသားစု၊ အမြဲသွားတဲ့ဆိုင်တွေနဲ့ လမ်းကြောင်းတွေ အကုန်ရင်းနှီးတယ်။",
+      "တကယ်ထွက်လာတော့ ရင်းနှီးတဲ့ပတ်ဝန်းကျင်က လုံခြုံမှုအရမ်းပေးတယ်ဆိုတာသိတယ်။ နေရာအသစ်မှာ ဆေးရုံသွားတာ၊ bank သွားတာ၊ အသုံးအဆောင်ဝယ်တာတောင် အသစ်ပြန်လေ့လာရတယ်။",
+      "ပထမလတွေမှာ အရင်ဘဝကိုပြန်ချင်တတ်တယ်။ ဒါပေမယ့် အချိန်ကြာလာတော့ သူငယ်ချင်းအသစ်တွေ၊ habit အသစ်တွေဖြစ်လာတယ်။",
+      "အခုတော့ ရင်းနှီးတဲ့နေရာကထွက်တာ စိတ်မအေးစေပေမယ့် ကိုယ်မလုပ်တတ်သေးတာတွေကို သင်ယူစေတယ်လို့ နားလည်လာတယ်။ တချို့တိုးတက်မှုတွေက comfort zone ကထွက်မှပဲဖြစ်လာတတ်တယ်။"
+    ],
+    "keywords": [
+      "熟悉",
+      "环境",
+      "安全感",
+      "用品",
+      "建立",
+      "随着",
+      "不安",
+      "成长",
+      "国外",
+      "发生"
+    ],
+    "audioUrl": "/audio/hsk-reading/hsk5/hsk5-reading-015.mp3",
+    "audioText": "搬到国外工作以前，我在同一个城市生活了很多年。朋友、家人、常去的店和每天的路线都很熟悉。真正离开以后，我才发现熟悉的环境会给人很强的安全感。在新的地方，连去医院、银行或者买生活用品都需要重新学习。开始的几个月，我常常想回到原来的生活。但是随着时间过去，我认识了新的朋友，也慢慢建立起新的习惯。现在我明白，离开熟悉的地方确实会带来不安，但也会逼着我们学习原来不会做的事情。有些成长只有走出熟悉的环境以后才会发生。"
+  },
+  {
+    "id": "hsk5-reading-016",
+    "level": 5,
+    "order": 16,
+    "title": "一次让我后悔的决定",
+    "pinyinTitle": "Yí cì ràng wǒ hòuhuǐ de juédìng",
+    "myanmarTitle": "နောင်တရစေခဲ့တဲ့ဆုံးဖြတ်ချက်",
+    "category": "daily-life",
+    "difficulty": "medium",
+    "estimatedMinutes": 6,
+    "paragraphs": [
+      "以前我曾经因为害怕改变，拒绝过一个很好的学习机会。当时需要去另外一个城市住半年，我觉得太麻烦，也担心影响工作。",
+      "后来那个机会给了别人。几个月以后，我看到参加项目的人学到了很多新的东西，也认识了不少专业人士。",
+      "那时候我确实有些后悔。但是我也知道，再怎么后悔都不能改变已经发生的事情。",
+      "从那以后，遇到新的机会时，我不会只考虑风险，也会认真想如果拒绝了以后自己会不会遗憾。后悔本身没有用，但如果能改变未来的选择，它也可以成为经验。"
+    ],
+    "pinyinParagraphs": [
+      "Yǐqián wǒ céngjīng yīnwèi hàipà gǎibiàn, jùjué guo yí ge hěn hǎo de xuéxí jīhuì. Dāngshí xūyào qù lìngwài yí ge chéngshì zhù bàn nián, wǒ juéde tài máfan, yě dānxīn yǐngxiǎng gōngzuò.",
+      "Hòulái nàge jīhuì gěi le biérén. Jǐ ge yuè yǐhòu, wǒ kàndào cānjiā xiàngmù de rén xué dào le hěn duō xīn de dōngxi, yě rènshi le bù shǎo zhuānyè rénshì.",
+      "Nà shíhou wǒ quèshí yǒuxiē hòuhuǐ. Dànshì wǒ yě zhīdào, zài zěnme hòuhuǐ dōu bù néng gǎibiàn yǐjīng fāshēng de shìqing.",
+      "Cóng nà yǐhòu, yùdào xīn de jīhuì shí, wǒ bú huì zhǐ kǎolǜ fēngxiǎn, yě huì rènzhēn xiǎng rúguǒ jùjué le yǐhòu zìjǐ huì bú huì yíhàn. Hòuhuǐ běnshēn méiyǒu yòng, dàn rúguǒ néng gǎibiàn wèilái de xuǎnzé, tā yě kěyǐ chéngwéi jīngyàn."
+    ],
+    "myanmarParagraphs": [
+      "အရင်က အပြောင်းအလဲကိုကြောက်လို့ လေ့လာရေးအခွင့်အရေးကောင်းတစ်ခုကို ငြင်းဖူးတယ်။ အခြားမြို့မှာ ခြောက်လနေရမှာဖြစ်လို့ အလုပ်ထိခိုက်မှာလည်းစိုးတယ်။",
+      "နောက်တော့ အဲဒီအခွင့်အရေးကို တခြားသူရသွားတယ်။ လအနည်းငယ်ကြာတော့ project တက်တဲ့သူတွေ အသစ်တွေအများကြီးသင်ပြီး professional လူတွေနဲ့လည်း ရင်းနှီးလာတာမြင်တယ်။",
+      "အဲဒီအချိန် နောင်တရတယ်။ ဒါပေမယ့် နောင်တရရုံနဲ့ ဖြစ်ပြီးသားကိုမပြောင်းနိုင်ဘူး။",
+      "အဲဒီနောက် အခွင့်အရေးအသစ်ရရင် risk ပဲမကြည့်ဘဲ ငြင်းလိုက်ရင် နောက်မှနောင်တရမလားလည်း စဉ်းစားတယ်။ နောင်တက တစ်ခုတည်းနဲ့ အသုံးမဝင်ပေမယ့် အနာဂတ်ဆုံးဖြတ်ချက်ပြောင်းနိုင်ရင် experience ဖြစ်လာနိုင်တယ်။"
+    ],
+    "keywords": [
+      "后悔",
+      "拒绝",
+      "机会",
+      "项目",
+      "专业",
+      "改变",
+      "风险",
+      "遗憾",
+      "未来",
+      "经验"
+    ],
+    "audioUrl": "/audio/hsk-reading/hsk5/hsk5-reading-016.mp3",
+    "audioText": "以前我曾经因为害怕改变，拒绝过一个很好的学习机会。当时需要去另外一个城市住半年，我觉得太麻烦，也担心影响工作。后来那个机会给了别人。几个月以后，我看到参加项目的人学到了很多新的东西，也认识了不少专业人士。那时候我确实有些后悔。但是我也知道，再怎么后悔都不能改变已经发生的事情。从那以后，遇到新的机会时，我不会只考虑风险，也会认真想如果拒绝了以后自己会不会遗憾。后悔本身没有用，但如果能改变未来的选择，它也可以成为经验。"
+  },
+  {
+    "id": "hsk5-reading-017",
+    "level": 5,
+    "order": 17,
+    "title": "如何建立自信",
+    "pinyinTitle": "Rúhé jiànlì zìxìn",
+    "myanmarTitle": "ကိုယ့်ကိုယ်ကို ယုံကြည်မှုတည်ဆောက်ခြင်း",
+    "category": "school",
+    "difficulty": "medium",
+    "estimatedMinutes": 6,
+    "paragraphs": [
+      "以前我以为自信是一种天生的性格。有些人从小就很大胆，而我不是那样的人，所以觉得自己很难改变。",
+      "后来我发现，自信很多时候来自一次又一次的小经验。第一次公开说话很紧张，第二次还是紧张，但是第三次可能就会好一点。",
+      "每完成一件原来不敢做的事情，就像是在告诉自己：“这件事我也可以。”这样的证据积累得越多，自信就越稳定。",
+      "现在我仍然会害怕新的挑战，但我不再把害怕理解成自己没有能力。自信并不是永远不害怕，而是即使害怕，也相信自己可以试一试。"
+    ],
+    "pinyinParagraphs": [
+      "Yǐqián wǒ yǐwéi zìxìn shì yì zhǒng tiānshēng de xìnggé. Yǒuxiē rén cóngxiǎo jiù hěn dàdǎn, ér wǒ bú shì nàyàng de rén, suǒyǐ juéde zìjǐ hěn nán gǎibiàn.",
+      "Hòulái wǒ fāxiàn, zìxìn hěn duō shíhou láizì yí cì yòu yí cì de xiǎo jīngyàn. Dì yī cì gōngkāi shuōhuà hěn jǐnzhāng, dì èr cì háishi jǐnzhāng, dànshì dì sān cì kěnéng jiù huì hǎo yìdiǎn.",
+      "Měi wánchéng yí jiàn yuánlái bù gǎn zuò de shìqing, jiù xiàng shì zài gàosu zìjǐ: 'Zhè jiàn shì wǒ yě kěyǐ.' Zhèyàng de zhèngjù jīlěi de yuè duō, zìxìn jiù yuè wěndìng.",
+      "Xiànzài wǒ réngrán huì hàipà xīn de tiǎozhàn, dàn wǒ bú zài bǎ hàipà lǐjiě chéng zìjǐ méiyǒu nénglì. Zìxìn bìng bú shì yǒngyuǎn bù hàipà, ér shì jíshǐ hàipà, yě xiāngxìn zìjǐ kěyǐ shì yí shì."
+    ],
+    "myanmarParagraphs": [
+      "အရင်က confidence က မွေးရာပါ personality လို့ထင်တယ်။ တချို့က ငယ်ငယ်ကတည်းကရဲတယ်၊ ကိုယ်ကဒီလိုမဟုတ်လို့ မပြောင်းနိုင်ဘူးထင်တယ်။",
+      "နောက်မှ confidence က အတွေ့အကြုံသေးသေးတွေကနေ တည်ဆောက်လာတာသိတယ်။ ပထမဆုံးပြောရင်ကြောက်တယ်၊ ဒုတိယအကြိမ်လည်းကြောက်တယ်၊ တတိယအကြိမ်မှာ နည်းနည်းလွယ်လာတတ်တယ်။",
+      "အရင်မလုပ်ရဲတာတစ်ခု ပြီးမြောက်တိုင်း “ဒါကိုလည်းလုပ်နိုင်တယ်” ဆိုတဲ့အထောက်အထားတစ်ခုရသလိုပါပဲ။ ဒီအထောက်အထားများလာလေလေ confidence ပိုတည်ငြိမ်လာတယ်။",
+      "အခုလည်း challenge အသစ်တွေကိုကြောက်တတ်ပေမယ့် ကြောက်တာကို စွမ်းရည်မရှိတာလို့ မယူဆတော့ဘူး။ Confidence ဆိုတာ ဘယ်တော့မှမကြောက်တာမဟုတ်ဘဲ ကြောက်ရင်းနဲ့ စမ်းကြည့်နိုင်မယ်လို့ ယုံကြည်တာပါ။"
+    ],
+    "keywords": [
+      "自信",
+      "天生",
+      "大胆",
+      "经验",
+      "证据",
+      "积累",
+      "稳定",
+      "挑战",
+      "能力",
+      "相信"
+    ],
+    "audioUrl": "/audio/hsk-reading/hsk5/hsk5-reading-017.mp3",
+    "audioText": "以前我以为自信是一种天生的性格。有些人从小就很大胆，而我不是那样的人，所以觉得自己很难改变。后来我发现，自信很多时候来自一次又一次的小经验。第一次公开说话很紧张，第二次还是紧张，但是第三次可能就会好一点。每完成一件原来不敢做的事情，就像是在告诉自己，这件事我也可以。这样的证据积累得越多，自信就越稳定。现在我仍然会害怕新的挑战，但我不再把害怕理解成自己没有能力。自信并不是永远不害怕，而是即使害怕，也相信自己可以试一试。"
+  },
+  {
+    "id": "hsk5-reading-018",
+    "level": 5,
+    "order": 18,
+    "title": "帮助别人也帮助自己",
+    "pinyinTitle": "Bāngzhù biérén yě bāngzhù zìjǐ",
+    "myanmarTitle": "သူများကိုကူညီရင်း ကိုယ့်ကိုလည်းကူညီခြင်း",
+    "category": "friends",
+    "difficulty": "medium",
+    "estimatedMinutes": 6,
+    "paragraphs": [
+      "以前我觉得帮助别人只是给对方好处，自己只是付出时间和精力。后来有一次，我负责教一个新同事，才改变了这种想法。",
+      "为了让她听懂，我必须把自己平时习惯做的工作一步一步解释清楚。这个过程让我发现，有些事情我虽然会做，却并没有真正理解为什么要这样做。",
+      "她问的问题也让我重新检查自己的方法。有些地方，我甚至因此找到了更简单、更有效的做法。",
+      "后来我发现，教别人和帮助别人不只是付出。在解释、回答和解决问题的过程中，自己也会重新整理知识，甚至发现原来没有注意到的地方。"
+    ],
+    "pinyinParagraphs": [
+      "Yǐqián wǒ juéde bāngzhù biérén zhǐshì gěi duìfāng hǎochu, zìjǐ zhǐshì fùchū shíjiān hé jīnglì. Hòulái yǒu yí cì, wǒ fùzé jiāo yí ge xīn tóngshì, cái gǎibiàn le zhè zhǒng xiǎngfǎ.",
+      "Wèile ràng tā tīng dǒng, wǒ bìxū bǎ zìjǐ píngshí xíguàn zuò de gōngzuò yí bù yí bù jiěshì qīngchu. Zhège guòchéng ràng wǒ fāxiàn, yǒuxiē shìqing wǒ suīrán huì zuò, què bìng méiyǒu zhēnzhèng lǐjiě wèishénme yào zhèyàng zuò.",
+      "Tā wèn de wèntí yě ràng wǒ chóngxīn jiǎnchá zìjǐ de fāngfǎ. Yǒuxiē dìfang, wǒ shènzhì yīncǐ zhǎodào le gèng jiǎndān, gèng yǒuxiào de zuòfǎ.",
+      "Hòulái wǒ fāxiàn, jiāo biérén hé bāngzhù biérén bù zhǐshì fùchū. Zài jiěshì, huídá hé jiějué wèntí de guòchéng zhōng, zìjǐ yě huì chóngxīn zhěnglǐ zhīshi, shènzhì fāxiàn yuánlái méiyǒu zhùyì dào de dìfang."
+    ],
+    "myanmarParagraphs": [
+      "အရင်က သူများကိုကူညီတာက တစ်ဖက်လူပဲအကျိုးရှိပြီး ကိုယ်က အချိန်နဲ့အားထုတ်ရတယ်လို့ထင်တယ်။ နောက်တော့ လုပ်ဖော်ကိုင်ဖက်အသစ်တစ်ယောက်ကိုသင်ပေးရင်း ဒီအမြင်ပြောင်းသွားတယ်။",
+      "သူနားလည်ဖို့ ကိုယ်လုပ်နေကျအလုပ်ကို အဆင့်လိုက်ရှင်းပြရတယ်။ အဲဒီအချိန် ကိုယ်လုပ်တတ်ပေမယ့် ဘာကြောင့်ဒီလိုလုပ်ရလဲ တကယ်မနားလည်တဲ့အရာတွေလည်း ရှိတာသိလာတယ်။",
+      "သူမေးတဲ့မေးခွန်းတွေက ကိုယ့်နည်းလမ်းကို ပြန်စစ်စေတယ်။ တချို့အရာတွေမှာ ပိုလွယ်ပြီးပိုထိရောက်တဲ့နည်းတောင် ရှာတွေ့တယ်။",
+      "နောက်တော့ သင်ပေးတာ၊ ကူညီတာက ပေးဆပ်ရုံမဟုတ်ဘူးလို့နားလည်လာတယ်။ ရှင်းပြ၊ ဖြေ၊ ပြဿနာဖြေရှင်းရင်း ကိုယ့်အသိပညာကို ပြန်စီစဉ်ပြီး အရင်မသတိထားတာတွေလည်း တွေ့လာတယ်။"
+    ],
+    "keywords": [
+      "付出",
+      "负责",
+      "解释",
+      "理解",
+      "重新",
+      "有效",
+      "知识",
+      "过程",
+      "整理",
+      "注意"
+    ],
+    "audioUrl": "/audio/hsk-reading/hsk5/hsk5-reading-018.mp3",
+    "audioText": "以前我觉得帮助别人只是给对方好处，自己只是付出时间和精力。后来有一次，我负责教一个新同事，才改变了这种想法。为了让她听懂，我必须把自己平时习惯做的工作一步一步解释清楚。这个过程让我发现，有些事情我虽然会做，却并没有真正理解为什么要这样做。她问的问题也让我重新检查自己的方法。有些地方，我甚至因此找到了更简单、更有效的做法。后来我发现，教别人和帮助别人不只是付出。在解释、回答和解决问题的过程中，自己也会重新整理知识，甚至发现原来没有注意到的地方。"
+  },
+  {
+    "id": "hsk5-reading-019",
+    "level": 5,
+    "order": 19,
+    "title": "改变计划的一天",
+    "pinyinTitle": "Gǎibiàn jìhuà de yì tiān",
+    "myanmarTitle": "အစီအစဉ်ပြောင်းခဲ့ရတဲ့နေ့",
+    "category": "daily-life",
+    "difficulty": "medium",
+    "estimatedMinutes": 6,
+    "paragraphs": [
+      "有一天，我原来安排得非常满。早上要去银行，中午要和朋友见面，下午还计划完成一份工作。",
+      "可是刚出门没多久，朋友突然告诉我她身体不舒服，需要去医院。我只好把原来的计划全部调整。",
+      "刚开始我有一点烦，因为我很不喜欢临时改变安排。但是陪朋友看完医生以后，我发现当天其他事情其实也可以晚一点做。",
+      "那天让我意识到，计划当然重要，但是现实不会永远按照计划发生。能够根据情况调整，有时候比严格完成原计划更重要。"
+    ],
+    "pinyinParagraphs": [
+      "Yǒu yì tiān, wǒ yuánlái ānpái de fēicháng mǎn. Zǎoshang yào qù yínháng, zhōngwǔ yào hé péngyou jiànmiàn, xiàwǔ hái jìhuà wánchéng yí fèn gōngzuò.",
+      "Kěshì gāng chūmén méi duōjiǔ, péngyou tūrán gàosu wǒ tā shēntǐ bù shūfu, xūyào qù yīyuàn. Wǒ zhǐhǎo bǎ yuánlái de jìhuà quánbù tiáozhěng.",
+      "Gāng kāishǐ wǒ yǒu yìdiǎn fán, yīnwèi wǒ hěn bù xǐhuan línshí gǎibiàn ānpái. Dànshì péi péngyou kàn wán yīshēng yǐhòu, wǒ fāxiàn dāngtiān qítā shìqing qíshí yě kěyǐ wǎn yìdiǎn zuò.",
+      "Nà tiān ràng wǒ yìshí dào, jìhuà dāngrán zhòngyào, dànshì xiànshí bú huì yǒngyuǎn ànzhào jìhuà fāshēng. Nénggòu gēnjù qíngkuàng tiáozhěng, yǒu shíhou bǐ yángé wánchéng yuán jìhuà gèng zhòngyào."
+    ],
+    "myanmarParagraphs": [
+      "တစ်နေ့မှာ schedule အပြည့်စီထားတယ်။ မနက် bank သွား၊ နေ့လယ်သူငယ်ချင်းတွေ့၊ ညနေအလုပ်တစ်ခုပြီးအောင်လုပ်ဖို့ထားတယ်။",
+      "အပြင်ထွက်ပြီးမကြာခင် သူငယ်ချင်းက နေမကောင်းလို့ ဆေးရုံသွားရမယ်လို့ပြောတယ်။ အစီအစဉ်အားလုံးပြန်ပြောင်းရတယ်။",
+      "အစမှာ sudden change မကြိုက်လို့ နည်းနည်းစိတ်ရှုပ်တယ်။ ဒါပေမယ့် ဆရာဝန်ပြပြီးတော့ တခြားအလုပ်တွေ နောက်ကျပြီးလုပ်လည်းရတယ်ဆိုတာသိလာတယ်။",
+      "ဒီနေ့က plan အရေးကြီးပေမယ့် အဖြစ်အပျက်တွေ အမြဲ plan အတိုင်းမဖြစ်ဘူးဆိုတာ သတိပေးတယ်။ Situation အလိုက်ပြောင်းနိုင်တာက plan ကိုတင်းတင်းလိုက်တာထက် တစ်ခါတလေပိုအရေးကြီးတယ်။"
+    ],
+    "keywords": [
+      "计划",
+      "调整",
+      "临时",
+      "安排",
+      "意识",
+      "现实",
+      "根据",
+      "情况",
+      "严格",
+      "完成"
+    ],
+    "audioUrl": "/audio/hsk-reading/hsk5/hsk5-reading-019.mp3",
+    "audioText": "有一天，我原来安排得非常满。早上要去银行，中午要和朋友见面，下午还计划完成一份工作。可是刚出门没多久，朋友突然告诉我她身体不舒服，需要去医院。我只好把原来的计划全部调整。刚开始我有一点烦，因为我很不喜欢临时改变安排。但是陪朋友看完医生以后，我发现当天其他事情其实也可以晚一点做。那天让我意识到，计划当然重要，但是现实不会永远按照计划发生。能够根据情况调整，有时候比严格完成原计划更重要。"
+  },
+  {
+    "id": "hsk5-reading-020",
+    "level": 5,
+    "order": 20,
+    "title": "我的未来计划",
+    "pinyinTitle": "Wǒ de wèilái jìhuà",
+    "myanmarTitle": "ကျွန်မရဲ့ အနာဂတ်အစီအစဉ်",
+    "category": "daily-life",
+    "difficulty": "medium",
+    "estimatedMinutes": 6,
+    "paragraphs": [
+      "以前别人问我未来五年想做什么，我总觉得自己应该给出一个非常清楚的答案。好像没有完整计划，就表示自己没有方向。",
+      "后来经历了一些工作和生活上的变化，我发现很多事情根本无法提前几年确定。行业会变化，兴趣会变化，人的想法也会变化。",
+      "现在我还是会做计划，但是计划不再那么具体。我更关注自己想提高什么能力、想过什么样的生活，以及哪些事情是长期重要的。",
+      "我希望未来几年可以继续学习，增加专业经验，也留出时间做自己真正喜欢的事情。对我来说，未来计划不是一张不能改变的地图，而是一个大概的方向。"
+    ],
+    "pinyinParagraphs": [
+      "Yǐqián biérén wèn wǒ wèilái wǔ nián xiǎng zuò shénme, wǒ zǒng juéde zìjǐ yīnggāi gěichū yí ge fēicháng qīngchu de dá'àn. Hǎoxiàng méiyǒu wánzhěng jìhuà, jiù biǎoshì zìjǐ méiyǒu fāngxiàng.",
+      "Hòulái jīnglì le yìxiē gōngzuò hé shēnghuó shàng de biànhuà, wǒ fāxiàn hěn duō shìqing gēnběn wúfǎ tíqián jǐ nián quèdìng. Hángyè huì biànhuà, xìngqù huì biànhuà, rén de xiǎngfǎ yě huì biànhuà.",
+      "Xiànzài wǒ háishi huì zuò jìhuà, dànshì jìhuà bú zài nàme jùtǐ. Wǒ gèng guānzhù zìjǐ xiǎng tígāo shénme nénglì, xiǎng guò shénme yàng de shēnghuó, yǐjí nǎxiē shìqing shì chángqī zhòngyào de.",
+      "Wǒ xīwàng wèilái jǐ nián kěyǐ jìxù xuéxí, zēngjiā zhuānyè jīngyàn, yě liúchū shíjiān zuò zìjǐ zhēnzhèng xǐhuan de shìqing. Duì wǒ láishuō, wèilái jìhuà bú shì yì zhāng bù néng gǎibiàn de dìtú, ér shì yí ge dàgài de fāngxiàng."
+    ],
+    "myanmarParagraphs": [
+      "အရင်က “နောက်ငါးနှစ်မှာဘာလုပ်မလဲ” မေးရင် အဖြေတိတိကျကျပေးနိုင်ရမယ်လို့ထင်တယ်။ Plan အပြည့်မရှိရင် ဦးတည်ချက်မရှိသလိုခံစားရတယ်။",
+      "နောက်တော့ အလုပ်နဲ့ဘဝမှာ အပြောင်းအလဲတချို့ကြုံပြီး အရာအများကြီးကို နှစ်ပေါင်းများစွာကြိုတင်တိတိကျကျမဆုံးဖြတ်နိုင်ဘူးဆိုတာ သိလာတယ်။ Industry ပြောင်းမယ်၊ စိတ်ဝင်စားမှုပြောင်းမယ်၊ အတွေးလည်းပြောင်းမယ်။",
+      "အခုလည်း plan ချတယ်၊ ဒါပေမယ့် အရမ်းအသေးစိတ်မထားတော့ဘူး။ ဘာစွမ်းရည်တိုးချင်လဲ၊ ဘယ်လိုဘဝနေရချင်လဲ၊ ရေရှည်ဘယ်အရာအရေးကြီးလဲကို ပိုအာရုံစိုက်တယ်။",
+      "နောက်နှစ်တွေမှာ ဆက်လေ့လာ၊ professional experience တိုးပြီး ကိုယ်တကယ်ကြိုက်တဲ့အရာတွေအတွက်လည်း အချိန်ထားချင်တယ်။ အနာဂတ် plan ဆိုတာ မပြောင်းရတဲ့မြေပုံမဟုတ်ဘဲ ဦးတည်ချက်တစ်ခုပါ။"
+    ],
+    "keywords": [
+      "未来",
+      "完整",
+      "方向",
+      "行业",
+      "确定",
+      "具体",
+      "关注",
+      "增加",
+      "专业",
+      "长期"
+    ],
+    "audioUrl": "/audio/hsk-reading/hsk5/hsk5-reading-020.mp3",
+    "audioText": "以前别人问我未来五年想做什么，我总觉得自己应该给出一个非常清楚的答案。好像没有完整计划，就表示自己没有方向。后来经历了一些工作和生活上的变化，我发现很多事情根本无法提前几年确定。行业会变化，兴趣会变化，人的想法也会变化。现在我还是会做计划，但是计划不再那么具体。我更关注自己想提高什么能力、想过什么样的生活，以及哪些事情是长期重要的。我希望未来几年可以继续学习，增加专业经验，也留出时间做自己真正喜欢的事情。对我来说，未来计划不是一张不能改变的地图，而是一个大概的方向。"
+  }
+]
